@@ -423,7 +423,7 @@ export interface components {
       /** Id */
       id: number
       /** Matches */
-      matches?: components['schemas']['MatchRange'][]
+      matches: components['schemas']['MatchRange'][]
       /** Started At */
       started_at: string
       /** Title */
@@ -569,7 +569,7 @@ export interface components {
      */
     SearchResults: {
       /** Meetings */
-      meetings?: components['schemas']['MeetingHit'][]
+      meetings: components['schemas']['MeetingHit'][]
       /** Query */
       query: string
       /**
@@ -578,7 +578,7 @@ export interface components {
        */
       total: number
       /** Transcripts */
-      transcripts?: components['schemas']['TranscriptHit'][]
+      transcripts: components['schemas']['TranscriptHit'][]
     }
     /**
      * SidebarChannels
@@ -640,7 +640,7 @@ export interface components {
      */
     TranscriptHit: {
       /** Matches */
-      matches?: components['schemas']['MatchRange'][]
+      matches: components['schemas']['MatchRange'][]
       /** Meeting Id */
       meeting_id: number
       /** Meeting Title */

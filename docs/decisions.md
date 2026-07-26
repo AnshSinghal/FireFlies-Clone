@@ -498,6 +498,110 @@ manual pass.
 
 ---
 
+## ADR-022 · User input is not a query language
+
+**Date:** 2026-07-26 · **Task:** T-08.3 · **Status:** Accepted
+
+**Context.** The first test of the search endpoint that typed punctuation returned a 500:
+
+```
+sqlite3.OperationalError: fts5: syntax error near "."
+```
+
+The value was bound, so this was never SQL injection. The problem is one layer up: FTS5 parses the
+*bound string* as its own query language, where `*`, `"`, `:`, `^`, `-`, `(` and `NEAR` are
+operators. A user typing `a.*b` into a search box means those five characters.
+
+**Decision.** `app/db/search.py::to_fts_query()` tokenises input to word characters, phrase-quotes
+each token, drops single-character tokens, and appends `*` to the last one so results narrow while
+typing. It lives at the **db layer**, not in the service, so T-35's call sites inherit it rather
+than each re-deriving it. Empty output means "no match", never "match everything".
+
+The same reasoning applies twice more in this task: `_title_ranges` uses `re.escape` rather than
+compiling user input as a pattern, and the title `LIKE` passes `autoescape=True` so a search for
+`50%` does not become a wildcard.
+
+**Consequences.** Some FTS5 power (explicit `NEAR`, boolean operators) is unreachable from the
+plain search box. T-35 specifies a deliberate query syntax — quoted phrases, `-exclusion`,
+`speaker:` — which is the right place to expose that, because then it is a documented feature rather
+than punctuation the parser happens to accept.
+
+---
+
+## ADR-023 · Search sends match ranges, never markup
+
+**Date:** 2026-07-26 · **Task:** T-08.3/T-08.10 · **Status:** Accepted
+
+**Context.** Highlighting a search hit needs the server's knowledge — FTS5 stemming means a query
+for `pricing` matches `priced`, and the client cannot re-derive which characters matched. The
+obvious implementation is `snippet(transcript_fts, 0, '<b>', '</b>', …)` and
+`dangerouslySetInnerHTML` on the client.
+
+**Decision.** The API returns `matches: [{start, end}]` and plain text. `SearchService` asks SQLite
+to delimit with `\x02`/`\x03` — control characters that cannot appear in transcript text — then
+converts those to offsets and strips them before serialising.
+
+Transcripts are user content. A meeting where somebody reads out an HTML tag would, under the markup
+approach, inject it into every dropdown that surfaces the line. Offsets make that structurally
+impossible: the `Highlighter` primitive splits into text nodes and wraps them in `<mark>`, so
+`<img src=x onerror=…>` renders as thirty visible characters.
+
+**Consequences.** Two extra conversion steps and a primitive the whole app must use for highlighting
+— `Highlighter` also backs T-22's find bar and T-35's results page. The e2e suite stubs the API with
+a transcript containing an `onerror` payload and asserts `window.__pwned` never appears, so the
+guarantee is tested rather than assumed.
+
+---
+
+## ADR-024 · ⌘K is a callback, not mirrored state
+
+**Date:** 2026-07-26 · **Task:** T-08.4 · **Status:** Accepted
+
+**Context.** `useCommandPalette` (T-06.11) owned an `isOpen` boolean. Wiring the real search field
+to it meant mirroring that boolean into the field's own state via an effect — which
+`react-hooks/set-state-in-effect` rejected, correctly.
+
+Suppressing the rule would have shipped a genuine bug. The hook's ⌘K handler *toggled*, so the two
+copies could disagree: clicking outside closed the field but left `isOpen` true, and the next ⌘K
+toggled the stale flag to false — the shortcut appeared dead until pressed twice.
+
+**Decision.** The hook registers the binding and fires `onTrigger`; it holds no state. `GlobalSearch`
+owns the single copy of "is the search open".
+
+The same reasoning removed the second effect in that component: the highlighted row is now *derived*
+during render (`preferredId` if it still exists in the current rows, else the first row) rather than
+stored and re-synced whenever the rows change.
+
+**Consequences.** Two effects and one whole category of state-desync bug are gone. This is the third
+time in this project the lint rule has pointed at a real defect rather than a style preference —
+after `use-local-storage` and `use-sidebar` — which is worth recording as evidence that the rule
+earns the friction.
+
+---
+
+## ADR-025 · Toasts and the search endpoint built ahead of their tasks
+
+**Date:** 2026-07-26 · **Task:** T-08 · **Status:** Accepted
+
+**Context.** T-08 depends on two things PLAN.md schedules later. T-08.6's `Sign out` is specified as
+showing an info toast, and the toast system is T-09. T-08.3's dropdown needs
+`GET /api/v1/search`, specified under T-35.1.
+
+**Decision.** Build minimal versions of both now rather than stub them.
+
+Stubbing the endpoint would have meant every dropdown test asserting against fixtures instead of
+real FTS ranking — the debounce, the grouping and the empty state would all have been verified
+against data that could not disagree with them. And a temporary inline banner for `Sign out`,
+replaced a task later, leaves that behaviour untested at the point it ships.
+
+**Consequences.** T-09 extends the toast API (actions, promise toasts, the undo pattern) rather than
+creating it; T-35 extends search with query syntax, filters, ranking transparency and pagination.
+Both were built to be extended: `ToastProvider` already carries variants and durations, and the
+search response is already the grouped shape T-35 needs. This is the only deviation from the plan's
+task ordering so far, and it is recorded here rather than left for a reader to notice.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

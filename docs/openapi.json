@@ -441,7 +441,8 @@
           "id",
           "title",
           "started_at",
-          "duration_seconds"
+          "duration_seconds",
+          "matches"
         ],
         "title": "MeetingHit",
         "type": "object"
@@ -783,6 +784,8 @@
         },
         "required": [
           "query",
+          "meetings",
+          "transcripts",
           "total"
         ],
         "title": "SearchResults",
@@ -959,7 +962,8 @@
           "meeting_title",
           "speaker",
           "start_ms",
-          "snippet"
+          "snippet",
+          "matches"
         ],
         "title": "TranscriptHit",
         "type": "object"

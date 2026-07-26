@@ -73,7 +73,7 @@ class SearchService:
         if len(cleaned) < MIN_QUERY_LENGTH:
             # One character matches most of the corpus; answering with nothing
             # is more useful than answering with everything.
-            return SearchResults(query=cleaned, total=0)
+            return SearchResults(query=cleaned, meetings=[], transcripts=[], total=0)
 
         # `autoescape` so a title search for `50%` looks for that, rather than
         # letting LIKE read the `%` as a wildcard.

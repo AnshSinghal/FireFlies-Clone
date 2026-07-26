@@ -12,6 +12,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState, type ReactNode } from 'react'
 
+import { ToastProvider } from '@/components/ui/toast'
 import { ApiError } from '@/lib/api/client'
 
 function makeQueryClient() {
@@ -61,5 +62,10 @@ export function Providers({ children }: { children: ReactNode }) {
   // twice in development, and the initialiser runs only once.
   const [queryClient] = useState(getQueryClient)
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={queryClient}>
+      {/* Inside the query provider, so a mutation's onError can raise a toast. */}
+      <ToastProvider>{children}</ToastProvider>
+    </QueryClientProvider>
+  )
 }

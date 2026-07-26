@@ -25,7 +25,7 @@ class MeetingHit(BaseModel):
     title: str
     started_at: str
     duration_seconds: int
-    matches: list[MatchRange] = Field(default_factory=list)
+    matches: list[MatchRange]
 
 
 class TranscriptHit(BaseModel):
@@ -38,7 +38,7 @@ class TranscriptHit(BaseModel):
     #: Milliseconds, so the client can deep-link to `?t=` directly.
     start_ms: int
     snippet: str
-    matches: list[MatchRange] = Field(default_factory=list)
+    matches: list[MatchRange]
 
 
 class SearchResults(BaseModel):
@@ -50,6 +50,10 @@ class SearchResults(BaseModel):
     """
 
     query: str
-    meetings: list[MeetingHit] = Field(default_factory=list)
-    transcripts: list[TranscriptHit] = Field(default_factory=list)
+    # No defaults anywhere in this module: a `default_factory` makes the field
+    # non-required in OpenAPI, so the generated client types it `T[] | undefined`
+    # and every call site has to handle an absence the API never produces. Same
+    # defect as `action_item_counts` in T-05.
+    meetings: list[MeetingHit]
+    transcripts: list[TranscriptHit]
     total: int = Field(description="Combined count across both groups.")
