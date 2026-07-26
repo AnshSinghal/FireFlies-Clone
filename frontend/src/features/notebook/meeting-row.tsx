@@ -15,6 +15,7 @@ import {
   FileAudio,
   FolderInput,
   MoreHorizontal,
+  PanelRight,
   Pencil,
   Play,
   SlidersHorizontal,
@@ -24,6 +25,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 import { AvatarGroup } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/chip'
 import { Checkbox } from '@/components/ui/controls'
 import { Dropdown, DropdownItem, DropdownSeparator, DropdownSub } from '@/components/ui/dropdown'
@@ -45,6 +47,7 @@ interface MeetingRowProps {
   /** Highlights the matching term in the title. */
   query?: string
   onDelete: (id: number) => void
+  onShowDetails: (id: number) => void
   /** Roving tabindex: only the focused row is tabbable (T-12.12). */
   tabIndex: number
   onFocus: () => void
@@ -58,6 +61,7 @@ export function MeetingRow({
   anySelected,
   query,
   onDelete,
+  onShowDetails,
   tabIndex,
   onFocus,
 }: MeetingRowProps) {
@@ -245,12 +249,22 @@ export function MeetingRow({
       */}
       <span
         className={cn(
-          'absolute right-2 top-1/2 -translate-y-1/2 transition-opacity duration-fast',
+          'absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 transition-opacity duration-fast',
           // Always in the DOM so it is reachable by keyboard; only visible on
           // hover or focus, so the resting list stays quiet.
           'opacity-0 focus-within:opacity-100 group-hover:opacity-100',
         )}
       >
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onShowDetails(meeting.id)}
+          data-testid="meeting-row-details"
+          className="bg-surface-0"
+        >
+          Details
+        </Button>
+
         <Dropdown
           testId={`meeting-row-menu-${meeting.id}`}
           trigger={
@@ -265,6 +279,13 @@ export function MeetingRow({
         >
           <DropdownItem icon={<ChevronRight size={16} strokeWidth={1.75} />} href={href}>
             Open
+          </DropdownItem>
+          <DropdownItem
+            icon={<PanelRight size={16} strokeWidth={1.75} />}
+            onSelect={() => onShowDetails(meeting.id)}
+            testId="meeting-row-details-menu"
+          >
+            Details
           </DropdownItem>
           <DropdownItem
             icon={<Copy size={16} strokeWidth={1.75} />}

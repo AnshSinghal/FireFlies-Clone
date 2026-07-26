@@ -67,3 +67,18 @@ export function getSpeakerColorIndex(name: string): number {
 export function getSpeakerColor(name: string): string {
   return `var(--ff-speaker-${getSpeakerColorIndex(name)})`
 }
+
+/**
+ * The colour for a server-assigned index.
+ *
+ * Distinct from `getSpeakerColor(name)`, which hashes: when the API has already
+ * decided a speaker's index it is AUTHORITATIVE (ADR-013), and re-hashing the
+ * name here would give the same person two different colours depending on which
+ * component drew them.
+ */
+export function getSpeakerColorByIndex(index: number): string {
+  // Wrapped rather than clamped: an out-of-range index is a bug, but cycling
+  // gives a stable colour instead of collapsing everyone onto the last one.
+  const safe = ((index % SPEAKER_COLOR_COUNT) + SPEAKER_COLOR_COUNT) % SPEAKER_COLOR_COUNT
+  return `var(--ff-speaker-${safe})`
+}

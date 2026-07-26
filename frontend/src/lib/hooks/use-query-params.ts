@@ -131,7 +131,7 @@ export function useQueryParams() {
  * filters to clear. `q` is excluded too — it has its own visible field, and
  * counting it twice overstates how narrowed the view is.
  */
-const NON_FILTERS = new Set(['sort', 'page', 'pageSize', 'q', 'tags'])
+const NON_FILTERS = new Set(['sort', 'page', 'pageSize', 'q', 'tags', 'details'])
 
 /**
  * Filter state for the Notebook, read from and written to the URL.
@@ -158,6 +158,9 @@ export function useNotebookParams() {
       channel: getParam('channel') ?? undefined,
       hasActionItems: parseBool(getParam('has_action_items')),
       source: getParam('source') ?? undefined,
+      // The details drawer's open meeting (T-15.12). Not a filter: it narrows
+      // nothing, so it is excluded from the Filters badge below.
+      details: getParam('details') ? getNumber('details', 0) : undefined,
       sort: getParam('sort') ?? '-started_at',
       page: getNumber('page', 1),
       pageSize: getNumber('page_size', 20),
@@ -184,7 +187,7 @@ export function useNotebookParams() {
     [setParams],
   )
 
-  return { filters, activeFilterCount, setFilter, setPage, clearFilters: clearParams }
+  return { filters, activeFilterCount, setFilter, setPage, setParams, clearFilters: clearParams }
 }
 
 /**

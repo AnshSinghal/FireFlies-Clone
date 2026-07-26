@@ -17,6 +17,22 @@ from app.services.meetings import MeetingService
 router = APIRouter(prefix="/meetings", tags=["summaries"])
 
 
+@router.get(
+    "/{meeting_id}/summary",
+    response_model=SummaryOut,
+    responses=NOT_FOUND_OR_GONE,
+    summary="Get a meeting summary",
+    description=(
+        "The stored summary. T-20 builds the full panel on this; the details "
+        "drawer uses the overview alone."
+    ),
+)
+def get_summary(db: DbSession, meeting_id: int) -> SummaryOut:
+    service = MeetingService(db)
+    meeting = service.get(meeting_id)
+    return service.to_summary(meeting)
+
+
 @router.post(
     "/{meeting_id}/summary/regenerate",
     response_model=SummaryOut,
@@ -42,10 +58,4 @@ def regenerate_summary(
     # T-29 swaps this for a real provider call. The endpoint exists now so the
     # contract, the rate limit and the error envelope are settled before the
     # thing that costs money is wired in.
-    return SummaryOut(
-        meeting_id=meeting.id,
-        overview=meeting.summary.overview if meeting.summary else None,
-        provider=meeting.summary.provider if meeting.summary else "mock",
-        is_stale=False,
-        generated_at=meeting.summary.generated_at if meeting.summary else None,
-    )
+    return service.to_summary(meeting)

@@ -657,3 +657,72 @@ def test_bulk_endpoints_reject_an_empty_batch(client: TestClient, library: Sessi
     # A no-op request is a client bug; answering 200 hides it.
     for path in ("bulk-delete", "bulk-restore"):
         assert client.post(f"/api/v1/meetings/{path}", json={"ids": []}).status_code == 422
+
+
+# ── Details drawer data (T-15) ──────────────────────────────────────────────
+
+
+def test_detail_carries_attendance_and_talk_time(client: TestClient, library: Session):
+    """The drawer distinguishes invited from attended, and shows how long each
+    person spoke — `ParticipantRef` deliberately carries neither."""
+    meeting = library.execute(Meeting.not_deleted()).scalars().first()
+    assert meeting is not None
+
+    body = client.get(f"/api/v1/meetings/{meeting.id}").json()
+    participant = body["participants"][0]
+
+    assert set(participant) >= {"attended", "talk_seconds", "email", "color_index"}
+    assert isinstance(participant["attended"], bool)
+
+
+def test_the_light_row_still_does_not_carry_attendance(client: TestClient, library: Session):
+    """A Notebook page holds twenty rows; shipping attendance for a hundred
+    people nobody looks at is exactly the weight T-04.4 warns about."""
+    row = client.get("/api/v1/meetings").json()["items"][0]
+    assert "talk_seconds" not in str(row)
+
+
+def test_action_items_can_be_ticked_and_unticked(client: TestClient, library: Session):
+    meeting = (
+        library.execute(Meeting.not_deleted().where(Meeting.title.contains("Roadmap")))
+        .scalars()
+        .one()
+    )
+
+    items = client.get(f"/api/v1/meetings/{meeting.id}/action-items").json()
+    assert len(items) == 2
+    assert items[0]["status"] == "open"
+
+    ticked = client.patch(
+        f"/api/v1/meetings/action-items/{items[0]['id']}", json={"status": "completed"}
+    ).json()
+    assert ticked["status"] == "completed"
+
+    # And the counts the Notebook row shows follow.
+    row = next(m for m in client.get("/api/v1/meetings").json()["items"] if m["id"] == meeting.id)
+    assert row["action_item_counts"] == {"open": 1, "completed": 1}
+
+    unticked = client.patch(
+        f"/api/v1/meetings/action-items/{items[0]['id']}", json={"status": "open"}
+    ).json()
+    assert unticked["status"] == "open"
+
+
+def test_action_items_for_a_deleted_meeting_are_410_not_empty(client: TestClient, library: Session):
+    """An empty list would read as "no action items" rather than "gone"."""
+    from datetime import UTC as _UTC
+    from datetime import datetime as _datetime
+
+    meeting = library.execute(Meeting.not_deleted()).scalars().first()
+    assert meeting is not None
+    meeting.deleted_at = _datetime.now(_UTC)
+    library.commit()
+
+    response = client.get(f"/api/v1/meetings/{meeting.id}/action-items")
+    assert response.status_code == status.HTTP_410_GONE
+
+
+def test_ticking_an_unknown_action_item_is_404(client: TestClient, library: Session):
+    response = client.patch("/api/v1/meetings/action-items/9999", json={"status": "open"})
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["error"]["code"] == "ACTION_ITEM_NOT_FOUND"

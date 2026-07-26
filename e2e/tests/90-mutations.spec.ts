@@ -221,3 +221,49 @@ test.describe('bulk delete', { tag: '@mutates' }, () => {
     await expect(page.getByTestId('meeting-row')).toHaveCount(before)
   })
 })
+
+test.describe('details drawer', { tag: '@mutates' }, () => {
+  test('T15-D · ticking an action item strikes it through and updates the row badge', async ({
+    page,
+  }) => {
+    await page.goto('/notebook?details=1')
+    await expect(page.getByTestId('details-drawer')).toBeVisible()
+
+    const badge = page.getByTestId('meeting-row-1').getByTestId('meeting-row-actions')
+    const before = await badge.textContent()
+
+    const item = page.locator('[data-testid^="details-action-item-"]').first()
+    await item.click()
+
+    // Optimistic: the strikethrough is immediate, not after a round-trip.
+    await expect(item).toHaveAttribute('data-state', 'checked')
+    // …and the Notebook row's "N open" count follows, which is the
+    // cross-surface invalidation ADR-005 chose TanStack Query for.
+    await expect(badge).not.toHaveText(before!)
+
+    // Put it back.
+    await item.click()
+    await expect(badge).toHaveText(before!)
+  })
+
+  test('T15-E · changing privacy saves and survives a reload', async ({ page }) => {
+    await page.goto('/notebook?details=1')
+    await expect(page.getByTestId('details-drawer')).toBeVisible()
+
+    const select = page.getByTestId('details-privacy-select')
+    const before = await select.textContent()
+
+    await select.click()
+    await page.getByTestId('select-option-public').click()
+
+    await expect(page.getByTestId('toast').first()).toContainText('Changes saved')
+
+    await page.reload()
+    await expect(page.getByTestId('details-privacy-select')).toContainText('Public')
+
+    // Restore the seeded value.
+    await page.getByTestId('details-privacy-select').click()
+    await page.getByTestId(`select-option-${before!.toLowerCase()}`).click()
+    await expect(page.getByTestId('details-privacy-select')).toContainText(before!)
+  })
+})

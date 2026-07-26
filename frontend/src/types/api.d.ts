@@ -92,6 +92,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/action-items/{item_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Tick or untick an action item
+     * @description `completed_at` is derived from the status rather than accepted from the client, so the two cannot disagree.
+     */
+    patch: operations['update_action_item_api_v1_meetings_action_items__item_id__patch']
+    trace?: never
+  }
   '/api/v1/meetings/bulk-delete': {
     parameters: {
       query?: never
@@ -180,6 +200,26 @@ export interface paths {
     patch: operations['update_meeting_api_v1_meetings__meeting_id__patch']
     trace?: never
   }
+  '/api/v1/meetings/{meeting_id}/action-items': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List a meeting's action items
+     * @description Ordered as they were raised. T-24 owns the full CRUD; this backs the previews.
+     */
+    get: operations['list_action_items_api_v1_meetings__meeting_id__action_items_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/meetings/{meeting_id}/restore': {
     parameters: {
       query?: never
@@ -194,6 +234,26 @@ export interface paths {
      * @description Undoes a soft delete. Backs the 6-second Undo affordance in the UI.
      */
     post: operations['restore_meeting_api_v1_meetings__meeting_id__restore_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/summary': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get a meeting summary
+     * @description The stored summary. T-20 builds the full panel on this; the details drawer uses the overview alone.
+     */
+    get: operations['get_summary_api_v1_meetings__meeting_id__summary_get']
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -260,6 +320,33 @@ export interface components {
        */
       open: number
     }
+    /**
+     * ActionItemOut
+     * @description One action item. T-24 owns the full CRUD; this is what a preview needs.
+     */
+    ActionItemOut: {
+      /** Assignee Name */
+      assignee_name?: string | null
+      /** Due Date */
+      due_date?: string | null
+      /** Id */
+      id: number
+      status: components['schemas']['ActionItemStatus']
+      /** Text */
+      text: string
+    }
+    /**
+     * ActionItemStatus
+     * @enum {string}
+     */
+    ActionItemStatus: 'open' | 'completed'
+    /**
+     * ActionItemUpdate
+     * @description The only field the drawer's checkbox changes.
+     */
+    ActionItemUpdate: {
+      status: components['schemas']['ActionItemStatus']
+    }
     /** BulkDeleteRequest */
     BulkDeleteRequest: {
       /** Ids */
@@ -312,6 +399,18 @@ export interface components {
        * @description Meetings in this channel, excluding deleted.
        */
       meeting_count: number
+      /** Name */
+      name: string
+      /** Slug */
+      slug: string
+    }
+    /**
+     * ChannelRef
+     * @description Just enough to name the channel a meeting sits in.
+     */
+    ChannelRef: {
+      /** Id */
+      id: number
       /** Name */
       name: string
       /** Slug */
@@ -467,6 +566,7 @@ export interface components {
      *     segments and shipping them inline makes the first paint wait on all of them.
      */
     MeetingDetail: {
+      channel?: components['schemas']['ChannelRef'] | null
       /**
        * Created At
        * Format: date-time
@@ -487,7 +587,7 @@ export interface components {
       /** Media Url */
       media_url?: string | null
       /** Participants */
-      participants?: components['schemas']['ParticipantRef'][]
+      participants?: components['schemas']['ParticipantDetail'][]
       processing_status: components['schemas']['ProcessingStatus']
       /**
        * Segment Count
@@ -640,6 +740,31 @@ export interface components {
       total: number
       /** Total Pages */
       readonly total_pages: number
+    }
+    /**
+     * ParticipantDetail
+     * @description A participant, as the details drawer shows them (T-15.8, T-15.9).
+     *
+     *     Richer than `ParticipantRef`, which exists to render an avatar in a group
+     *     and deliberately carries nothing else — a Notebook page holds twenty rows
+     *     and would otherwise ship attendance data for a hundred people nobody looks
+     *     at.
+     */
+    ParticipantDetail: {
+      /** Attended */
+      attended: boolean
+      /** Avatar Url */
+      avatar_url?: string | null
+      /** Color Index */
+      color_index?: number | null
+      /** Display Name */
+      display_name: string
+      /** Email */
+      email?: string | null
+      /** Id */
+      id: number
+      /** Talk Seconds */
+      talk_seconds: number
     }
     /**
      * ParticipantRef
@@ -1026,6 +1151,68 @@ export interface operations {
       }
     }
   }
+  update_action_item_api_v1_meetings_action_items__item_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        item_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ActionItemUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ActionItemOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   bulk_delete_api_v1_meetings_bulk_delete_post: {
     parameters: {
       query?: never
@@ -1315,6 +1502,64 @@ export interface operations {
       }
     }
   }
+  list_action_items_api_v1_meetings__meeting_id__action_items_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ActionItemOut'][]
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   restore_meeting_api_v1_meetings__meeting_id__restore_post: {
     parameters: {
       query?: never
@@ -1333,6 +1578,64 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['MeetingDetail']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  get_summary_api_v1_meetings__meeting_id__summary_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SummaryOut']
         }
       }
       /** @description No meeting with this id. */

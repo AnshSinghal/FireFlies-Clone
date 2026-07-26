@@ -16,13 +16,21 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import Select, UnaryExpression, func, select
 from sqlalchemy.orm import selectinload
 
-from app.core.exceptions import InvalidSortError, MeetingDeletedError, MeetingNotFoundError
+from app.core.exceptions import (
+    ActionItemNotFoundError,
+    InvalidSortError,
+    MeetingDeletedError,
+    MeetingNotFoundError,
+)
 from app.models import ActionItem, Meeting, Participant, TranscriptSegment, User
 from app.models.enums import ActionItemStatus, MediaType
 from app.schemas.meeting import (
     ActionItemCounts,
+    ActionItemOut,
+    ChannelRef,
     MeetingDetail,
     MeetingListItem,
+    ParticipantDetail,
     ParticipantRef,
     TagRef,
 )
@@ -32,6 +40,7 @@ from app.schemas.meeting import (
 from app.schemas.meeting import (
     MatchContext as MatchContextSchema,
 )
+from app.schemas.summary import SummaryOut
 from app.schemas.user import UserRef
 from app.services.meeting_filters import (
     MeetingFilters,
@@ -283,12 +292,95 @@ class MeetingService:
             media_type=meeting.media_type,
             media_url=meeting.media_url,
             host=UserRef.model_validate(meeting.host),
-            participants=[ParticipantRef.model_validate(p) for p in meeting.participants],
+            participants=[self._to_participant_detail(p) for p in meeting.participants],
+            channel=ChannelRef.model_validate(meeting.channel) if meeting.channel else None,
             tags=[TagRef.model_validate(t) for t in meeting.tags],
             keywords=[k.term for k in meeting.keywords],
             segment_count=segment_count,
             created_at=meeting.created_at,
             updated_at=meeting.updated_at,
+        )
+
+    @staticmethod
+    def _to_participant_detail(participant: Participant) -> ParticipantDetail:
+        """Carry the speaker's colour index through, when they have one.
+
+        The talk-time bar has to be the same colour as this person in the
+        transcript, and the colour is assigned server-side so every surface
+        agrees (ADR-013). A participant who never spoke has no speaker row and
+        therefore no colour, which is correct — their bar is zero-length.
+        """
+        return ParticipantDetail(
+            id=participant.id,
+            display_name=participant.display_name,
+            email=participant.email,
+            # A participant has no avatar of their own — it belongs to the
+            # linked user account, and an external attendee has none at all.
+            # The client falls back to initials on a hashed colour.
+            avatar_url=participant.user.avatar_url if participant.user else None,
+            attended=participant.attended,
+            talk_seconds=participant.talk_seconds,
+            color_index=participant.speaker.color_index if participant.speaker else None,
+        )
+
+    def action_items(self, meeting_id: int) -> list[ActionItemOut]:
+        """Every action item on a meeting, in the order they were raised."""
+        rows = self.db.execute(
+            select(ActionItem)
+            .where(ActionItem.meeting_id == meeting_id)
+            .order_by(ActionItem.sequence)
+            .options(selectinload(ActionItem.assignee))
+        ).scalars()
+
+        return [
+            ActionItemOut(
+                id=item.id,
+                text=item.text,
+                status=item.status,
+                due_date=item.due_date,
+                assignee_name=item.assignee.display_name if item.assignee else None,
+            )
+            for item in rows
+        ]
+
+    def set_action_item_status(self, item_id: int, status: ActionItemStatus) -> ActionItemOut:
+        """Tick or untick one item.
+
+        `completed_at` is maintained here rather than by the caller: it is
+        derived from the status, and letting a client send both invites the two
+        to disagree.
+        """
+        item = self.db.get(ActionItem, item_id)
+        if item is None:
+            raise ActionItemNotFoundError(details={"action_item_id": item_id})
+
+        item.status = status
+        item.completed_at = datetime.now(UTC) if status == ActionItemStatus.COMPLETED else None
+        self.db.commit()
+        self.db.refresh(item)
+
+        return ActionItemOut(
+            id=item.id,
+            text=item.text,
+            status=item.status,
+            due_date=item.due_date,
+            assignee_name=item.assignee.display_name if item.assignee else None,
+        )
+
+    def to_summary(self, meeting: Meeting) -> SummaryOut:
+        """The stored summary, or an empty one.
+
+        A meeting without a summary answers 200 with `overview: null` rather
+        than 404 — "not summarised yet" is a state of the meeting, not a missing
+        resource, and a 404 would make the client treat it as an error.
+        """
+        summary = meeting.summary
+        return SummaryOut(
+            meeting_id=meeting.id,
+            overview=summary.overview if summary else None,
+            provider=summary.provider if summary else "mock",
+            is_stale=summary.is_stale if summary else False,
+            generated_at=summary.generated_at if summary else None,
         )
 
     # ── Writes ──────────────────────────────────────────────────────────────
