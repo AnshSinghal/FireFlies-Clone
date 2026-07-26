@@ -1,6 +1,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help dev down logs migrate migrate-down migration seed seed-reset test test-backend \
-        test-frontend e2e lint lint-frontend lint-backend typecheck format types install clean
+        test-frontend e2e lint lint-frontend lint-backend typecheck format types \
+        seed-demo seed-validate install clean
 
 # ─────────────────────────────────────────────────────────────────────────────
 help: ## Show this help
@@ -34,6 +35,16 @@ seed: migrate ## Populate the demo database (idempotent)
 
 seed-reset: migrate ## Drop and repopulate the demo database
 	cd backend && uv run python -m app.seed.seed --reset
+
+seed-demo: migrate ## Reset, seed, validate and print a summary table
+	@cd backend && uv run python -m app.seed.seed --reset
+	@cd backend && uv run python -m app.seed.validate
+	@echo ""
+	@cd backend && uv run python -c "from app.seed.seed import summary_table; print(summary_table())"
+	@echo ""
+
+seed-validate: ## Check seeded data satisfies every invariant
+	cd backend && uv run python -m app.seed.validate
 
 # ── Codegen ──────────────────────────────────────────────────────────────────
 # Generated from the app object, not a running server, so this works from a cold

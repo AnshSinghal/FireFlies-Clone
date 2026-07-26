@@ -1,0 +1,38 @@
+{
+  "_comment": "The consistent cast (T-05.5). Twelve people who recur across meetings, so the app reads like one company's account rather than eight unrelated fixtures. Emails use .test, a reserved TLD that can never resolve to a real address.",
+
+  "users": [
+    { "slug": "sarah-chen", "name": "Sarah Chen", "email": "sarah.chen@northstar.test", "role": "VP Product" },
+    { "slug": "marcus-patel", "name": "Marcus Patel", "email": "marcus.patel@northstar.test", "role": "Engineering Lead" },
+    { "slug": "priya-raman", "name": "Priya Raman", "email": "priya.raman@northstar.test", "role": "Design Lead" },
+    { "slug": "james-okafor", "name": "James Okafor", "email": "james.okafor@northstar.test", "role": "Backend Engineer" },
+    { "slug": "elena-volkov", "name": "Elena Volkov", "email": "elena.volkov@northstar.test", "role": "Customer Success Lead" },
+    { "slug": "tom-bradley", "name": "Tom Bradley", "email": "tom.bradley@northstar.test", "role": "Account Executive" },
+    { "slug": "aisha-khan", "name": "Aisha Khan", "email": "aisha.khan@northstar.test", "role": "Data Analyst" },
+    { "slug": "david-kim", "name": "David Kim", "email": "david.kim@northstar.test", "role": "Frontend Engineer" },
+    { "slug": "nina-alvarez", "name": "Nina Alvarez", "email": "nina.alvarez@northstar.test", "role": "QA Engineer" },
+    { "slug": "raj-mehta", "name": "Raj Mehta", "email": "raj.mehta@northstar.test", "role": "CEO" },
+    { "slug": "chloe-dubois", "name": "Chloe Dubois", "email": "chloe.dubois@northstar.test", "role": "Product Marketing" },
+    { "slug": "yuki-tanaka", "name": "Yuki Tanaka", "email": "yuki.tanaka@northstar.test", "role": "Support Engineer" }
+  ],
+
+  "externals": [
+    { "slug": "dana-whitfield", "name": "Dana Whitfield", "email": "dana.whitfield@acmecorp.test", "company": "Acme Corp" },
+    { "slug": "peter-lindqvist", "name": "Peter Lindqvist", "email": "p.lindqvist@northwind.test", "company": "Northwind" },
+    { "slug": "grace-oyelaran", "name": "Grace Oyelaran", "email": "grace.o@northwind.test", "company": "Northwind" }
+  ],
+
+  "channels": [
+    { "slug": "design-team", "name": "design-team", "is_private": false, "icon": "hash" },
+    { "slug": "leadership", "name": "leadership", "is_private": true, "icon": "lock" },
+    { "slug": "customer-calls", "name": "customer-calls", "is_private": false, "icon": "hash" }
+  ],
+
+  "tags": [
+    { "name": "sales", "color": "3" },
+    { "name": "engineering", "color": "0" },
+    { "name": "product", "color": "6" },
+    { "name": "customer", "color": "5" },
+    { "name": "urgent", "color": "4" }
+  ]
+}

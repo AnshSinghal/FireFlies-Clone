@@ -1,0 +1,152 @@
+{
+  "seed_key": "all-hands-q2-results",
+  "title": "All-Hands: Q2 Results",
+  "description": "Company-wide update on Q2 performance and Q3 priorities.",
+  "day_offset": -26,
+  "time": "16:30",
+  "host": "raj-mehta",
+  "channel": null,
+  "tags": ["product"],
+  "media": null,
+  "language": "en",
+  "participants": [
+    { "slug": "raj-mehta", "role": "host" },
+    { "slug": "sarah-chen", "role": "attendee" },
+    { "slug": "marcus-patel", "role": "attendee" },
+    { "slug": "priya-raman", "role": "attendee" },
+    { "slug": "james-okafor", "role": "attendee" },
+    { "slug": "elena-volkov", "role": "attendee" },
+    { "slug": "tom-bradley", "role": "attendee" },
+    { "slug": "aisha-khan", "role": "attendee" },
+    { "slug": "david-kim", "role": "attendee" },
+    { "slug": "nina-alvarez", "role": "attendee" },
+    { "slug": "chloe-dubois", "role": "attendee" },
+    { "slug": "yuki-tanaka", "role": "attendee" }
+  ],
+  "_comment": "extra_participants exist as attendees without accounts — an all-hands is exactly where that happens, and it takes this meeting past twenty for the avatar-overflow case (T05-F).",
+  "extra_participants": [
+    "Oliver Bennett", "Fatima Al-Rashid", "Diego Moreau", "Hannah Schulz",
+    "Kwame Asante", "Sofia Ricci", "Liam O'Donnell", "Mei Lin",
+    "Adebayo Adeyemi", "Clara Nowak", "Ravi Subramanian", "Zoe Fitzgerald"
+  ],
+  "transcript": [
+    ["Raj Mehta", "Afternoon everyone. Thanks for making the time — I know it's late in the day for the European folks."],
+    ["Raj Mehta", "I want to do this differently from last quarter. Less slides, more actual detail, and I'll take questions properly at the end rather than pretending we're out of time."],
+    ["Raj Mehta", "So. Q2. The headline is that we grew, and that the growth was less even than the number suggests."],
+    ["Raj Mehta", "Revenue was up twenty-two percent quarter on quarter. That's ahead of the plan we set in March."],
+    ["Raj Mehta", "But almost all of it came from expansion in existing accounts, not new logos."],
+    ["Raj Mehta", "New business was roughly flat. If you're on the sales team, you already knew that."],
+    ["Raj Mehta", "I don't want to spin that as a good thing. Expansion is healthy — it means the product works for people who use it — but flat new business is a real signal."],
+    ["Raj Mehta", "Sarah, do you want to take the product side of that?"],
+    ["Sarah Chen", "Sure. I think the honest read is that our product is easy to expand and hard to start."],
+    ["Sarah Chen", "Once a team is using it, other teams see the output and adopt. That's why expansion works."],
+    ["Sarah Chen", "But the first-run experience is genuinely poor, particularly on mobile, and that shows up as flat new business."],
+    ["Sarah Chen", "We lose about forty percent of mobile signups partway through. That's not a subtle number."],
+    ["Raj Mehta", "And that's why mobile onboarding is a Q3 priority rather than a nice-to-have."],
+    ["Sarah Chen", "Correct. It's the single change with the clearest line to new business."],
+    ["Raj Mehta", "Let me go through the other numbers before we get into Q3."],
+    ["Raj Mehta", "Net revenue retention was a hundred and eighteen percent. That's genuinely strong and it's the number I'd point an investor at."],
+    ["Raj Mehta", "Gross churn was four point one percent, which is up slightly from three point six."],
+    ["Raj Mehta", "The increase is two accounts, both of which were acquired and consolidated onto a competitor's contract. That's not a product failure but it does count against us."],
+    ["Raj Mehta", "Headcount is fifty-four, up from forty-nine. Four of those five were engineering."],
+    ["Raj Mehta", "Support ticket volume per customer is down eleven percent, which I want to call out because it's the result of deliberate work by Yuki's team."],
+    ["Raj Mehta", "That's the kind of number that doesn't get celebrated because nothing visible happened."],
+    ["Raj Mehta", "Right. Q3 priorities. There are three, and I want to be clear that there are only three."],
+    ["Raj Mehta", "One: mobile onboarding. Sarah covered why."],
+    ["Raj Mehta", "Two: usage-based pricing for the enterprise tier."],
+    ["Raj Mehta", "This one's going to generate questions so let me pre-empt the main one — no, this is not a price rise dressed up as a model change."],
+    ["Raj Mehta", "Some customers will pay more. Some will pay less. The ones who'll pay more are the ones currently using four times the median volume on the same seat price."],
+    ["Raj Mehta", "Existing contracts are grandfathered for two quarters and everyone gets sixty days' notice. Nobody finds out from an invoice."],
+    ["Raj Mehta", "Three: reliability. Specifically, putting configuration changes behind the same review process as code."],
+    ["Raj Mehta", "We had two incidents this quarter with the same root cause. That's not bad luck, that's a missing process, and we're funding the fix."],
+    ["Sarah Chen", "Can I add something to that?"],
+    ["Raj Mehta", "Please."],
+    ["Sarah Chen", "The thing I'd want people to take away is that reliability made the list at all."],
+    ["Sarah Chen", "It's competing with two revenue-facing projects and it won. That's a deliberate choice and it should tell you something about how we're prioritising."],
+    ["Raj Mehta", "Well said."],
+    ["Raj Mehta", "What's not on the list — and I want to be explicit because people will ask — is the analytics rebuild, the Salesforce integration, and the self-serve tier."],
+    ["Raj Mehta", "All three are reasonable. None of them are happening this quarter. If you're working on one of them, come and talk to me."],
+    ["Raj Mehta", "Okay, questions. I'll take them in the order they came in on the channel."],
+    ["Raj Mehta", "First one — 'Does flat new business mean we're pausing hiring in sales?'"],
+    ["Raj Mehta", "No. We're not pausing, but we're not accelerating either. Two open roles stay open, and I'm not adding a third until onboarding lands."],
+    ["Raj Mehta", "Second — 'How confident are we in the mobile onboarding date?'"],
+    ["Raj Mehta", "Sarah, that's yours."],
+    ["Sarah Chen", "Moderately. It's slipped twice, which I'm not going to hide."],
+    ["Sarah Chen", "The difference this time is that we've identified the specific technical risk — deep-link handling — and we're spiking it before committing rather than after."],
+    ["Sarah Chen", "So I'd say the date is more likely to hold than the last two, but I won't say it's certain."],
+    ["Raj Mehta", "That's the right level of confidence to express publicly."],
+    ["Raj Mehta", "Third question — 'Will usage-based pricing affect the team's commission structure?'"],
+    ["Raj Mehta", "Yes, and we haven't finished working out how. I'd rather say that than invent an answer."],
+    ["Raj Mehta", "What I'll commit to is that nobody's commission gets restructured without a conversation first, and that no change lands mid-quarter."],
+    ["Raj Mehta", "Fourth — and this is the last one on the list — 'Are we profitable?'"],
+    ["Raj Mehta", "Not yet. We're closer than we were. At current burn and current growth we've got runway into the second half of next year."],
+    ["Raj Mehta", "That's not a crisis and it's not comfortable either. It's why the three priorities are the three priorities."],
+    ["Raj Mehta", "Anything from the room?"],
+    ["Sarah Chen", "One thing I'd add — if you're unclear how your work connects to one of those three, that's a reasonable thing to ask your lead, and it's a fair question."],
+    ["Raj Mehta", "Agreed. And if the honest answer is that it doesn't connect, that's worth surfacing too."],
+    ["Raj Mehta", "Okay. Thanks everyone. Slides and the recording go out this evening."],
+    ["Raj Mehta", "And genuinely — thank you for the support-volume number. That one was hard-won."]
+  ],
+  "summary": {
+    "overview": "Q2 revenue grew 22% quarter on quarter and net revenue retention reached 118%, but essentially all growth came from expansion in existing accounts while new business was flat. Sarah attributed this to a product that is easy to expand and hard to start, with roughly forty percent of mobile signups abandoning partway through. Q3 has exactly three priorities — mobile onboarding, usage-based enterprise pricing, and putting configuration changes behind review — with the analytics rebuild, Salesforce integration and self-serve tier explicitly excluded. Raj confirmed the company is not yet profitable, with runway into the second half of next year.",
+    "gist": "Growth is all expansion; three Q3 priorities named, three initiatives explicitly cut.",
+    "keywords": ["net revenue retention", "new business", "usage-based pricing", "mobile onboarding", "reliability", "runway"],
+    "outline": [
+      { "title": "Q2 headline: growth was uneven", "at_segment": 2 },
+      { "title": "Why new business was flat", "at_segment": 8 },
+      { "title": "The rest of the numbers", "at_segment": 14 },
+      { "title": "Q3 priority one: mobile onboarding", "at_segment": 22 },
+      { "title": "Q3 priority two: usage-based pricing", "at_segment": 24 },
+      { "title": "Q3 priority three: reliability", "at_segment": 28 },
+      { "title": "What is not on the list", "at_segment": 35 },
+      { "title": "Questions", "at_segment": 38 }
+    ],
+    "notes": [
+      {
+        "chapter": "Q2 headline: growth was uneven",
+        "bullets": [
+          "Revenue up 22% quarter on quarter, ahead of the March plan.",
+          "Almost entirely expansion in existing accounts; new business roughly flat.",
+          "Net revenue retention 118%; gross churn 4.1%, up from 3.6% on two acquisition-driven losses."
+        ]
+      },
+      {
+        "chapter": "Why new business was flat",
+        "bullets": [
+          "The product is easy to expand and hard to start.",
+          "~40% of mobile signups abandon partway through — the clearest line to new business.",
+          "Support tickets per customer down 11% through deliberate work, called out as invisible progress."
+        ]
+      },
+      {
+        "chapter": "Q3 priority two: usage-based pricing",
+        "bullets": [
+          "Explicitly not a price rise dressed as a model change — some accounts pay less.",
+          "Targets accounts using ~4× median volume at the same seat price.",
+          "Two quarters of grandfathering and sixty days' notice; nobody learns of it from an invoice."
+        ]
+      },
+      {
+        "chapter": "What is not on the list",
+        "bullets": [
+          "Analytics rebuild, Salesforce integration and the self-serve tier are all deferred.",
+          "Named explicitly so people working on them can raise it rather than discover it."
+        ]
+      },
+      {
+        "chapter": "Questions",
+        "bullets": [
+          "Sales hiring neither paused nor accelerated; two roles stay open, no third until onboarding lands.",
+          "Onboarding confidence stated as moderate, with the deep-link risk being spiked before committing.",
+          "Commission impact of usage-based pricing unresolved; no restructure without a conversation and none mid-quarter.",
+          "Not yet profitable; runway into the second half of next year."
+        ]
+      }
+    ]
+  },
+  "action_items": [
+    { "text": "Circulate the all-hands slides and recording", "assignee": "Raj Mehta", "status": "completed", "due_in_days": -26, "at_segment": 55 },
+    { "text": "Work out the commission structure implications of usage-based pricing", "assignee": "Raj Mehta", "due_in_days": 5, "at_segment": 47 },
+    { "text": "Publish which Q3 priority each team's work maps to", "assignee": "Sarah Chen", "due_in_days": -14, "at_segment": 53 }
+  ]
+}

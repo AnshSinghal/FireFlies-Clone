@@ -1,0 +1,126 @@
+{
+  "seed_key": "engineering-standup",
+  "title": "Weekly Engineering Standup",
+  "description": "Short sync across backend, frontend, QA and support.",
+  "day_offset": -1,
+  "time": "09:15",
+  "host": "marcus-patel",
+  "channel": null,
+  "tags": ["engineering"],
+  "media": null,
+  "language": "en",
+  "participants": [
+    { "slug": "marcus-patel", "role": "host" },
+    { "slug": "james-okafor", "role": "attendee" },
+    { "slug": "david-kim", "role": "attendee" },
+    { "slug": "nina-alvarez", "role": "attendee" },
+    { "slug": "yuki-tanaka", "role": "attendee" },
+    { "slug": "priya-raman", "role": "invited", "attended": false },
+    { "slug": "aisha-khan", "role": "invited", "attended": false }
+  ],
+  "transcript": [
+    ["Marcus Patel", "Morning. Let's keep this to fifteen minutes. James, start us off."],
+    ["James Okafor", "Morning. Yesterday was all incident follow-up — writing the postmortem, mostly."],
+    ["James Okafor", "Today I'm finishing that and then I'm back on the mobile auth flow from Monday."],
+    ["Marcus Patel", "Good. That's the plan Sarah and I agreed yesterday."],
+    ["James Okafor", "No blockers."],
+    ["Marcus Patel", "David?"],
+    ["David Kim", "I shipped the transcript virtualisation change on Friday. It's been in production over the weekend with no errors."],
+    ["David Kim", "Scroll performance on the long meetings is dramatically better. We were rendering twelve hundred nodes, now it's about forty."],
+    ["Nina Alvarez", "I can confirm that. I was testing on the design review recording and it used to lock up my laptop."],
+    ["David Kim", "Yeah, that one was the worst case."],
+    ["Marcus Patel", "Nice. Anything left on it?"],
+    ["David Kim", "One thing — the jump-to-current button occasionally flickers when you scroll fast. It's cosmetic but it looks broken."],
+    ["David Kim", "I know what's causing it. The programmatic scroll is triggering the user-scrolled handler."],
+    ["Marcus Patel", "Is that a quick fix?"],
+    ["David Kim", "Half a day. I'll pick it up today."],
+    ["Marcus Patel", "Do it. Cosmetic bugs in the main view cost us more than they look like they should."],
+    ["David Kim", "Agreed. No blockers."],
+    ["Marcus Patel", "Nina."],
+    ["Nina Alvarez", "Two things. First, I've finished the regression pass on the export feature and there's one real bug."],
+    ["Nina Alvarez", "PDF export breaks if the meeting title contains a forward slash. It's trying to use the title as a filename."],
+    ["Marcus Patel", "Ouch. Is that in production?"],
+    ["Nina Alvarez", "It is. It's been there since the feature shipped, I think — nobody had a slash in a title until this week."],
+    ["James Okafor", "That's a filename sanitisation thing. I can fix that in twenty minutes."],
+    ["Nina Alvarez", "It's a bit worse than it looks — it's not just slashes. Dot-dot works too."],
+    ["Marcus Patel", "That's a path traversal, not a cosmetic bug."],
+    ["Nina Alvarez", "That's why I flagged it as the first thing."],
+    ["Marcus Patel", "Right. James, drop the postmortem and do that first."],
+    ["James Okafor", "On it."],
+    ["Marcus Patel", "Nina, what was the second thing?"],
+    ["Nina Alvarez", "Much smaller. The date filter on the meetings list is off by one at the end of the range."],
+    ["Nina Alvarez", "If you filter to a range ending today, meetings from today don't appear."],
+    ["David Kim", "That's the classic inclusive-end bug. The query is using less-than rather than less-than-or-equal on the date."],
+    ["Nina Alvarez", "That's what it looks like from the outside."],
+    ["Marcus Patel", "Is anyone actually hitting that?"],
+    ["Yuki Tanaka", "Yes — two tickets last week. Both users assumed the filter was broken and gave up."],
+    ["Marcus Patel", "Then it's worth fixing. David, can you take it?"],
+    ["David Kim", "Sure, after the flicker fix."],
+    ["Marcus Patel", "Yuki, you're up."],
+    ["Yuki Tanaka", "Ticket volume is down about fifteen percent week on week, which is mostly the incident traffic clearing."],
+    ["Yuki Tanaka", "The thing I want to raise is that we're getting repeat questions about where recordings are stored."],
+    ["Yuki Tanaka", "Six tickets in two weeks, all essentially the same question. There's nothing in the docs that answers it clearly."],
+    ["Marcus Patel", "That's a documentation gap, not a support gap."],
+    ["Yuki Tanaka", "That's my read too. I can draft something if someone will check it for accuracy."],
+    ["Marcus Patel", "James, can you review it when Yuki has a draft?"],
+    ["James Okafor", "Yep, happy to."],
+    ["Yuki Tanaka", "I'll have something by Thursday."],
+    ["Marcus Patel", "Good. Anything else from anyone?"],
+    ["David Kim", "Quick one — are we still doing the Friday demo? It's been cancelled twice."],
+    ["Marcus Patel", "Yes, and that's on me. Let's actually do it this week."],
+    ["Nina Alvarez", "I'd like to show the export regression suite if there's time."],
+    ["Marcus Patel", "There will be. Right — that's us. Thanks everyone."]
+  ],
+  "summary": {
+    "overview": "Transcript virtualisation shipped Friday and is stable in production, cutting rendered nodes from roughly twelve hundred to forty. Nina found a path-traversal bug in PDF export where the meeting title is used unsanitised as a filename, which was escalated to top priority ahead of the incident postmortem. A separate off-by-one in the meetings date filter excludes same-day meetings from an inclusive range and has generated two support tickets. Yuki raised a documentation gap around recording storage that has produced six near-identical tickets in two weeks.",
+    "gist": "Virtualisation shipped clean; export filename bug is a path traversal and jumps the queue.",
+    "keywords": ["virtualisation", "path traversal", "PDF export", "date filter", "postmortem", "documentation gap"],
+    "outline": [
+      { "title": "James — incident postmortem", "at_segment": 1 },
+      { "title": "David — transcript virtualisation shipped", "at_segment": 6 },
+      { "title": "Nina — export filename vulnerability", "at_segment": 18 },
+      { "title": "Nina — date filter off-by-one", "at_segment": 29 },
+      { "title": "Yuki — support volume and docs gap", "at_segment": 38 },
+      { "title": "Friday demo", "at_segment": 48 }
+    ],
+    "notes": [
+      {
+        "chapter": "David — transcript virtualisation shipped",
+        "bullets": [
+          "Live since Friday, no errors over the weekend.",
+          "Rendered DOM nodes down from ~1,200 to ~40 on long meetings.",
+          "Remaining issue: jump-to-current flickers because programmatic scroll triggers the user-scroll handler."
+        ]
+      },
+      {
+        "chapter": "Nina — export filename vulnerability",
+        "bullets": [
+          "PDF export uses the meeting title as a filename without sanitisation.",
+          "Forward slashes break it; `..` sequences make it a path traversal rather than a cosmetic bug.",
+          "Present in production since the feature shipped; reprioritised above the postmortem."
+        ]
+      },
+      {
+        "chapter": "Nina — date filter off-by-one",
+        "bullets": [
+          "A range ending today excludes meetings from today — inclusive-end handled as `<` rather than `<=`.",
+          "Two support tickets; both users concluded the filter was broken."
+        ]
+      },
+      {
+        "chapter": "Yuki — support volume and docs gap",
+        "bullets": [
+          "Ticket volume down ~15% week on week as incident traffic clears.",
+          "Six tickets in two weeks asking where recordings are stored — nothing in the docs answers it."
+        ]
+      }
+    ]
+  },
+  "action_items": [
+    { "text": "Fix filename sanitisation in PDF export — path traversal via meeting title", "assignee": "James Okafor", "due_in_days": 0, "at_segment": 26 },
+    { "text": "Fix the jump-to-current flicker caused by programmatic scroll", "assignee": "David Kim", "due_in_days": 1, "at_segment": 14 },
+    { "text": "Fix the inclusive-end off-by-one in the meetings date filter", "assignee": "David Kim", "due_in_days": 3, "at_segment": 35 },
+    { "text": "Draft documentation on where recordings are stored", "assignee": "Yuki Tanaka", "due_in_days": 2, "at_segment": 45 },
+    { "text": "Review Yuki's storage documentation for technical accuracy", "assignee": "James Okafor", "due_in_days": 4, "at_segment": 43 }
+  ]
+}

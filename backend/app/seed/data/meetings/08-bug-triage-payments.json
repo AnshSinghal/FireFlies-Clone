@@ -1,0 +1,141 @@
+{
+  "seed_key": "bug-triage-payments",
+  "title": "Bug Triage — Payments Incident",
+  "description": "Duplicate charges on renewal. Immediate mitigation and follow-up.",
+  "day_offset": -75,
+  "time": "08:45",
+  "host": "marcus-patel",
+  "channel": null,
+  "tags": ["engineering", "urgent"],
+  "media": null,
+  "language": "en",
+  "participants": [
+    { "slug": "marcus-patel", "role": "host" },
+    { "slug": "james-okafor", "role": "attendee" },
+    { "slug": "yuki-tanaka", "role": "attendee" },
+    { "slug": "elena-volkov", "role": "attendee" }
+  ],
+  "transcript": [
+    ["Marcus Patel", "Right, everyone's here. Yuki, you raised it — go."],
+    ["Yuki Tanaka", "We've got customers being charged twice on renewal. Four confirmed so far this morning."],
+    ["Marcus Patel", "Since when?"],
+    ["Yuki Tanaka", "First ticket came in at seven forty. But the charges are dated yesterday evening, so it's been happening for at least twelve hours."],
+    ["Elena Volkov", "Which accounts?"],
+    ["Yuki Tanaka", "Two mid-market, two small. No enterprise yet, but that might just be timing — enterprise renewals cluster at month end."],
+    ["Marcus Patel", "So this could get much worse in about a week."],
+    ["Yuki Tanaka", "That's my concern, yes."],
+    ["Marcus Patel", "James, do we know what's happening?"],
+    ["James Okafor", "I've got a theory but I want to be careful because I've only had it for ten minutes."],
+    ["Marcus Patel", "Theories are fine as long as we label them."],
+    ["James Okafor", "The renewal job retries on failure. If the payment provider times out, we retry."],
+    ["James Okafor", "The problem is that a timeout doesn't mean the charge failed. It means we didn't hear back."],
+    ["Elena Volkov", "So we charge, don't hear, and charge again."],
+    ["James Okafor", "That's the theory."],
+    ["Marcus Patel", "Is there an idempotency key on the request?"],
+    ["James Okafor", "There is, but I think it's being regenerated on retry. Which makes it useless."],
+    ["Marcus Patel", "That would do it."],
+    ["James Okafor", "I want to confirm before we act on it. Give me fifteen minutes with the logs."],
+    ["Marcus Patel", "Take it. Meanwhile — Yuki, how are we handling the affected customers?"],
+    ["Yuki Tanaka", "I've refunded the duplicates manually. It's four accounts, it's manageable."],
+    ["Elena Volkov", "Have you told them, or are you waiting?"],
+    ["Yuki Tanaka", "I've replied to the ones who wrote in. I haven't proactively contacted anyone who hasn't noticed."],
+    ["Elena Volkov", "I'd contact them. Finding a duplicate charge yourself after we knew is much worse than hearing from us first."],
+    ["Yuki Tanaka", "Agreed, I just wanted the call."],
+    ["Elena Volkov", "You've got it. I'll draft the message so it's consistent."],
+    ["Marcus Patel", "Good. While James is digging — do we stop the renewal job?"],
+    ["Elena Volkov", "What's the cost of stopping it?"],
+    ["Marcus Patel", "Renewals don't process. Nobody loses access immediately, there's a grace period, so the blast radius of stopping is small."],
+    ["Elena Volkov", "Then stop it. A delayed renewal is an email; a double charge is a chargeback."],
+    ["Marcus Patel", "That's a good way to frame it. I'll stop it now."],
+    ["Yuki Tanaka", "How long can it stay stopped?"],
+    ["Marcus Patel", "A few days without anyone noticing. A week and we'd have a revenue recognition problem."],
+    ["James Okafor", "Back. It's confirmed, and it's slightly worse than I said."],
+    ["Marcus Patel", "Go on."],
+    ["James Okafor", "The idempotency key is generated inside the retry loop, so every attempt gets a fresh one. That part I had right."],
+    ["James Okafor", "What I missed is that the retry is also triggered by a 5xx from our own queue, not just from the provider."],
+    ["James Okafor", "So we can retry a charge that definitely succeeded, because our own infrastructure hiccupped after the fact."],
+    ["Marcus Patel", "How many retries?"],
+    ["James Okafor", "Three."],
+    ["Yuki Tanaka", "So a customer could in principle be charged four times."],
+    ["James Okafor", "In principle, yes. In practice I've only seen doubles."],
+    ["Elena Volkov", "I'd like to check that rather than assume it."],
+    ["James Okafor", "That's fair. I can query for any account with more than two charges in a twenty-four hour window."],
+    ["Marcus Patel", "Do that first, actually. Before the fix. If there's a triple out there I want to know now."],
+    ["James Okafor", "Understood."],
+    ["Marcus Patel", "What's the fix itself?"],
+    ["James Okafor", "Move the key generation outside the loop, so all attempts share one key. That's a two-line change."],
+    ["Marcus Patel", "And the provider honours it?"],
+    ["James Okafor", "They do. Same key within twenty-four hours returns the original charge rather than making a new one."],
+    ["Marcus Patel", "Then that's the fix. Two lines, but I want it reviewed properly given where we are."],
+    ["James Okafor", "I'd want that too."],
+    ["Elena Volkov", "Is there a wider version of this problem? Other jobs that retry against external services?"],
+    ["James Okafor", "Almost certainly. The renewal job is the one with money attached, which is why we noticed."],
+    ["Marcus Patel", "That's an audit, not a fix. Let's do the fix today and the audit properly afterwards."],
+    ["Elena Volkov", "As long as the audit actually happens."],
+    ["Marcus Patel", "I'll raise the ticket now so it exists."],
+    ["Yuki Tanaka", "What do I tell customers about why it happened?"],
+    ["Elena Volkov", "Keep it short and true. A retry in our billing system charged some customers twice, we've refunded it, we've stopped it recurring."],
+    ["Yuki Tanaka", "No technical detail?"],
+    ["Elena Volkov", "Not unless they ask. If they ask, tell them exactly what James just told us."],
+    ["Marcus Patel", "Right. Ordering — James checks for triples, then ships the two-line fix with review. Yuki and Elena handle communications. I'll restart the job once the fix is deployed."],
+    ["Marcus Patel", "How long until we know about triples?"],
+    ["James Okafor", "Twenty minutes for the query."],
+    ["Marcus Patel", "Then let's reconvene at half nine. Thanks everyone, this was quick and useful."]
+  ],
+  "summary": {
+    "overview": "Four customers were charged twice on renewal, with charges dating back at least twelve hours before the first ticket. James traced it to an idempotency key regenerated inside the retry loop, made worse by retries also firing on 5xx responses from our own queue — meaning a charge that definitely succeeded could be repeated up to three times. The renewal job was stopped immediately on the reasoning that a delayed renewal is an email while a double charge is a chargeback. The fix is a two-line change moving key generation outside the loop, gated on first confirming no account was charged more than twice.",
+    "gist": "Duplicate renewal charges from a regenerated idempotency key; job stopped, two-line fix pending a triple-charge check.",
+    "keywords": ["idempotency key", "duplicate charge", "retry loop", "renewal job", "chargeback", "audit"],
+    "outline": [
+      { "title": "Scope of the problem", "at_segment": 1 },
+      { "title": "Initial theory", "at_segment": 8 },
+      { "title": "Customer communications", "at_segment": 19 },
+      { "title": "Stopping the renewal job", "at_segment": 26 },
+      { "title": "Confirmed root cause", "at_segment": 33 },
+      { "title": "The fix and the wider audit", "at_segment": 47 },
+      { "title": "Ordering and next check-in", "at_segment": 63 }
+    ],
+    "notes": [
+      {
+        "chapter": "Scope of the problem",
+        "bullets": [
+          "Four confirmed duplicate charges; two mid-market, two small.",
+          "Charges predate the first ticket by at least twelve hours.",
+          "No enterprise accounts yet — but enterprise renewals cluster at month end, roughly a week away."
+        ]
+      },
+      {
+        "chapter": "Confirmed root cause",
+        "bullets": [
+          "The idempotency key is generated inside the retry loop, so every attempt gets a fresh key.",
+          "Retries also fire on 5xx from our own queue, so a charge that succeeded can still be repeated.",
+          "Three retries means a customer could in principle be charged four times."
+        ]
+      },
+      {
+        "chapter": "Stopping the renewal job",
+        "bullets": [
+          "Stopped immediately — a grace period means nobody loses access.",
+          "Framing that decided it: a delayed renewal is an email, a double charge is a chargeback.",
+          "Safe for a few days; a week creates a revenue recognition problem."
+        ]
+      },
+      {
+        "chapter": "The fix and the wider audit",
+        "bullets": [
+          "Two-line change moving key generation outside the retry loop; the provider honours a repeated key for 24 hours.",
+          "Reviewed rather than hot-fixed, given the context.",
+          "Other jobs retrying against external services likely share the flaw — raised as a separate audit so it is not lost."
+        ]
+      }
+    ]
+  },
+  "action_items": [
+    { "text": "Query for any account charged more than twice in a 24-hour window", "assignee": "James Okafor", "status": "completed", "due_in_days": -75, "at_segment": 44 },
+    { "text": "Move idempotency key generation outside the retry loop", "assignee": "James Okafor", "status": "completed", "due_in_days": -75, "at_segment": 48 },
+    { "text": "Proactively contact affected customers who have not written in", "assignee": "Elena Volkov", "status": "completed", "due_in_days": -75, "at_segment": 25 },
+    { "text": "Audit every job that retries against an external service for the same flaw", "assignee": "Marcus Patel", "due_in_days": -60, "at_segment": 57 },
+    { "text": "Restart the renewal job once the fix is deployed and verified", "assignee": "Marcus Patel", "status": "completed", "due_in_days": -74, "at_segment": 63 },
+    { "text": "Write a template for billing incident customer communications", "assignee": null, "due_in_days": -30, "at_segment": 60 }
+  ]
+}

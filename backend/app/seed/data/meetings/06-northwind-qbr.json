@@ -1,0 +1,167 @@
+{
+  "seed_key": "northwind-qbr",
+  "title": "Customer Success QBR — Northwind",
+  "description": "Quarterly business review. Adoption, the rate-limit incident, and renewal.",
+  "day_offset": -18,
+  "time": "11:00",
+  "host": "elena-volkov",
+  "channel": "customer-calls",
+  "tags": ["customer", "urgent"],
+  "media": null,
+  "language": "en",
+  "participants": [
+    { "slug": "elena-volkov", "role": "host" },
+    { "slug": "tom-bradley", "role": "attendee" },
+    { "slug": "peter-lindqvist", "role": "attendee", "external": true },
+    { "slug": "grace-oyelaran", "role": "attendee", "external": true },
+    { "slug": "aisha-khan", "role": "invited", "attended": false }
+  ],
+  "transcript": [
+    ["Elena Volkov", "Peter, Grace — thanks for joining. I know we're overdue for this one."],
+    ["Peter Lindqvist", "It's been a busy quarter on our side too. No complaints."],
+    ["Elena Volkov", "I've got Tom here as well since renewal comes up in this conversation."],
+    ["Tom Bradley", "Morning both."],
+    ["Grace Oyelaran", "Hi Tom."],
+    ["Elena Volkov", "I want to structure this as adoption first, then the incident, then renewal. But if the incident is front of mind we can start there."],
+    ["Peter Lindqvist", "Let's do adoption first. The incident matters but I don't want it to dominate."],
+    ["Elena Volkov", "Appreciated. So — you're at three hundred and twelve active users, up from two hundred and forty at the last review."],
+    ["Grace Oyelaran", "That growth is almost entirely the operations team. They went from a pilot to full rollout in about six weeks."],
+    ["Elena Volkov", "That's fast. What drove it?"],
+    ["Grace Oyelaran", "Honestly, one manager. She started sharing meeting summaries in the team channel and people asked how she was doing it."],
+    ["Tom Bradley", "That's the best kind of adoption. It's very hard to manufacture."],
+    ["Grace Oyelaran", "We've tried to manufacture it elsewhere and it doesn't work the same way."],
+    ["Elena Volkov", "Where hasn't it landed?"],
+    ["Peter Lindqvist", "Engineering, mostly. They're sceptical of anything that records them."],
+    ["Elena Volkov", "That's common. Is it a privacy concern or a signal-to-noise one?"],
+    ["Peter Lindqvist", "Both, but mostly signal-to-noise. Their standups are five minutes and the summary is longer than the meeting."],
+    ["Elena Volkov", "That's fair criticism, and it's a real product gap. Short meetings summarise badly."],
+    ["Peter Lindqvist", "It's not a dealbreaker. It just means engineering won't be a growth area for you here."],
+    ["Elena Volkov", "Understood. I'd rather know that than chase it."],
+    ["Elena Volkov", "On usage — you're averaging about eleven hundred meetings a month, which is well within your tier."],
+    ["Grace Oyelaran", "What happens if operations doubles again?"],
+    ["Elena Volkov", "You'd want a conversation before that, and Tom would need to be in it."],
+    ["Tom Bradley", "There's headroom in the current tier but not that much. Better to plan it than trip over it."],
+    ["Peter Lindqvist", "Noted."],
+    ["Elena Volkov", "Right. The incident. I want to go through what happened rather than just apologise."],
+    ["Peter Lindqvist", "Please, that's more useful."],
+    ["Elena Volkov", "On the Tuesday, a configuration change intended for trial accounts applied to all accounts. It reduced your API rate limit by ninety percent for forty minutes."],
+    ["Grace Oyelaran", "We noticed because our integration started failing. It took us about fifteen minutes to work out it wasn't our side."],
+    ["Elena Volkov", "That's the part I'm sorriest about. You spent fifteen minutes debugging our problem."],
+    ["Grace Oyelaran", "It happens. What I'd want is to hear about it from you rather than find it ourselves."],
+    ["Peter Lindqvist", "That's the actual complaint, if I'm honest. Not the outage — the notification."],
+    ["Elena Volkov", "That's a fair complaint and I don't have a good answer for it."],
+    ["Elena Volkov", "We don't currently have a way to proactively notify affected accounts during an incident. We found out you were affected because you told us."],
+    ["Peter Lindqvist", "Which is backwards."],
+    ["Elena Volkov", "It is backwards. I'll take that back internally as a specific ask rather than general feedback."],
+    ["Tom Bradley", "Would a status page have helped, or do you want direct contact?"],
+    ["Grace Oyelaran", "A status page helps but only if we think to look. An email to the technical contact would have saved the fifteen minutes."],
+    ["Elena Volkov", "That's clear enough to act on. Thank you."],
+    ["Peter Lindqvist", "What's the fix on your side so it doesn't recur?"],
+    ["Elena Volkov", "Config changes are moving behind review with a staged rollout. I can share the summary of the postmortem if that's useful."],
+    ["Peter Lindqvist", "It would be. Our security team will ask."],
+    ["Elena Volkov", "I'll send it this week."],
+    ["Elena Volkov", "Was there any commercial impact? I'd rather ask directly."],
+    ["Grace Oyelaran", "Not really. It was forty minutes in the middle of our afternoon and the queue caught up."],
+    ["Peter Lindqvist", "If it had been month-end close it would be a different conversation."],
+    ["Elena Volkov", "Understood."],
+    ["Tom Bradley", "Can I move us to renewal, or is there more on the incident?"],
+    ["Peter Lindqvist", "Go ahead."],
+    ["Tom Bradley", "You're up in four months. I'm not going to do a hard sell today — I mainly want to know what would make it an easy yes."],
+    ["Peter Lindqvist", "Incident communication, which we've covered. And a serious answer on SSO."],
+    ["Tom Bradley", "SSO with which provider?"],
+    ["Grace Oyelaran", "Okta. We're consolidating everything onto it by the end of the year."],
+    ["Tom Bradley", "That's supported on the enterprise tier."],
+    ["Peter Lindqvist", "We're on enterprise."],
+    ["Tom Bradley", "Then it's a configuration exercise, not a purchase. Elena, can we get that scheduled?"],
+    ["Elena Volkov", "Yes. It's about a two-hour session with someone from your identity team."],
+    ["Grace Oyelaran", "I can arrange that. Better before the end of the quarter."],
+    ["Elena Volkov", "I'll send some times."],
+    ["Peter Lindqvist", "The other thing — and this is smaller — is user management. Removing a leaver takes three clicks in three places."],
+    ["Elena Volkov", "That's a real gap. Bulk deprovisioning is on the roadmap but I won't pretend it's imminent."],
+    ["Peter Lindqvist", "SCIM would solve it, presumably."],
+    ["Elena Volkov", "It would, and it's the same project. I'll find out where it actually sits and come back with a date or an honest 'not this year'."],
+    ["Peter Lindqvist", "I'd take an honest 'not this year' over a vague yes."],
+    ["Elena Volkov", "Then that's what you'll get."],
+    ["Tom Bradley", "Anything else that would make renewal harder?"],
+    ["Grace Oyelaran", "Pricing, potentially. We've heard rumours of a model change."],
+    ["Tom Bradley", "There is one coming, and I'd rather you heard the shape of it from me than from a rumour."],
+    ["Tom Bradley", "Enterprise moves to usage-based. Existing contracts are grandfathered for two quarters and there's sixty days' notice before anything changes."],
+    ["Peter Lindqvist", "Would we be better or worse off?"],
+    ["Tom Bradley", "I don't have your numbers modelled yet. I'd rather come back with a real figure than guess on a call."],
+    ["Peter Lindqvist", "That's the right answer. When?"],
+    ["Tom Bradley", "Two weeks."],
+    ["Peter Lindqvist", "Fine."],
+    ["Elena Volkov", "Let me recap so nothing gets lost. I'm sending the postmortem summary this week, and times for the SSO session."],
+    ["Elena Volkov", "I'm taking the incident notification gap back internally as a specific ask, and finding out where SCIM actually sits."],
+    ["Tom Bradley", "And I'm modelling Northwind under usage-based pricing, back to you in two weeks."],
+    ["Grace Oyelaran", "I'll get our identity team to respond on SSO timing."],
+    ["Peter Lindqvist", "That's a useful session. Thanks both."],
+    ["Elena Volkov", "Thanks Peter, Grace."]
+  ],
+  "summary": {
+    "overview": "Northwind has grown to 312 active users from 240, driven almost entirely by organic adoption in the operations team; engineering has not adopted and likely will not, because short standups summarise poorly. The rate-limit incident was discussed frankly, and the substantive complaint was not the outage but the absence of proactive notification — Northwind discovered it themselves and spent fifteen minutes debugging someone else's problem. Renewal in four months hinges on incident communication and a concrete answer on Okta SSO, which is already available on their tier. SCIM for bulk deprovisioning is wanted but Elena committed to an honest date or an honest no.",
+    "gist": "Healthy adoption, renewal turns on incident comms and SSO; notification gap is the real complaint.",
+    "keywords": ["adoption", "incident notification", "Okta SSO", "SCIM", "renewal", "usage-based pricing"],
+    "outline": [
+      { "title": "Adoption and growth", "at_segment": 7 },
+      { "title": "Where it has not landed", "at_segment": 13 },
+      { "title": "Incident review", "at_segment": 25 },
+      { "title": "The notification gap", "at_segment": 30 },
+      { "title": "Renewal requirements", "at_segment": 48 },
+      { "title": "SSO and user management", "at_segment": 52 },
+      { "title": "Pricing change disclosure", "at_segment": 68 },
+      { "title": "Recap", "at_segment": 76 }
+    ],
+    "notes": [
+      {
+        "chapter": "Adoption and growth",
+        "bullets": [
+          "312 active users, up from 240 at the last review.",
+          "Growth is almost entirely operations, seeded by one manager sharing summaries in a team channel.",
+          "~1,100 meetings/month — within tier, but a further doubling needs a conversation first."
+        ]
+      },
+      {
+        "chapter": "Where it has not landed",
+        "bullets": [
+          "Engineering is sceptical: partly privacy, mostly signal-to-noise.",
+          "Five-minute standups produce summaries longer than the meeting — acknowledged as a real product gap.",
+          "Elena chose not to chase engineering rather than pretend it is winnable."
+        ]
+      },
+      {
+        "chapter": "The notification gap",
+        "bullets": [
+          "Northwind discovered the incident themselves and spent ~15 minutes debugging our problem.",
+          "There is currently no mechanism to notify affected accounts during an incident.",
+          "A status page helps only if you think to look; an email to the technical contact is what was wanted."
+        ]
+      },
+      {
+        "chapter": "SSO and user management",
+        "bullets": [
+          "Okta SSO is available on their existing tier — a configuration exercise, not a purchase.",
+          "Two-hour session needed with Northwind's identity team, ideally before quarter end.",
+          "Removing a leaver takes three clicks in three places; SCIM would solve it but has no committed date."
+        ]
+      },
+      {
+        "chapter": "Pricing change disclosure",
+        "bullets": [
+          "Usage-based enterprise pricing disclosed proactively rather than left to rumour.",
+          "Grandfathering for two quarters and sixty days' notice both stated explicitly.",
+          "Northwind's own position to be modelled and returned within two weeks."
+        ]
+      }
+    ]
+  },
+  "action_items": [
+    { "text": "Send Northwind the incident postmortem summary", "assignee": "Elena Volkov", "due_in_days": -11, "status": "completed", "at_segment": 42 },
+    { "text": "Send proposed times for the Okta SSO configuration session", "assignee": "Elena Volkov", "due_in_days": -12, "status": "completed", "at_segment": 60 },
+    { "text": "Raise proactive incident notification for affected accounts as a product ask", "assignee": "Elena Volkov", "due_in_days": -8, "at_segment": 35 },
+    { "text": "Find out where SCIM sits and return with a date or an honest 'not this year'", "assignee": "Elena Volkov", "due_in_days": 1, "at_segment": 65 },
+    { "text": "Model Northwind's position under usage-based pricing", "assignee": "Tom Bradley", "due_in_days": -4, "at_segment": 73 },
+    { "text": "Arrange Northwind identity team availability for SSO", "assignee": null, "due_in_days": 3, "at_segment": 59 },
+    { "text": "Review whether short meetings should summarise differently", "assignee": null, "at_segment": 17 }
+  ]
+}

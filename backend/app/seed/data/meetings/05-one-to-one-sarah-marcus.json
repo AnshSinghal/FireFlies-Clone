@@ -1,0 +1,140 @@
+{
+  "seed_key": "one-to-one-sarah-marcus",
+  "title": "1:1 — Sarah & Marcus",
+  "description": "Fortnightly one-to-one. Team capacity and the config review trade-off.",
+  "day_offset": -5,
+  "time": "16:00",
+  "host": "sarah-chen",
+  "channel": null,
+  "tags": ["engineering"],
+  "media": null,
+  "language": "en",
+  "participants": [
+    { "slug": "sarah-chen", "role": "host" },
+    { "slug": "marcus-patel", "role": "attendee" }
+  ],
+  "transcript": [
+    ["Sarah Chen", "Hey. How's your week been?"],
+    ["Marcus Patel", "Long. The incident ate most of it."],
+    ["Sarah Chen", "I saw. Are you okay? You were online very late on Tuesday."],
+    ["Marcus Patel", "I'm fine. It wasn't the incident that kept me up, it was writing the postmortem afterwards."],
+    ["Sarah Chen", "That's usually the harder part."],
+    ["Marcus Patel", "It is when you have to be honest about the cause."],
+    ["Sarah Chen", "Say more about that."],
+    ["Marcus Patel", "The cause was that we let anyone change production config without review. That's not a mistake someone made, that's a process we chose not to build."],
+    ["Marcus Patel", "It's uncomfortable to write down because it means the incident was predictable."],
+    ["Sarah Chen", "For what it's worth, I'd rather read that postmortem than one that blames a person."],
+    ["Marcus Patel", "That's why I wrote it that way. But I want to make sure the fix actually happens, otherwise the honesty is decorative."],
+    ["Sarah Chen", "That's fair pressure to put on me."],
+    ["Marcus Patel", "It's not aimed at you specifically."],
+    ["Sarah Chen", "No, but it lands with me, and it should. Let's talk about what it costs."],
+    ["Marcus Patel", "Two engineer-weeks. Realistically that's James, because he knows the deployment path best."],
+    ["Sarah Chen", "James is also the person unblocking mobile onboarding."],
+    ["Marcus Patel", "Which is the whole problem. He's the constraint on both."],
+    ["Sarah Chen", "Is that a bus-factor issue we should be fixing separately?"],
+    ["Marcus Patel", "Yes, honestly. There's a lot in his head that isn't written down."],
+    ["Sarah Chen", "Okay, park that — I want to come back to it. First: which one goes first?"],
+    ["Marcus Patel", "Onboarding, and I'll say why."],
+    ["Marcus Patel", "The config work protects us from a future incident. The onboarding work is already two weeks late and has been promised to the board twice."],
+    ["Sarah Chen", "That's a more political answer than I expected from you."],
+    ["Marcus Patel", "It's not political, it's about credibility. If we slip onboarding again nobody believes our next estimate, including the config estimate."],
+    ["Sarah Chen", "That's a good argument. I withdraw the accusation."],
+    ["Marcus Patel", "Accepted."],
+    ["Sarah Chen", "So James does onboarding first, then config. What's the exposure in the gap?"],
+    ["Marcus Patel", "Roughly three weeks where a bad config change can still take out production."],
+    ["Sarah Chen", "Can we reduce that without building the whole thing?"],
+    ["Marcus Patel", "Partly. I could put a two-person rule on the rate limit config specifically — just that one file — in about a day."],
+    ["Sarah Chen", "That covers the failure mode we actually hit."],
+    ["Marcus Patel", "It covers the one we hit twice, yes. It doesn't cover the general case."],
+    ["Sarah Chen", "I'll take a day of work that covers the thing that's actually happened twice."],
+    ["Marcus Patel", "Then I'll do that this week."],
+    ["Sarah Chen", "Good. Now — back to the bus factor."],
+    ["Marcus Patel", "I've been avoiding this conversation, if I'm honest."],
+    ["Sarah Chen", "Why?"],
+    ["Marcus Patel", "Because the answer is that we need to hire, and I know what the hiring conversation looks like right now."],
+    ["Sarah Chen", "It's not as closed as you think. What would you ask for?"],
+    ["Marcus Patel", "One backend engineer. Not senior necessarily — someone who can absorb the deployment knowledge and pair with James for a quarter."],
+    ["Sarah Chen", "That's a more modest ask than I expected."],
+    ["Marcus Patel", "A second senior wouldn't help. The problem isn't capability, it's that one person holds all the context."],
+    ["Sarah Chen", "Write that up. Half a page, and make the bus-factor argument explicitly — not 'we're busy', which is what every req says."],
+    ["Marcus Patel", "I can do that."],
+    ["Sarah Chen", "When?"],
+    ["Marcus Patel", "Before the end of next week."],
+    ["Sarah Chen", "Good. I'd rather take it to Raj with a specific risk attached than a general request for headcount."],
+    ["Marcus Patel", "That's fair."],
+    ["Sarah Chen", "Anything else on your mind?"],
+    ["Marcus Patel", "One thing, and it's a bit awkward."],
+    ["Sarah Chen", "Go on."],
+    ["Marcus Patel", "In the roadmap meeting you asked me for a one-pager by Friday, and then in the same meeting Priya got asked for a scope by Thursday and James got reassigned."],
+    ["Marcus Patel", "It felt like a lot of commitments made quickly without checking what was already in flight."],
+    ["Sarah Chen", "That's a completely fair criticism and I'd rather hear it now than not at all."],
+    ["Marcus Patel", "I wasn't sure whether to raise it."],
+    ["Sarah Chen", "Always raise it. What would you have preferred?"],
+    ["Marcus Patel", "Just — 'what does that displace?' before agreeing a date. Half the time the answer is 'nothing' and it costs ten seconds."],
+    ["Sarah Chen", "That's easy to do and I'll do it. Thank you."],
+    ["Marcus Patel", "Thanks for taking it well."],
+    ["Sarah Chen", "Was there anything from my side you wanted?"],
+    ["Marcus Patel", "Not really. I'd like to know earlier when board dates move, because that's usually what compresses everything."],
+    ["Sarah Chen", "That's reasonable. I'll forward the calendar invite rather than mentioning it in passing."],
+    ["Marcus Patel", "That would help a lot."],
+    ["Sarah Chen", "Okay. Same time in two weeks?"],
+    ["Marcus Patel", "Yep. Thanks Sarah."]
+  ],
+  "summary": {
+    "overview": "Marcus's postmortem attributes the rate-limit incident to an absent process rather than an individual error, and he pressed for the fix to be funded rather than acknowledged. He argued onboarding should still go first — not politically, but because a third slip would discredit every subsequent estimate including the config one — and proposed a one-day two-person rule on the rate-limit config to cover the interim. The underlying issue is that James is the single constraint on both workstreams, so Marcus will write a headcount request framed explicitly as bus-factor risk. Marcus also raised that commitments in the roadmap meeting were agreed without checking what they displaced.",
+    "gist": "Onboarding first, one-day stopgap on config, and a bus-factor headcount case to write up.",
+    "keywords": ["postmortem", "bus factor", "config review", "headcount", "prioritisation", "one-to-one"],
+    "outline": [
+      { "title": "The postmortem and its conclusion", "at_segment": 3 },
+      { "title": "Cost of the config fix", "at_segment": 14 },
+      { "title": "Sequencing: onboarding first", "at_segment": 20 },
+      { "title": "Interim mitigation", "at_segment": 27 },
+      { "title": "Bus factor and headcount", "at_segment": 34 },
+      { "title": "Feedback on how commitments were made", "at_segment": 49 }
+    ],
+    "notes": [
+      {
+        "chapter": "The postmortem and its conclusion",
+        "bullets": [
+          "Root cause written as a process gap, not human error — the incident was predictable.",
+          "Marcus wants the fix funded, otherwise the candour in the postmortem is decorative."
+        ]
+      },
+      {
+        "chapter": "Sequencing: onboarding first",
+        "bullets": [
+          "Config work prevents a future incident; onboarding is already two weeks late and promised to the board twice.",
+          "A third slip would discredit every later estimate, including the config one."
+        ]
+      },
+      {
+        "chapter": "Interim mitigation",
+        "bullets": [
+          "Roughly three weeks of exposure while onboarding takes priority.",
+          "One day of work adds a two-person rule to the rate-limit config specifically — covers the failure that has now happened twice, not the general case."
+        ]
+      },
+      {
+        "chapter": "Bus factor and headcount",
+        "bullets": [
+          "James is the sole constraint on both workstreams; much of the deployment knowledge is undocumented.",
+          "Ask is one mid-level backend engineer to pair and absorb context — not a second senior.",
+          "To be written up as a specific risk rather than a general capacity request."
+        ]
+      },
+      {
+        "chapter": "Feedback on how commitments were made",
+        "bullets": [
+          "Several dates were agreed in one meeting without checking what they displaced.",
+          "Agreed remedy: ask 'what does that displace?' before accepting a date.",
+          "Board date changes to be forwarded as calendar invites rather than mentioned in passing."
+        ]
+      }
+    ]
+  },
+  "action_items": [
+    { "text": "Add a two-person review rule to the rate-limit config file", "assignee": "Marcus Patel", "due_in_days": -1, "at_segment": 33 },
+    { "text": "Write the half-page headcount case framed as bus-factor risk", "assignee": "Marcus Patel", "due_in_days": 4, "at_segment": 43 },
+    { "text": "Forward board calendar invites rather than mentioning date changes in passing", "assignee": "Sarah Chen", "status": "completed", "at_segment": 64 }
+  ]
+}
