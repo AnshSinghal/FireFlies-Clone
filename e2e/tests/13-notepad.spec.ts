@@ -19,7 +19,7 @@ async function notepad(page: Page): Promise<void> {
 test.describe('notepad shell', () => {
   test.beforeEach(async ({ page }) => {
     await notepad(page)
-    await expect(page.getByTestId('transcript-segments')).toBeVisible()
+    await expect(page.getByTestId('transcript-list')).toBeVisible()
   })
 
   test('T18-A · every part of the workspace is present', async ({ page }) => {
@@ -119,7 +119,7 @@ test.describe('notepad shell', () => {
 
     await expect(page.getByTestId('summary-panel')).toContainText("Couldn't load the summary")
     // The transcript is unaffected.
-    await expect(page.getByTestId('transcript-segments')).toBeVisible()
+    await expect(page.getByTestId('transcript-list')).toBeVisible()
   })
 })
 

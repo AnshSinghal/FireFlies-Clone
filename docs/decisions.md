@@ -1484,6 +1484,89 @@ decoration into a source of false visual-regression diffs.
 
 ---
 
+## ADR-060 — The transcript is virtualised by SEGMENT, not by speaker turn
+
+**Context.** Segments group into turns, so a turn is the visual unit and the
+obvious thing to virtualise. It is the wrong one.
+
+**Decision.** Virtualise segments; grouping is a `startsTurn` FLAG computed once
+over the list. A turn can be a screen tall, and the thing that has to be
+scrolled to is the line currently playing — with turns as the unit,
+`scrollToIndex` lands on the top of a block that may not contain the playhead
+at all, and "follow the audio" becomes an estimate.
+
+**Consequence.** `markTurns` is a pure function with its own tests, the
+virtualiser sees a flat list, and the active index is exactly the index the
+binary search returns.
+
+---
+
+## ADR-061 — Auto-scroll suspends on INPUT, not on the scroll event
+
+**Context.** The transcript follows the playhead, and must stop following the
+moment the reader scrolls away — T-20.9 calls this out because a panel that
+yanks itself back is one of the most visible bugs a transcript view can have.
+
+The first version listened for `scroll` and ignored events inside an 800ms
+window after its own programmatic scroll. A scroll event cannot say who caused
+it, so a window is the only way to use one — and that window swallows a real
+user scroll that lands inside it. Which is precisely when a user scrolls: the
+panel has just moved, and they want it to stop.
+
+**Decision.** Suspend on `wheel`, `touchmove` and the scrolling keys. Nothing
+programmatic emits those, so there is no window and no ambiguity. The `scroll`
+listener remains, with its window, as the fallback for the one way to scroll
+that emits no input event of its own — dragging the scrollbar.
+
+**Consequence.** Tests must scroll the way a user does: `page.mouse.wheel`,
+not `element.scrollTo`. That is a better simulation anyway — the bug this
+found was invisible to a test that scrolled programmatically.
+
+---
+
+## ADR-062 — `SegmentRow` is memoised by hand; the list is not memoised at all
+
+**Context.** The playhead commits ten times a second and every commit re-renders
+the transcript. `useVirtualizer` returns fresh function identities by design, so
+the React Compiler refuses to memoise any component that calls it — and says so.
+
+**Decision.** Accept that for the list, which there is one of, and memoise
+`SegmentRow` by hand with an explicit comparator, of which there are hundreds.
+The comparator deliberately excludes the callbacks: they are `useCallback`-stable
+at the call site, and including them would silently turn the comparator into a
+no-op the first time one was rebuilt.
+
+**Consequence.** One `eslint-disable` with a written reason, and the empty-array
+fallbacks in the panel are memoised too — `data?.segments ?? []` is a new array
+every render, and a fresh identity there defeats everything downstream of it.
+
+---
+
+## ADR-063 — T20-E's 1,200-segment transcript is synthesised in the test
+
+**Context.** T-20 tests virtualisation against "the 55-min meeting (1,200
+segments)". T-05.2 specified 60–220 segments per meeting, and the seed honours
+that: the longest is 159. The plan disagrees with itself — 55 minutes at the
+word counts T-05 also specifies is roughly 270 segments, not 1,200.
+
+**Decision.** Keep the seed as T-05 specified it and supply the size in the
+test, by intercepting the transcript response with a generated 1,200-segment
+payload. The claim under test is about the RENDERER, and a fixture is a fine
+way to state it.
+
+Rewriting the seed was the alternative, and it would have rippled through the
+summaries (whose chapter timestamps must land on real segments), the derived
+durations, the talk-time shares and every test that asserts against them —
+changing closed, merged work to satisfy a number that contradicts the section
+that produced it.
+
+**Consequence.** T20-E and T20-N run against synthetic data and say so. The
+empty-transcript state (T20-O) is tested the same way, for the same reason: no
+seeded meeting has an empty transcript, and giving one an empty transcript
+would cost every other test that uses it.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

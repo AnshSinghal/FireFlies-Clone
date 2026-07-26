@@ -25,7 +25,7 @@ async function openPlayer(page: Page, meetingId = WITH_AUDIO): Promise<Locator> 
    * the one route rendered on demand, so its first request pays for warming
    * the server as well as for the data.
    */
-  await expect(page.getByTestId('transcript-segments')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByTestId('transcript-list')).toBeVisible({ timeout: 15_000 })
   return player
 }
 
@@ -36,7 +36,7 @@ async function openPlayer(page: Page, meetingId = WITH_AUDIO): Promise<Locator> 
  * nav item, and an unscoped attribute selector matches both.
  */
 function activeSegment(page: Page): Locator {
-  return page.getByTestId('transcript-segments').locator('[data-active="true"]')
+  return page.getByTestId('transcript-list').locator('[data-active="true"]')
 }
 
 /** The playhead in seconds. */
@@ -178,7 +178,7 @@ test.describe('player', () => {
   test('T19-H · ?t= opens at that position with the segment highlighted', async ({ page }) => {
     await page.goto(`/meeting/${WITH_AUDIO}?t=300`)
     await expect(page.getByTestId('player')).toBeVisible()
-    await expect(page.getByTestId('transcript-segments')).toBeVisible()
+    await expect(page.getByTestId('transcript-list')).toBeVisible()
 
     await expect.poll(() => position(page)).toBe(300)
     await expect(page.getByTestId('player-time')).toContainText('05:00')
