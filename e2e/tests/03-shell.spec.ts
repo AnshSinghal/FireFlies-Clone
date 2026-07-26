@@ -128,8 +128,10 @@ test.describe('URL as state', () => {
     const empty = page.getByTestId('notebook-empty')
     await expect(empty).toBeVisible()
     // Different copy from the no-data case — reusing one message for both is
-    // on the do-not-ship list.
-    await expect(empty).toContainText('No meetings match your search')
+    // on the do-not-ship list. T-16 sharpened this further: the search variant
+    // now echoes the query rather than describing the category.
+    await expect(empty).toHaveAttribute('data-variant', 'no-results')
+    await expect(empty).toContainText('zzzznotathing')
   })
 })
 
@@ -166,6 +168,10 @@ test('skeleton rows are the same height as real rows', async ({ page }) => {
   // The CARD, not the anchor inside it: the card is what occupies space in the
   // list, so it is what the skeleton has to match. `meeting-row-<id>` is the
   // link, which sits inside the card's border and is therefore 2px shorter.
+  // Explicitly awaited before measuring: under CI load the list element can
+  // be attached a moment before the first card is laid out, and `boundingBox()`
+  // returns null for an element with no box yet.
+  await expect(page.getByTestId('meeting-row').first()).toBeVisible({ timeout: 15_000 })
   const rowBox = await page.getByTestId('meeting-row').first().boundingBox()
 
   expect(skeletonBox).not.toBeNull()
