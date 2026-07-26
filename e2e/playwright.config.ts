@@ -43,9 +43,35 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
 
+  /*
+   * TWO PROJECTS, because there is ONE database.
+   *
+   * Until T-09 every test only read, so four workers sharing a seeded database
+   * was safe. Delete-and-undo broke that: while `T09-A` has a meeting deleted,
+   * `03-shell`'s "renders seeded meetings end to end" is asserting there are
+   * exactly eight — and which one wins depends on scheduling. It passed alone
+   * and failed in the suite, which is the signature of this class of bug.
+   *
+   * So tests that write are tagged `@mutates`, run in their own project, and
+   * that project `dependsOn` the read-only one — Playwright finishes every
+   * reader before the first writer starts. `fullyParallel: false` then keeps
+   * the writers from racing each other.
+   *
+   * The alternative, a database per worker, needs a backend process per worker
+   * too. That is the right answer for a suite ten times this size; here it
+   * would cost more startup time than the whole run.
+   */
   projects: [
     {
-      name: 'chromium-desktop',
+      name: 'read-only',
+      grepInvert: /@mutates/,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: 'mutations',
+      grep: /@mutates/,
+      dependencies: ['read-only'],
+      fullyParallel: false,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
   ],

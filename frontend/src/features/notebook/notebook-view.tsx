@@ -13,12 +13,13 @@
  * gets decided in T-12; this renders neither, deliberately.
  */
 
-import { AlertTriangle, Inbox } from 'lucide-react'
+import { AlertTriangle, Inbox, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 import { MeetingListSkeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api/client'
 import { useMeetings } from '@/lib/api/meetings'
+import { useDeleteWithUndo } from '@/lib/hooks/use-delete-with-undo'
 import { useNotebookParams } from '@/lib/hooks/use-query-params'
 import { formatDuration, formatRelativeDate, pluralize } from '@/lib/utils/format'
 
@@ -46,11 +47,15 @@ export function NotebookView() {
       {data && data.items.length > 0 && (
         <ul className="rounded-lg border border-subtle" data-testid="meeting-list">
           {data.items.map((meeting) => (
-            <li key={meeting.id}>
+            <li
+              key={meeting.id}
+              className="relative border-b border-subtle last:border-b-0"
+              data-testid="meeting-row"
+            >
               <Link
                 href={`/meeting/${meeting.id}`}
                 data-testid={`meeting-row-${meeting.id}`}
-                className="flex h-row items-center gap-4 border-b border-subtle px-4 transition-colors duration-fast last:border-b-0 hover:bg-surface-hover"
+                className="flex h-row items-center gap-4 px-4 pr-14 transition-colors duration-fast hover:bg-surface-hover"
               >
                 <div className="min-w-0 flex-1">
                   <p
@@ -102,11 +107,38 @@ export function NotebookView() {
                   )}
                 </span>
               </Link>
+
+              {/*
+                PROVISIONAL. T-12.11 replaces this with the row kebab
+                (`Open`, `Copy link`, `Rename`, … `Delete`). It exists now
+                because T-09's undo flow is the deliverable and a toast with no
+                way to trigger it is a toast that is never tested.
+
+                A sibling of the Link, not a child: a button inside an anchor is
+                invalid, and the click would navigate before it deleted.
+              */}
+              <DeleteButton id={meeting.id} title={meeting.title} />
             </li>
           ))}
         </ul>
       )}
     </div>
+  )
+}
+
+function DeleteButton({ id, title }: { id: number; title: string }) {
+  const deleteWithUndo = useDeleteWithUndo()
+
+  return (
+    <button
+      type="button"
+      onClick={() => void deleteWithUndo(id)}
+      data-testid={`meeting-delete-${id}`}
+      aria-label={`Delete ${title}`}
+      className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
+    >
+      <Trash2 size={16} strokeWidth={1.75} />
+    </button>
   )
 }
 

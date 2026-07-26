@@ -30,7 +30,7 @@ const THEMES = [
 export function AvatarMenu() {
   const { open, toggle, close, ref } = usePopover()
   const { data: user } = useCurrentUser()
-  const { toast } = useToast()
+  const toast = useToast()
   const { value: theme, setValue: setTheme } = useLocalStorage<ThemePreference>(THEME_KEY, 'system')
 
   return (
@@ -106,9 +106,8 @@ export function AvatarMenu() {
               close()
               // Explicitly a toast and not a redirect: there is no auth to sign
               // out of, and a fake login screen would misrepresent the build.
-              toast({
-                variant: 'info',
-                title: 'Authentication is out of scope for this build',
+              toast.info({
+                message: 'Authentication is out of scope for this build',
                 description: 'The app runs as the seeded demo user.',
               })
             }}
