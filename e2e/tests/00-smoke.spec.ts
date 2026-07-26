@@ -24,13 +24,15 @@ test('API documents itself', async ({ request }) => {
 })
 
 test('frontend renders through the token layer', async ({ page }) => {
+  // `/` redirects to the Notebook since T-06 (ADR — open decision #4), so this
+  // asserts on the destination rather than on the scaffold page it replaced.
   await page.goto('/')
+  await expect(page).toHaveURL(/\/notebook$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Meetings' })).toBeVisible()
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Fireflies' })).toBeVisible()
-
-  // The app background must resolve from --ff-surface-1. If the token layer is
-  // broken, this is the assertion that notices — a missing custom property
-  // renders as transparent, not as the wrong colour.
+  // The app background must resolve from a token. If the token layer is broken,
+  // this is the assertion that notices — a missing custom property renders as
+  // transparent, not as the wrong colour.
   const background = await page.evaluate(() =>
     getComputedStyle(document.body).getPropertyValue('background-color'),
   )
