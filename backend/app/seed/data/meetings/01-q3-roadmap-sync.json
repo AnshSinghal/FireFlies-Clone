@@ -1,0 +1,159 @@
+{
+  "seed_key": "q3-roadmap-sync",
+  "title": "Q3 Product Roadmap Sync",
+  "description": "Reviewing Q3 commitments ahead of the board update.",
+  "day_offset": 0,
+  "time": "10:00",
+  "host": "sarah-chen",
+  "channel": "leadership",
+  "tags": ["product", "engineering"],
+  "media": "sample-meeting.m4a",
+  "language": "en",
+  "participants": [
+    { "slug": "sarah-chen", "role": "host" },
+    { "slug": "marcus-patel", "role": "attendee" },
+    { "slug": "priya-raman", "role": "attendee" },
+    { "slug": "aisha-khan", "role": "attendee" },
+    { "slug": "chloe-dubois", "role": "attendee" },
+    { "slug": "raj-mehta", "role": "invited", "attended": false }
+  ],
+  "transcript": [
+    ["Sarah Chen", "Good morning everyone. Let's get started — I know Raj can't make it, so I'll send him a summary afterwards."],
+    ["Sarah Chen", "Agenda is short today. Q3 pricing, the API rate limit incident from last week, and then where we actually are on the mobile onboarding work."],
+    ["Marcus Patel", "Morning. Before we start — do we want to talk about the hiring req as well, or is that a separate conversation?"],
+    ["Sarah Chen", "Separate. Let's keep this one to the roadmap, otherwise we'll run over again like last time."],
+    ["Marcus Patel", "Fair enough."],
+    ["Sarah Chen", "Okay. Pricing. Aisha, you pulled the numbers — do you want to walk us through what you found?"],
+    ["Aisha Khan", "Sure. So I looked at the last two quarters of usage across the enterprise tier, and the short version is that our seat-based model is leaving money on the table."],
+    ["Aisha Khan", "The top decile of accounts are using roughly four times the API volume of the median account, but they're paying the same per seat."],
+    ["Chloe Dubois", "Do we know if that's a handful of outliers or a real distribution?"],
+    ["Aisha Khan", "It's a real distribution. It's not one whale skewing it. There are about thirty accounts in that band and they've all grown volume month over month since February."],
+    ["Marcus Patel", "That tracks with what we're seeing on the infrastructure side. The cost curve on those accounts is genuinely uncomfortable."],
+    ["Sarah Chen", "So the proposal is usage-based billing for enterprise. Chloe, what's the read from marketing?"],
+    ["Chloe Dubois", "Cautiously positive. The thing I'd want to avoid is a repeat of the 2024 migration where people found out about a pricing change from a billing email."],
+    ["Chloe Dubois", "If we do this, we need at minimum sixty days' notice and a calculator on the pricing page so people can model their own bill."],
+    ["Sarah Chen", "Agreed. That's non-negotiable."],
+    ["Priya Raman", "Is the calculator a design ask? Because if so I'd like to know now rather than in three weeks."],
+    ["Chloe Dubois", "It is, sorry. I should have flagged that earlier."],
+    ["Priya Raman", "It's fine, I'd just rather have it in the plan than sprung on us."],
+    ["Sarah Chen", "Noted. Priya, can you scope the calculator this week? Even a rough estimate."],
+    ["Priya Raman", "Yeah, I can have something by Thursday."],
+    ["Marcus Patel", "One thing I want to raise — what happens to the accounts that are currently underpaying relative to usage? Do they get an immediate increase?"],
+    ["Aisha Khan", "That's the part I don't have a good answer to yet."],
+    ["Sarah Chen", "My instinct is we grandfather existing contracts through to renewal. It's slower revenue but it avoids a churn spike."],
+    ["Chloe Dubois", "I'd back that. The optics of a mid-contract increase are bad enough that I think it costs us more than it earns."],
+    ["Marcus Patel", "How long is 'through to renewal' in practice? Some of those contracts are eighteen months."],
+    ["Aisha Khan", "Median remaining term is about seven months. There are four accounts past twelve."],
+    ["Sarah Chen", "Then let's cap it. Grandfathered for two quarters, and the four long-tail accounts we handle individually."],
+    ["Marcus Patel", "That's workable."],
+    ["Sarah Chen", "Okay, so — decision. Enterprise moves to usage-based billing, existing customers grandfathered for two quarters, sixty days' notice, calculator ships with the announcement."],
+    ["Sarah Chen", "Aisha, can you own the model? I need a revenue projection for the board deck."],
+    ["Aisha Khan", "Yep. When do you need it?"],
+    ["Sarah Chen", "Board's on the fourteenth, so I'd want it by the ninth to have time to argue with it."],
+    ["Aisha Khan", "That's fine."],
+    ["Sarah Chen", "Right. Let's move to the API incident. Marcus?"],
+    ["Marcus Patel", "So — last Tuesday, around eleven in the morning, we started rate limiting a chunk of legitimate traffic."],
+    ["Marcus Patel", "The root cause was a config change that dropped the per-account limit from ten thousand requests an hour to one thousand. It was meant to apply to trial accounts only."],
+    ["Sarah Chen", "How long was it live?"],
+    ["Marcus Patel", "Forty minutes. We caught it because two customers opened tickets within about ten minutes of each other."],
+    ["Chloe Dubois", "Which customers?"],
+    ["Marcus Patel", "Northwind and one of the mid-market accounts. Elena's already spoken to Northwind."],
+    ["Sarah Chen", "That's the second config-related incident this quarter."],
+    ["Marcus Patel", "It is, and I'm not going to defend it. The underlying problem is that config changes don't go through review the way code does."],
+    ["Marcus Patel", "Anyone with production access can change a limit and it takes effect immediately. There's no staging step and no approval."],
+    ["Sarah Chen", "What would it take to fix that properly?"],
+    ["Marcus Patel", "Two weeks of one engineer, roughly. Put the config in version control, require a pull request, and add a canary rollout so a bad change hits five percent of traffic first."],
+    ["Aisha Khan", "Would that have caught this one?"],
+    ["Marcus Patel", "The canary would have. Five percent of accounts hitting a rate limit is noise; a hundred percent is an incident."],
+    ["Sarah Chen", "Two weeks is a lot in a quarter where we're also doing a pricing migration."],
+    ["Marcus Patel", "I know. But we've now had two of these, and the next one might land during the pricing announcement, which is exactly when we can't afford it."],
+    ["Sarah Chen", "That's a fair argument."],
+    ["Priya Raman", "For what it's worth, this is the kind of thing that shows up in support volume for weeks afterwards even when the incident itself is short."],
+    ["Sarah Chen", "Okay. Marcus, put together a one-pager — scope, who does it, what slips. I'd rather make that trade-off explicitly than let it get squeezed out."],
+    ["Marcus Patel", "Will do. End of week?"],
+    ["Sarah Chen", "End of week is fine."],
+    ["Sarah Chen", "Last thing. Mobile onboarding. Priya, where are we actually?"],
+    ["Priya Raman", "Honestly? Behind. The design is done and I'm happy with it, but we've been blocked on the auth flow for about two weeks."],
+    ["Marcus Patel", "That's partly on us. James has been pulled onto the incident work."],
+    ["Priya Raman", "I'm not blaming anyone, I just don't want us to get to the end of the quarter and act surprised."],
+    ["Sarah Chen", "No, that's the right instinct. What's the realistic date?"],
+    ["Priya Raman", "If James is back on it next week, we could be in internal testing by the end of the month. If not, it slips to Q4."],
+    ["Sarah Chen", "Marcus?"],
+    ["Marcus Patel", "I can get James back on it Monday. The incident work is mostly writing things down at this point."],
+    ["Sarah Chen", "Then let's do that. Priya, can you and Marcus sync on Monday and give me a date I can put in the board deck?"],
+    ["Priya Raman", "Yes."],
+    ["Marcus Patel", "Yep."],
+    ["Chloe Dubois", "One question on onboarding — is the new flow going to change anything customer-facing that I need to write about?"],
+    ["Priya Raman", "The signup flow gets shorter. Four steps down to two. That's probably worth a blog post."],
+    ["Chloe Dubois", "Definitely worth a blog post. I'll put it in the content calendar."],
+    ["Sarah Chen", "Good. Let's wrap. Aisha's got the revenue model by the ninth, Marcus has the config one-pager by Friday, Priya's scoping the calculator by Thursday and syncing with Marcus Monday."],
+    ["Sarah Chen", "Anything I've missed?"],
+    ["Marcus Patel", "I don't think so."],
+    ["Priya Raman", "No, that's everything."],
+    ["Sarah Chen", "Great. Thanks everyone."]
+  ],
+  "summary": {
+    "overview": "The team confirmed the move to usage-based billing for the enterprise tier, with existing contracts grandfathered for two quarters and a sixty-day notice period. Marcus reported on the API rate-limit incident, which was caused by an unreviewed config change, and was asked to scope a two-week fix putting configuration behind pull-request review with canary rollout. Mobile onboarding is behind by roughly two weeks because James was pulled onto incident work; he returns to it Monday, with a firm date expected before the board meeting.",
+    "gist": "Pricing moves to usage-based; config review work scoped; mobile onboarding at risk but recoverable.",
+    "keywords": ["usage-based billing", "rate limit incident", "config review", "mobile onboarding", "grandfathering", "board deck"],
+    "outline": [
+      { "title": "Agenda and apologies", "at_segment": 0 },
+      { "title": "Q3 pricing: usage-based billing", "at_segment": 5 },
+      { "title": "Grandfathering existing contracts", "at_segment": 20 },
+      { "title": "API rate-limit incident review", "at_segment": 33 },
+      { "title": "Config change review process", "at_segment": 41 },
+      { "title": "Mobile onboarding status", "at_segment": 54 },
+      { "title": "Wrap-up and owners", "at_segment": 68 }
+    ],
+    "notes": [
+      {
+        "chapter": "Q3 pricing: usage-based billing",
+        "bullets": [
+          "Top decile of enterprise accounts use ~4× the API volume of the median but pay the same per seat.",
+          "About thirty accounts sit in that band, all growing month over month since February — a distribution, not an outlier.",
+          "Enterprise tier moves to usage-based billing.",
+          "Sixty days' notice and a self-serve pricing calculator are conditions of the change, not nice-to-haves."
+        ]
+      },
+      {
+        "chapter": "Grandfathering existing contracts",
+        "bullets": [
+          "Existing contracts grandfathered for two quarters to avoid a churn spike.",
+          "Median remaining term is seven months; four accounts run past twelve and will be handled individually."
+        ]
+      },
+      {
+        "chapter": "API rate-limit incident review",
+        "bullets": [
+          "A config change intended for trial accounts dropped the per-account limit from 10,000 to 1,000 requests/hour.",
+          "Live for forty minutes; detected via two customer tickets rather than monitoring.",
+          "Second config-related incident this quarter."
+        ]
+      },
+      {
+        "chapter": "Config change review process",
+        "bullets": [
+          "Config changes bypass review entirely — no staging, no approval, immediate effect.",
+          "Proposed fix: version-controlled config, pull-request review, canary rollout to 5% of traffic.",
+          "Estimated at two engineer-weeks; a canary would have caught this incident."
+        ]
+      },
+      {
+        "chapter": "Mobile onboarding status",
+        "bullets": [
+          "Design complete; blocked roughly two weeks on the auth flow.",
+          "James returns to the work Monday; internal testing by month end if unblocked, otherwise slips to Q4.",
+          "Signup shortens from four steps to two — worth a launch post."
+        ]
+      }
+    ]
+  },
+  "action_items": [
+    { "text": "Build the revenue projection model for the usage-based pricing change", "assignee": "Aisha Khan", "due_in_days": 6, "at_segment": 29 },
+    { "text": "Write a one-pager scoping the config review and canary rollout work", "assignee": "Marcus Patel", "due_in_days": 3, "at_segment": 51 },
+    { "text": "Scope the self-serve pricing calculator", "assignee": "Priya Raman", "due_in_days": 2, "at_segment": 18 },
+    { "text": "Sync on mobile onboarding and commit to a date for the board deck", "assignee": "Marcus Patel", "due_in_days": 4, "at_segment": 63 },
+    { "text": "Add the shortened signup flow to the content calendar", "assignee": "Chloe Dubois", "due_in_days": 10, "at_segment": 67 },
+    { "text": "Send Raj a written summary of the pricing decision", "assignee": "Sarah Chen", "status": "completed", "due_in_days": 1, "at_segment": 0 }
+  ]
+}

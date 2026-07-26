@@ -1,0 +1,129 @@
+{
+  "seed_key": "acme-discovery-call",
+  "title": "Acme Corp — Discovery Call",
+  "description": "First call with Acme's platform team. Qualifying for the enterprise tier.",
+  "day_offset": 0,
+  "time": "15:30",
+  "host": "tom-bradley",
+  "channel": "customer-calls",
+  "tags": ["sales", "customer"],
+  "media": null,
+  "language": "en",
+  "participants": [
+    { "slug": "tom-bradley", "role": "host" },
+    { "slug": "elena-volkov", "role": "attendee" },
+    { "slug": "dana-whitfield", "role": "attendee", "external": true }
+  ],
+  "transcript": [
+    ["Tom Bradley", "Dana, thanks for making the time. Can you hear me okay?"],
+    ["Dana Whitfield", "Loud and clear. Sorry, I'm dialling in from a hotel so if I drop out that's why."],
+    ["Tom Bradley", "No problem at all. I've got Elena with me — she leads customer success, so if this goes anywhere she's the person you'd actually be working with."],
+    ["Elena Volkov", "Hi Dana. Nice to meet you."],
+    ["Dana Whitfield", "Likewise."],
+    ["Tom Bradley", "So I don't want to spend the call talking at you. Maybe start with what prompted you to reach out?"],
+    ["Dana Whitfield", "Sure. We've got about a hundred and forty people in the platform org, and we run a lot of meetings — probably too many, honestly."],
+    ["Dana Whitfield", "The specific problem is that decisions get made in a call and then nobody can find them two weeks later. Someone takes notes, sometimes, and they end up in a doc nobody reads."],
+    ["Tom Bradley", "That's the exact pattern we hear most often. Is it all internal meetings, or customer-facing too?"],
+    ["Dana Whitfield", "Both, but internal is the painful one. Customer calls at least have a CRM entry."],
+    ["Tom Bradley", "Got it. And is anyone recording today?"],
+    ["Dana Whitfield", "Some teams record to Zoom cloud storage. Nobody watches them back. It's write-only."],
+    ["Elena Volkov", "That's very common. Recording solves the archival problem but not the retrieval problem."],
+    ["Dana Whitfield", "Right, exactly. I don't need a video. I need to be able to search for 'did we decide to deprecate the v1 API' and get an answer."],
+    ["Tom Bradley", "That's essentially what the product does. Can I ask about your stack — what are you running for calendar and conferencing?"],
+    ["Dana Whitfield", "Google Workspace, and Meet for the most part. A few teams use Zoom because of a legacy contract that expires in March."],
+    ["Tom Bradley", "Both are supported. The Meet integration is the more mature one, for what it's worth."],
+    ["Dana Whitfield", "Good, that's most of our volume."],
+    ["Elena Volkov", "Can I ask about compliance? A hundred and forty people in a platform org usually means someone in legal has opinions."],
+    ["Dana Whitfield", "Ha. Yes. That's actually my main worry."],
+    ["Dana Whitfield", "We're in a regulated segment for part of our business. Anything that records conversations has to go through a review, and that review has killed two tools already."],
+    ["Tom Bradley", "What killed them, specifically? Was it data residency, retention, or something else?"],
+    ["Dana Whitfield", "Residency mostly. One vendor couldn't tell us which region the audio was processed in, and that was the end of the conversation."],
+    ["Tom Bradley", "That's a fair thing to fail someone on."],
+    ["Dana Whitfield", "It was less that the answer was wrong and more that they didn't seem to know. That's what worried the reviewers."],
+    ["Elena Volkov", "I'd rather flag this now than three weeks in — region pinning is available, but it's an enterprise-tier feature and it does affect the price."],
+    ["Dana Whitfield", "That's fine. I'd rather pay for it than fail review again."],
+    ["Tom Bradley", "Then let's put the specifics in writing rather than me freelancing on a call. Elena, can you pull the data-handling doc together?"],
+    ["Elena Volkov", "Yep. Dana, would it help if that covered retention and deletion as well? Those tend to come up in the same review."],
+    ["Dana Whitfield", "It would, yes. Especially deletion. Our policy is ninety days for anything with customer data in it."],
+    ["Elena Volkov", "Ninety-day retention is configurable, so that's not a problem."],
+    ["Dana Whitfield", "Good."],
+    ["Tom Bradley", "Can I ask about timeline? Is there something driving this, or is it a 'when we get to it'?"],
+    ["Dana Whitfield", "There's a driver. We've got a reorg landing in Q4 and I'd like the tooling in place before people start moving teams."],
+    ["Dana Whitfield", "When someone changes team, all their context evaporates. That's the moment this hurts most."],
+    ["Tom Bradley", "So realistically you'd want to be live by — end of Q3?"],
+    ["Dana Whitfield", "Ideally, yes. Pilot in September, wider rollout in October."],
+    ["Tom Bradley", "That's achievable. The security review is usually the long pole, not the deployment."],
+    ["Dana Whitfield", "That matches my experience."],
+    ["Elena Volkov", "How many people would be in the pilot?"],
+    ["Dana Whitfield", "I'd start with one team. Fifteen, maybe twenty."],
+    ["Tom Bradley", "That's a good size. Big enough to be a real test, small enough that you can actually talk to everyone about how it went."],
+    ["Dana Whitfield", "That's the idea."],
+    ["Tom Bradley", "What about budget — is there a number in mind, or does that come after the review?"],
+    ["Dana Whitfield", "There's a number but I'd rather not anchor on it before I know what the enterprise tier actually includes."],
+    ["Tom Bradley", "That's reasonable. I'll send pricing alongside the data-handling doc so you can look at them together."],
+    ["Dana Whitfield", "Perfect."],
+    ["Elena Volkov", "One more thing worth raising — do you have a preference on whether the notetaker joins visibly, or records in the background?"],
+    ["Dana Whitfield", "Visibly. Strong preference. If people don't know they're being recorded that's its own compliance problem."],
+    ["Elena Volkov", "Good, that's the default. I only ask because some customers want the opposite and it's a difficult conversation."],
+    ["Dana Whitfield", "I can imagine."],
+    ["Tom Bradley", "Okay. So next steps from my side — Elena sends the data-handling and retention doc, I send enterprise pricing, and we get something in the diary for the week after next?"],
+    ["Dana Whitfield", "That works. I'll want to bring our security lead to the next one."],
+    ["Tom Bradley", "Please do. It's a much shorter process when they're in the room early."],
+    ["Dana Whitfield", "Agreed. Send me the docs and I'll get them in front of him beforehand."],
+    ["Elena Volkov", "I'll have those over by Wednesday."],
+    ["Dana Whitfield", "Great. Thanks both, this was useful."],
+    ["Tom Bradley", "Thanks Dana. Safe travels."]
+  ],
+  "summary": {
+    "overview": "Acme's platform organisation of roughly 140 people is losing decisions made in meetings — recordings exist but are effectively write-only. Dana's primary constraint is a compliance review that has already rejected two vendors, mainly on data residency, so region pinning and a ninety-day retention policy are requirements rather than preferences. A reorg landing in Q4 is driving the timeline: pilot with one team of 15–20 in September, wider rollout in October. Next steps are a data-handling document, enterprise pricing, and a follow-up call with Acme's security lead present.",
+    "gist": "Qualified enterprise opportunity; compliance review is the critical path, not deployment.",
+    "keywords": ["data residency", "compliance review", "retention policy", "pilot rollout", "Google Meet", "enterprise pricing"],
+    "outline": [
+      { "title": "Introductions", "at_segment": 0 },
+      { "title": "The problem: decisions get lost", "at_segment": 5 },
+      { "title": "Current tooling and stack", "at_segment": 10 },
+      { "title": "Compliance and data residency", "at_segment": 18 },
+      { "title": "Retention and deletion policy", "at_segment": 27 },
+      { "title": "Timeline and pilot scope", "at_segment": 32 },
+      { "title": "Next steps", "at_segment": 51 }
+    ],
+    "notes": [
+      {
+        "chapter": "The problem: decisions get lost",
+        "bullets": [
+          "~140 people in the platform org; decisions made in calls are unfindable two weeks later.",
+          "Internal meetings are the painful case — customer calls at least land in the CRM.",
+          "Existing Zoom recordings are archival only; nobody watches them back."
+        ]
+      },
+      {
+        "chapter": "Compliance and data residency",
+        "bullets": [
+          "Two prior vendors were rejected in review, primarily on data residency.",
+          "One failed because they could not say which region audio was processed in — the uncertainty, not the answer, was disqualifying.",
+          "Region pinning is enterprise-tier and affects price; Dana accepted that trade readily."
+        ]
+      },
+      {
+        "chapter": "Retention and deletion policy",
+        "bullets": [
+          "Acme policy is ninety-day retention for anything containing customer data.",
+          "Configurable retention covers this; deletion behaviour must be documented explicitly."
+        ]
+      },
+      {
+        "chapter": "Timeline and pilot scope",
+        "bullets": [
+          "A Q4 reorg is the forcing function — team moves are when lost context hurts most.",
+          "Pilot one team of 15–20 in September, wider rollout October.",
+          "Security review is the long pole; deployment is not."
+        ]
+      }
+    ]
+  },
+  "action_items": [
+    { "text": "Send Acme the data-handling, residency and retention document", "assignee": "Elena Volkov", "due_in_days": 2, "at_segment": 27 },
+    { "text": "Send enterprise tier pricing including region pinning", "assignee": "Tom Bradley", "due_in_days": 2, "at_segment": 45 },
+    { "text": "Book a follow-up call with Acme's security lead present", "assignee": "Tom Bradley", "due_in_days": 9, "at_segment": 51 }
+  ]
+}
