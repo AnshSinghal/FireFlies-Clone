@@ -35,6 +35,7 @@ import { pluralize } from '@/lib/utils/format'
 import { RemovableChip } from '@/components/ui/chip'
 
 import { BulkBar } from './bulk-bar'
+import { DetailsDrawer } from './details-drawer'
 
 import { activeFilterChips, draftFromFilters, filtersFromDraft } from './filter-presets'
 import { FiltersPanel } from './filters-panel'
@@ -91,7 +92,7 @@ function removeChip(
 }
 
 export function NotebookView() {
-  const { filters, setFilter, setPage } = useNotebookParams()
+  const { filters, setFilter, setPage, setParams } = useNotebookParams()
   const { data, isPending, isFetching, isError, error, refetch } = useMeetings(filters)
   const { data: facets } = useMeetingFacets()
   const deleteWithUndo = useDeleteWithUndo()
@@ -114,6 +115,19 @@ export function NotebookView() {
   }, [])
 
   const chips = useMemo(() => activeFilterChips(filters), [filters])
+
+  /*
+   * The drawer's open state lives in the URL (T-15.12), so it is deep-linkable
+   * and survives a refresh. `showDetails(null)` closes it.
+   */
+  const detailsId = filters.details ?? null
+  const showDetails = useCallback(
+    (id: number | null) =>
+      // `replace`, not push: opening a drawer is not a place you want Back to
+      // return you to five times after browsing five meetings.
+      setParams({ details: id }, { history: 'replace' }),
+    [setParams],
+  )
 
   /*
    * The search field is LOCAL state, debounced into the URL.
@@ -305,6 +319,7 @@ export function NotebookView() {
           selection={selection}
           query={filters.q}
           onDelete={(id) => void deleteWithUndo(id)}
+          onShowDetails={showDetails}
         />
       )}
 
@@ -332,6 +347,23 @@ export function NotebookView() {
                 }),
             })
           }
+        />
+      )}
+
+      {detailsId !== null && (
+        <DetailsDrawer
+          meetingId={detailsId}
+          onClose={() => {
+            showDetails(null)
+            // Focus returns to the row that opened it (T-15.3) — otherwise a
+            // keyboard user is dropped at the top of the document.
+            document.querySelector<HTMLElement>(`[data-testid="meeting-row-${detailsId}"]`)?.focus()
+          }}
+          onNavigate={(direction) => {
+            const index = pageIds.indexOf(detailsId)
+            const next = pageIds[index + direction]
+            if (next !== undefined) showDetails(next)
+          }}
         />
       )}
 
@@ -367,9 +399,10 @@ interface GroupedListProps {
   selection: ReturnType<typeof useSelection<number>>
   query?: string
   onDelete: (id: number) => void
+  onShowDetails: (id: number) => void
 }
 
-function GroupedList({ groups, selection, query, onDelete }: GroupedListProps) {
+function GroupedList({ groups, selection, query, onDelete, onShowDetails }: GroupedListProps) {
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups])
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -445,6 +478,7 @@ function GroupedList({ groups, selection, query, onDelete }: GroupedListProps) {
                   anySelected={selection.count > 0}
                   query={query}
                   onDelete={onDelete}
+                  onShowDetails={onShowDetails}
                   tabIndex={meeting.id === activeId ? 0 : -1}
                   onFocus={() => setPreferredId(meeting.id)}
                 />

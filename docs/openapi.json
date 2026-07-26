@@ -18,6 +18,73 @@
         "title": "ActionItemCounts",
         "type": "object"
       },
+      "ActionItemOut": {
+        "description": "One action item. T-24 owns the full CRUD; this is what a preview needs.",
+        "properties": {
+          "assignee_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Name"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ActionItemStatus"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "status"
+        ],
+        "title": "ActionItemOut",
+        "type": "object"
+      },
+      "ActionItemStatus": {
+        "enum": [
+          "open",
+          "completed"
+        ],
+        "title": "ActionItemStatus",
+        "type": "string"
+      },
+      "ActionItemUpdate": {
+        "description": "The only field the drawer's checkbox changes.",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ActionItemStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ActionItemUpdate",
+        "type": "object"
+      },
       "BulkDeleteRequest": {
         "properties": {
           "ids": {
@@ -125,6 +192,30 @@
           "meeting_count"
         ],
         "title": "ChannelOut",
+        "type": "object"
+      },
+      "ChannelRef": {
+        "description": "Just enough to name the channel a meeting sits in.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "title": "ChannelRef",
         "type": "object"
       },
       "ErrorDetail": {
@@ -397,6 +488,16 @@
       "MeetingDetail": {
         "description": "The Notepad payload. Heavy, and only ever returned for a single meeting.\n\nTranscript segments are NOT here \u2014 they are paginated separately via\n`/meetings/{id}/transcript` (T-17.2), because a 55-minute meeting is ~1,200\nsegments and shipping them inline makes the first paint wait on all of them.",
         "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChannelRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -451,7 +552,7 @@
           },
           "participants": {
             "items": {
-              "$ref": "#/components/schemas/ParticipantRef"
+              "$ref": "#/components/schemas/ParticipantDetail"
             },
             "title": "Participants",
             "type": "array"
@@ -822,6 +923,68 @@
           "has_next"
         ],
         "title": "Page[MeetingListItem]",
+        "type": "object"
+      },
+      "ParticipantDetail": {
+        "description": "A participant, as the details drawer shows them (T-15.8, T-15.9).\n\nRicher than `ParticipantRef`, which exists to render an avatar in a group\nand deliberately carries nothing else \u2014 a Notebook page holds twenty rows\nand would otherwise ship attendance data for a hundred people nobody looks\nat.",
+        "properties": {
+          "attended": {
+            "title": "Attended",
+            "type": "boolean"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "color_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Index"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "talk_seconds": {
+            "title": "Talk Seconds",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "attended",
+          "talk_seconds"
+        ],
+        "title": "ParticipantDetail",
         "type": "object"
       },
       "ParticipantRef": {
@@ -1654,6 +1817,89 @@
         ]
       }
     },
+    "/api/v1/meetings/action-items/{item_id}": {
+      "patch": {
+        "description": "`completed_at` is derived from the status rather than accepted from the client, so the two cannot disagree.",
+        "operationId": "update_action_item_api_v1_meetings_action_items__item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionItemUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionItemOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Tick or untick an action item",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
     "/api/v1/meetings/bulk-delete": {
       "post": {
         "description": "Reports per-id failures rather than aborting the batch, so the client can say '2 of 3 deleted' instead of leaving the user guessing.",
@@ -2008,6 +2254,83 @@
         ]
       }
     },
+    "/api/v1/meetings/{meeting_id}/action-items": {
+      "get": {
+        "description": "Ordered as they were raised. T-24 owns the full CRUD; this backs the previews.",
+        "operationId": "list_action_items_api_v1_meetings__meeting_id__action_items_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ActionItemOut"
+                  },
+                  "title": "Response List Action Items Api V1 Meetings  Meeting Id  Action Items Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "List a meeting's action items",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
     "/api/v1/meetings/{meeting_id}/restore": {
       "post": {
         "description": "Undoes a soft delete. Backs the 6-second Undo affordance in the UI.",
@@ -2078,6 +2401,79 @@
         "summary": "Restore a deleted meeting",
         "tags": [
           "meetings"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/summary": {
+      "get": {
+        "description": "The stored summary. T-20 builds the full panel on this; the details drawer uses the overview alone.",
+        "operationId": "get_summary_api_v1_meetings__meeting_id__summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Get a meeting summary",
+        "tags": [
+          "summaries"
         ]
       }
     },

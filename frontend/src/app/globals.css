@@ -103,6 +103,11 @@
     animation: ff-modal-in var(--ff-dur-base) var(--ff-ease);
   }
 
+  /* The details drawer slides in from the right (T-15.2). */
+  .ff-drawer {
+    animation: ff-slide-in var(--ff-dur-slow) var(--ff-ease);
+  }
+
   /* The bulk bar slides up as it appears (T-14.4). */
   .ff-bulk-bar {
     animation: ff-slide-up var(--ff-dur-base) var(--ff-ease);
@@ -122,6 +127,15 @@
     );
     background-size: 200% 100%;
     animation: ff-shimmer 1.4s var(--ff-ease) infinite;
+  }
+}
+
+@keyframes ff-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }
 
@@ -201,7 +215,8 @@
    */
   .ff-toast-enter,
   .ff-modal-enter,
-  .ff-bulk-bar {
+  .ff-bulk-bar,
+  .ff-drawer {
     animation-name: ff-toast-fade;
   }
 

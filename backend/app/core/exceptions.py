@@ -49,6 +49,10 @@ class MeetingNotFoundError(NotFoundError):
     message = "Meeting not found."
 
 
+class ActionItemNotFoundError(NotFoundError):
+    code = "ACTION_ITEM_NOT_FOUND"
+
+
 class GoneError(AppException):
     """410, not 404.
 

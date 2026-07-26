@@ -20,6 +20,8 @@ from app.core.deps import CurrentUser, DbSession, Pagination
 from app.core.http import NotModified, weak_etag
 from app.schemas.common import Page
 from app.schemas.meeting import (
+    ActionItemOut,
+    ActionItemUpdate,
     BulkDeleteRequest,
     BulkDeleteResponse,
     BulkRestoreResponse,
@@ -221,3 +223,32 @@ def bulk_delete(db: DbSession, payload: BulkDeleteRequest) -> BulkDeleteResponse
 def bulk_restore(db: DbSession, payload: BulkDeleteRequest) -> BulkRestoreResponse:
     restored, failed = MeetingService(db).bulk_restore(payload.ids)
     return BulkRestoreResponse(restored=restored, failed=failed)
+
+
+@router.get(
+    "/{meeting_id}/action-items",
+    response_model=list[ActionItemOut],
+    responses=NOT_FOUND_OR_GONE,
+    summary="List a meeting's action items",
+    description="Ordered as they were raised. T-24 owns the full CRUD; this backs the previews.",
+)
+def list_action_items(db: DbSession, meeting_id: int) -> list[ActionItemOut]:
+    service = MeetingService(db)
+    # Through `get` first, so a deleted meeting answers 410 rather than an
+    # empty list that looks like "no action items".
+    service.get(meeting_id)
+    return service.action_items(meeting_id)
+
+
+@router.patch(
+    "/action-items/{item_id}",
+    response_model=ActionItemOut,
+    responses=NOT_FOUND_OR_GONE,
+    summary="Tick or untick an action item",
+    description=(
+        "`completed_at` is derived from the status rather than accepted from "
+        "the client, so the two cannot disagree."
+    ),
+)
+def update_action_item(db: DbSession, item_id: int, payload: ActionItemUpdate) -> ActionItemOut:
+    return MeetingService(db).set_action_item_status(item_id, payload.status)

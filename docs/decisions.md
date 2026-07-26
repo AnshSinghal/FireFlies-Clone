@@ -1116,6 +1116,50 @@ shows up there rather than only in a browser.
 
 ---
 
+## ADR-045 · The list row and the details drawer get different participant shapes
+
+**Date:** 2026-07-27 · **Task:** T-15.8/T-15.9 · **Status:** Accepted
+
+**Context.** The drawer needs each participant's email, whether they attended, how long they spoke,
+and their speaker colour. The obvious move is to add those fields to `ParticipantRef`, which the
+Notebook row already uses.
+
+**Decision.** A separate `ParticipantDetail`, returned only by `GET /meetings/{id}`.
+
+`ParticipantRef` exists to render an avatar in a group and deliberately carries nothing else. A
+Notebook page holds twenty rows with up to five participants each — widening it would ship
+attendance data for a hundred people nobody looks at, on every page load. That is the same weight
+ADR-032 removed from the list query, arriving from the other direction.
+
+**Consequences.** Two shapes for one concept, which is a real cost in a codebase this size. It is
+the right cost: the split is exactly where the payload sizes diverge, and a test asserts the light
+row still does not carry `talk_seconds`.
+
+The talk-time bar uses the SERVER's `color_index` rather than re-hashing the name, because the
+server's assignment is authoritative (ADR-013) — re-hashing here would give the same person two
+different colours depending on which component drew them.
+
+---
+
+## ADR-046 · A meeting without a summary is 200, not 404
+
+**Date:** 2026-07-27 · **Task:** T-15.5 · **Status:** Accepted
+
+**Context.** `GET /meetings/{id}/summary` had to be added — only the regenerate endpoint existed, so
+the drawer's overview silently never loaded. The question was what an unsummarised meeting answers.
+
+**Decision.** 200 with `overview: null`.
+
+"Not summarised yet" is a state of the meeting, not a missing resource. A 404 would make every
+client treat a perfectly normal meeting as an error — retry logic, error toasts, an error boundary —
+for a condition that is expected and temporary.
+
+**Consequences.** Callers check the field rather than the status. This mirrors ADR-014's reasoning
+about 410 versus 404: the status code should describe what happened, and the client's behaviour
+should follow from that rather than from a guess.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

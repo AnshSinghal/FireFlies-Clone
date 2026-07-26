@@ -18,11 +18,17 @@ null": every field defaults to `None` and the router serialises with
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.models.enums import MediaType, MeetingSource, ProcessingStatus, Visibility
+from app.models.enums import (
+    ActionItemStatus,
+    MediaType,
+    MeetingSource,
+    ProcessingStatus,
+    Visibility,
+)
 from app.schemas.user import UserRef
 
 # Re-exported so ROUTERS can reference the enum without importing from
@@ -31,6 +37,7 @@ from app.schemas.user import UserRef
 # answer is for the API layer to get its vocabulary from the schema module
 # rather than to carve a hole in the check.
 __all__ = [
+    "ActionItemStatus",
     "MediaType",
     "MeetingSource",
     "ProcessingStatus",
@@ -38,6 +45,16 @@ __all__ = [
 ]
 
 TITLE_MAX = 200
+
+
+class ChannelRef(BaseModel):
+    """Just enough to name the channel a meeting sits in."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    slug: str
 
 
 class ParticipantRef(BaseModel):
@@ -48,6 +65,48 @@ class ParticipantRef(BaseModel):
     id: int
     display_name: str
     avatar_url: str | None = None
+
+
+class ParticipantDetail(BaseModel):
+    """A participant, as the details drawer shows them (T-15.8, T-15.9).
+
+    Richer than `ParticipantRef`, which exists to render an avatar in a group
+    and deliberately carries nothing else — a Notebook page holds twenty rows
+    and would otherwise ship attendance data for a hundred people nobody looks
+    at.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    display_name: str
+    email: str | None = None
+    avatar_url: str | None = None
+    #: Invited but absent is a real and useful distinction — the drawer lists
+    #: "Invited" and "Attended" separately.
+    attended: bool
+    talk_seconds: int
+    #: The speaker colour index, so the talk-time bar matches this person's
+    #: colour in the transcript. Server-assigned (ADR-013).
+    color_index: int | None = None
+
+
+class ActionItemOut(BaseModel):
+    """One action item. T-24 owns the full CRUD; this is what a preview needs."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    text: str
+    status: ActionItemStatus
+    due_date: date | None = None
+    assignee_name: str | None = None
+
+
+class ActionItemUpdate(BaseModel):
+    """The only field the drawer's checkbox changes."""
+
+    status: ActionItemStatus
 
 
 class ActionItemCounts(BaseModel):
@@ -230,9 +289,12 @@ class MeetingDetail(BaseModel):
     media_type: MediaType
     media_url: str | None = None
     host: UserRef
-    participants: list[ParticipantRef] = Field(default_factory=list)
+    # The DETAIL shape, unlike the list row's `ParticipantRef`: the drawer shows
+    # who attended, for how long, and in whose colour.
+    participants: list[ParticipantDetail] = Field(default_factory=list)
     tags: list[TagRef] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
     segment_count: int = 0
+    channel: ChannelRef | None = None
     created_at: datetime
     updated_at: datetime
