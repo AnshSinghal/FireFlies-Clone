@@ -122,6 +122,27 @@ which necessarily contains `tokens.css` inlined plus this one vendor value.
 
 ---
 
+## ADR-008 · `httpx2` replaces `httpx`
+
+**Date:** 2026-07-26 · **Task:** T-01.4 · **Status:** Accepted
+
+**Context.** The plan lists `httpx` as a backend dependency. Starlette 1.3 now emits
+`StarletteDeprecationWarning: Using httpx with starlette.testclient is deprecated; install httpx2
+instead` when `TestClient` is constructed. Because `filterwarnings = ["error"]` is set in the pytest
+config — deliberately, so a deprecation cannot rot quietly for weeks — that warning failed the entire
+suite at collection time.
+
+**Decision.** Depend on `httpx2` and drop `httpx`. One HTTP client serves both `TestClient` and the
+outbound LLM calls in T-29.
+
+**Consequences.** The dependency list diverges from PLAN.md T-01.4, which was written before the
+rename. Nothing else changes: `httpx2` is the same library's next major line under a new
+distribution name. Keeping `filterwarnings = ["error"]` means the next such deprecation surfaces the
+same way — as a failing build on the day it appears, rather than as a surprise during a later
+upgrade.
+
+---
+
 ## ADR-005 · Frontend consumes the API over HTTP from the browser, not via RSC
 
 *(Placeholder — to be written during T-06 when the data layer lands.)*
