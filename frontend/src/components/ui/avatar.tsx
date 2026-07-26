@@ -114,6 +114,17 @@ export function AvatarGroup({ people, size = 'md', max = 3, className }: AvatarG
           <span
             data-testid="avatar-overflow"
             tabIndex={0}
+            /*
+             * The names are on the element itself, not only in the tooltip.
+             *
+             * This module's own rule, from tooltip.tsx: a tooltip is a
+             * SUPPLEMENT, never the only place information lives. It does not
+             * exist for touch users and is not reliably announced. So "+21" is
+             * a dead end for anyone who cannot hover — the aria-label is what
+             * actually makes the hidden participants discoverable, and the
+             * tooltip is the sighted-pointer convenience on top.
+             */
+            aria-label={overflowLabel(hidden.map((p) => p.name))}
             className={cn(
               '-ml-2 inline-flex shrink-0 items-center justify-center rounded-full bg-surface-2 font-medium text-secondary ring-2 ring-surface',
               SIZE[size],
@@ -127,9 +138,19 @@ export function AvatarGroup({ people, size = 'md', max = 3, className }: AvatarG
   )
 }
 
+/** Capped the same way the tooltip is, so the two never disagree. */
+const OVERFLOW_NAMES_SHOWN = 10
+
+export function overflowLabel(names: readonly string[]): string {
+  const shown = names.slice(0, OVERFLOW_NAMES_SHOWN)
+  const rest = names.length - shown.length
+  const list = shown.join(', ')
+  return rest > 0 ? `${list}, and ${rest} more` : list
+}
+
 function OverflowNames({ names }: { names: string[] }): ReactNode {
   // Capped, because 21 names in a tooltip is a wall the user cannot scroll.
-  const SHOWN = 10
+  const SHOWN = OVERFLOW_NAMES_SHOWN
   const rest = names.length - SHOWN
 
   return (
