@@ -383,7 +383,9 @@ class MeetingService:
         """
         summary = meeting.summary
         if summary is None:
-            return SummaryOut(meeting_id=meeting.id, provider="mock")
+            return SummaryOut(
+                meeting_id=meeting.id, provider="mock", keywords=[], outline=[], notes=[]
+            )
 
         sections = sorted(summary.sections, key=lambda s: s.sequence)
 
@@ -443,7 +445,9 @@ class MeetingService:
         """
         summary = meeting.summary
         if summary is None:
-            return SummaryOut(meeting_id=meeting.id, provider="mock")
+            return SummaryOut(
+                meeting_id=meeting.id, provider="mock", keywords=[], outline=[], notes=[]
+            )
 
         # `CursorResult` is what an UPDATE actually returns; the annotation on
         # `Session.execute` is the wider `Result`, which has no `rowcount`.

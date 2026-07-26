@@ -138,7 +138,13 @@ test.describe('URL as state', () => {
 // ── T06-H · branded 404 ─────────────────────────────────────────────────────
 
 test('an unknown route shows a branded 404, not a stack trace', async ({ page }) => {
-  const response = await page.goto('/meeting/does-not-exist-at-all')
+  /*
+   * A URL that matches NO route, which is what this case is about. It used to
+   * use `/meeting/does-not-exist-at-all`, which stopped being an unknown route
+   * the moment T-18 added `/meeting/[id]` — from then on it was a known route
+   * with an invalid parameter, which is a different thing (see T16-I).
+   */
+  const response = await page.goto('/totally-unknown-route')
 
   expect(response?.status()).toBe(404)
   await expect(page.getByTestId('not-found')).toBeVisible()

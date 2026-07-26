@@ -1306,6 +1306,67 @@ every one of them is a place where the code looks right and the behaviour is wro
 buffered rather than streamed; the seam for streaming is in `read_range` and the callers do not
 change.
 
+## ADR-052 — The shell's `<main>` owns the height chain; pages own their padding
+
+**Context.** The Notepad's panels must be the only things that scroll: the
+header stays put, and each pane scrolls its own interior. Every panel had
+`h-full min-h-0 overflow-y-auto` and none of them scrolled — the whole page
+scrolled instead, and the header slid away.
+
+`h-full` resolves against the parent's height. The shell's `<main>` was a grid
+row with a wrapper of `mx-auto w-full max-w-content p-6`: no height, so every
+`h-full` below it resolved to `auto` and the chain broke at the top.
+
+**Decision.** The wrapper is `mx-auto flex h-full w-full max-w-content flex-col`
+and carries NO padding; each page adds its own. The shell's grid rows became
+`[56px_auto_minmax(0,1fr)]` so the last row can actually shrink.
+
+Padding moved to the pages because the Notepad needs its header flush to the
+edges while the Notebook wants the old inset — a shared padded wrapper cannot
+give both, and the Notepad's version was the one silently breaking.
+
+**Consequence.** Any new page must set its own padding. The alternative — a
+`noPadding` prop on the shell — puts one page's layout exception into shared
+chrome, which is how shells accumulate flags.
+
+---
+
+## ADR-053 — `notFound()` in a matched dynamic route renders the 404 page but returns 200
+
+**Context.** `/meeting/bogus` calls `notFound()` from the server component after
+rejecting a non-numeric id. The test asserted a 404 status and got 200.
+
+**Decision.** Keep `notFound()`, and record the status behaviour honestly rather
+than assert something that is not true. In this Next version a route that
+MATCHED (the segment exists; only its parameter is wrong) has already committed
+its status by the time the boundary renders. A genuinely unmatched path —
+`/totally-unknown-route` — does return 404; that is what `03-shell` asserts now.
+
+**Consequence.** `12-states` asserts the branded not-found page renders for a
+malformed id, with the status deviation written down beside it. Anything
+depending on the status — a crawler, a link checker — sees 200 for a malformed
+id. Acceptable here: these links are internal and no route serves both.
+
+---
+
+## ADR-054 — Responsive branches get their own e2e coverage
+
+**Context.** The Notepad's sub-1024px branch swaps the split for tabs. It
+rendered "Something went wrong" for the entire time it existed, and every test
+was green: `TabPanel` was a SIBLING of `Tabs` rather than a child, Radix's
+`Tabs.Content` throws outside its `Tabs.Root`, and the route error boundary
+turned the throw into a friendly message. The desktop tests never entered the
+branch, and no console error surfaced because the boundary caught it.
+
+**Decision.** Every layout branch behind a media query gets at least one test at
+a viewport inside it, asserting the branch's own testid (`notepad-tabs`), not
+just that the page rendered.
+
+**Consequence.** A handful of `test.use({ viewport })` blocks. The alternative is
+what happened here — a whole responsive mode broken, invisible to a suite that
+only ever ran at 1440px, and caught only because a viewport-specific assertion
+finally failed.
+
 ---
 
 ## Pending decisions

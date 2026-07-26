@@ -41,6 +41,10 @@ export type BulkRestoreResponse = Schemas['BulkRestoreResponse']
 export type MatchContext = Schemas['MatchContext']
 export type Facets = Schemas['Facets']
 
+export type TranscriptPage = Schemas['TranscriptPage']
+export type SegmentOut = Schemas['SegmentOut']
+export type SpeakerRef = Schemas['SpeakerRef']
+
 export type SearchResults = Schemas['SearchResults']
 export type MeetingHit = Schemas['MeetingHit']
 export type TranscriptHit = Schemas['TranscriptHit']
