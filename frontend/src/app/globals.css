@@ -88,6 +88,36 @@
   .tnum {
     font-variant-numeric: tabular-nums;
   }
+
+  /*
+   * Toast entrance (T-09). A keyframe rather than a Tailwind transition because
+   * it has to run once on mount, and there is no "before mount" state to
+   * transition from.
+   */
+  .ff-toast-enter {
+    animation: ff-toast-in var(--ff-dur-base) var(--ff-ease);
+  }
+}
+
+@keyframes ff-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduced motion swaps the animation for a fade — no translate at all (T-09.9). */
+@keyframes ff-toast-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /*
@@ -102,5 +132,15 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /*
+   * The blanket rule above already makes the entrance instant, which stops the
+   * translate. Naming the fade variant explicitly states the INTENT — motion is
+   * removed, feedback is not — so the toast still fades in if that rule is ever
+   * narrowed to exclude opacity.
+   */
+  .ff-toast-enter {
+    animation-name: ff-toast-fade;
   }
 }

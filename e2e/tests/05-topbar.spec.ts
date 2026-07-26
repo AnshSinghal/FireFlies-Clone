@@ -233,7 +233,9 @@ test.describe('topbar', () => {
     const menu = page.getByTestId('topbar-avatar-menu')
 
     await expect(menu).toContainText('@')
-    await expect(menu.getByTestId('avatar-profile')).toHaveAttribute('aria-disabled', 'true')
+    // A `Soon` row is clickable and explains itself (T-09.10). It was inert
+    // when T-08 shipped; T-09 made silence the worse of the two options.
+    await expect(menu.getByTestId('avatar-profile')).toContainText('Soon')
     await expect(menu.getByTestId('avatar-settings')).toHaveAttribute('href', '/settings')
   })
 

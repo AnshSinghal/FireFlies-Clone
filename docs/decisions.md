@@ -602,6 +602,59 @@ task ordering so far, and it is recorded here rather than left for a reader to n
 
 ---
 
+## ADR-026 · An undo handler cannot own a component-scoped mutation
+
+**Date:** 2026-07-26 · **Task:** T-09.4 · **Status:** Accepted
+
+**Context.** `useDeleteWithUndo` first used `useRestoreMeeting()` — a `useMutation` — inside the
+toast's `Undo` handler. Deleting worked, the toast appeared, and clicking `Undo` did nothing at all:
+no restore, no confirmation, no error.
+
+A `useMutation` observer belongs to the component that called the hook. Here that component was the
+row's delete button, inside the row that the successful delete had just removed from the list. By
+the time the user clicked `Undo`, the observer had unsubscribed with its component and `mutate()`'s
+callbacks never fired.
+
+**Decision.** The undo path calls `api.post(...)` directly and invalidates `qk.meetings.all` itself.
+
+The general rule this instance illustrates: **an undo handler outlives whatever raised it**, so it
+cannot depend on that thing still being mounted. Any handler that survives in a toast, a
+notification or a timer has the same constraint.
+
+**Consequences.** The restore bypasses the `MutationCache`, and therefore the global error toast
+from T-09.11 — so it reports its own failure explicitly. Saying "couldn't restore" matters more than
+usual here, because the user has been told the meeting was deleted and now believes it is back.
+
+The bug was invisible in isolation and only showed up as a missing toast, which is a good argument
+for T09-B asserting the *restored meeting reappears* rather than just that a toast is shown.
+
+---
+
+## ADR-027 · Tests that write get their own Playwright project
+
+**Date:** 2026-07-26 · **Task:** T-09 · **Status:** Accepted
+
+**Context.** Until T-09 every e2e test only read, so four workers sharing one seeded database was
+safe. Delete-and-undo broke that immediately: while `T09-A` has a meeting deleted, `03-shell`'s
+"renders seeded meetings end to end" asserts there are exactly eight, and which one wins depends on
+scheduling. `T09-B` passed run alone and failed in the suite — the signature of this class of bug,
+and the reason "run the whole suite before merging" is a rule here.
+
+**Decision.** Tests that write are tagged `@mutates` and run in a `mutations` project that
+`dependsOn` the read-only one, with `fullyParallel: false`. Playwright finishes every reader before
+the first writer starts, and the writers do not race each other. Each writer also restores what it
+changed, so the next one starts from the seeded state.
+
+**Rejected: a database per worker.** It is the right answer for a suite ten times this size, but it
+needs a backend process per worker, and the startup cost would exceed the entire current run.
+
+**Consequences.** Writers are serial, so they are the wall-clock floor as they multiply — T-14's bulk
+delete, T-26's create and T-28's delete all land in this project. The tag is the whole contract: a
+new writing test that forgets `@mutates` runs in the parallel project and produces exactly the flake
+described above. That is worth watching for in review.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

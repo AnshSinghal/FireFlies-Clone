@@ -11,6 +11,9 @@
 import Link from 'next/link'
 import type { ComponentType, ReactNode } from 'react'
 
+import { useToast } from '@/components/ui/toast'
+import { TOAST_MESSAGES } from '@/lib/toast/messages'
+
 interface MenuPanelProps {
   children: ReactNode
   /** Which edge the panel hangs from. Right for the topbar's right cluster. */
@@ -46,12 +49,14 @@ interface MenuItemProps {
   children: ReactNode
   href?: string
   onSelect?: () => void
-  /** Renders a `Soon` badge and makes the row inert. */
+  /** Renders a `Soon` badge; clicking explains rather than doing nothing. */
   soon?: boolean
   testId?: string
 }
 
 export function MenuItem({ icon: Icon, children, href, onSelect, soon, testId }: MenuItemProps) {
+  const toast = useToast()
+
   const content = (
     <>
       {Icon && <Icon size={16} strokeWidth={1.75} className="shrink-0 text-muted" />}
@@ -68,20 +73,28 @@ export function MenuItem({ icon: Icon, children, href, onSelect, soon, testId }:
     'flex w-full items-center gap-2.5 px-3 py-2 text-left text-body text-primary transition-colors duration-fast'
 
   /*
-   * A "Soon" row stays in the DOM and stays announced — it is telling the user
-   * the feature exists — but it is a `<span>`, not a button. A disabled button
-   * that still looks clickable is worse than a label that clearly is not.
+   * A "Soon" row is clickable and SAYS SO when clicked (T-09.10, T09-J).
+   *
+   * The first version rendered an inert `aria-disabled` span, on the reasoning
+   * that a dead button is worse than an obvious label. But a row that silently
+   * does nothing is the worst of the three — the user cannot tell the
+   * difference between "not built" and "broken". The toast makes the build
+   * honest about its own edges.
    */
   if (soon) {
     return (
-      <span
+      <button
+        type="button"
         role="menuitem"
-        aria-disabled="true"
+        onClick={() => {
+          onSelect?.()
+          toast.info(TOAST_MESSAGES.comingSoon)
+        }}
         data-testid={testId}
-        className={`${shared} cursor-default text-secondary`}
+        className={`${shared} text-secondary hover:bg-surface-hover`}
       >
         {content}
-      </span>
+      </button>
     )
   }
 
