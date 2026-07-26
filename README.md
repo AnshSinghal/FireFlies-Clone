@@ -137,8 +137,20 @@ _(Expanded in T-45.9.)_ Known scope boundaries, all deliberate:
 _(Counts and coverage added in T-45.10.)_
 
 ```bash
-make test    # pytest
-make e2e     # Playwright
+make test        # Backend suite (pytest)
+make e2e         # End-to-end suite (Playwright)
+make lint        # Both apps' linters + the backend layering check
+make typecheck   # mypy --strict and tsc --noEmit
+```
+
+Playwright starts its own copies of both apps on ports **3100/8100**, so `make dev` can stay running
+on 3000/8000 while the suite executes, and a run can never accidentally test whatever else happens to
+be listening. Override with `E2E_FRONTEND_PORT` / `E2E_BACKEND_PORT`.
+
+First run needs the browser binaries:
+
+```bash
+cd e2e && npm install && npx playwright install chromium
 ```
 
 ---
