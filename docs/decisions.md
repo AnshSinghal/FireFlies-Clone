@@ -405,6 +405,41 @@ only more dialogue in the JSON.
 
 ---
 
+## ADR-021 · The rail is measured from the reference, not taken from the plan
+
+**Date:** 2026-07-26 · **Task:** T-07 · **Status:** Accepted
+
+**Context.** T-07 is the first task where pixel fidelity *is* the deliverable, and T-02 had already
+shown the plan's researched values could be wrong. So the rail geometry was measured off
+`docs/reference/fireflies/03.png` rather than typed in from the spec table. Scale was recovered by
+assuming the documented 240px rail width and reading the divider position (x=332), giving
+1 CSS px = 1.383 image px.
+
+**Measured against specified:**
+
+| | PLAN.md T-07 | Measured | Used |
+|---|---|---|---|
+| Item height | 36px | 35.4px | 36px ✓ |
+| Item pitch | 40px (2px margin) | 39.8–41.9px | 40px ✓ |
+| Inner padding | 12px | 13.0px | 12px ✓ |
+| **Pill inset** | **8px** (`margin: 2px 8px`) | **12.3 / 11.6px** | **12px** |
+| **Background** | **`--ff-surface-1`** | **`#FFFFFF`** | **`--ff-surface-0`** |
+
+**Decision.** Follow the measurements on both divergences.
+
+The background one matters most and follows directly from ADR-011: Fireflies is white-on-white, with
+a 1px `#ECEDF1` border doing the separating. A grey rail against white content is wrong at a glance
+in exactly the side-by-side comparison this project is graded on.
+
+The 12px inset is subtler but visible — at 8px the pill sits noticeably closer to the rail edge than
+the reference.
+
+**Consequences.** design.md §3.7's `rail 240 / collapsed 64` still holds; only the inset and the
+background changed. The tests assert on **computed** values resolved through the token layer rather
+than on class names, so a test cannot pass while the token behind it is broken.
+
+---
+
 ## ADR-005 · Client-side data fetching, not RSC
 
 **Date:** 2026-07-26 · **Task:** T-06 · **Status:** Accepted
