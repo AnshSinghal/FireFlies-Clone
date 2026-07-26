@@ -11,9 +11,9 @@ the contract; the shape is what matters now.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-from sqlalchemy import Select, UnaryExpression, func, select
+from sqlalchemy import Select, UnaryExpression, func, select, update
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import (
@@ -22,8 +22,8 @@ from app.core.exceptions import (
     MeetingDeletedError,
     MeetingNotFoundError,
 )
-from app.models import ActionItem, Meeting, Participant, TranscriptSegment, User
-from app.models.enums import ActionItemStatus, MediaType
+from app.models import ActionItem, Meeting, Participant, Summary, TranscriptSegment, User
+from app.models.enums import ActionItemStatus, MediaType, SummarySectionKind
 from app.schemas.meeting import (
     ActionItemCounts,
     ActionItemOut,
@@ -40,7 +40,7 @@ from app.schemas.meeting import (
 from app.schemas.meeting import (
     MatchContext as MatchContextSchema,
 )
-from app.schemas.summary import SummaryOut
+from app.schemas.summary import NoteGroup, OutlineEntry, SummaryOut
 from app.schemas.user import UserRef
 from app.services.meeting_filters import (
     MeetingFilters,
@@ -50,6 +50,7 @@ from app.services.meeting_filters import (
 )
 
 if TYPE_CHECKING:
+    from sqlalchemy import CursorResult
     from sqlalchemy.orm import Session
 
     from app.schemas.meeting import MeetingCreate, MeetingUpdate
@@ -368,20 +369,114 @@ class MeetingService:
         )
 
     def to_summary(self, meeting: Meeting) -> SummaryOut:
-        """The stored summary, or an empty one.
+        """The five canonical sections, COMPOSED from four sources (T-17.7).
+
+        The overview is a scalar on `summaries`, outline and note rows live in
+        `summary_sections`, keywords have their own table, and action items
+        have theirs. The API assembles them so the client never has to know
+        that (ADR-015) — a client stitching four responses together is a client
+        that will eventually stitch them differently from the next one.
 
         A meeting without a summary answers 200 with `overview: null` rather
-        than 404 — "not summarised yet" is a state of the meeting, not a missing
-        resource, and a 404 would make the client treat it as an error.
+        than 404 — "not summarised yet" is a state of the meeting, not a
+        missing resource (ADR-046).
         """
         summary = meeting.summary
+        if summary is None:
+            return SummaryOut(meeting_id=meeting.id, provider="mock")
+
+        sections = sorted(summary.sections, key=lambda s: s.sequence)
+
+        outline = [
+            OutlineEntry(
+                title=section.title or "",
+                # Not nullable in the response: an outline entry with no
+                # timestamp cannot be clicked, which is the whole point of it.
+                start_ms=section.start_ms or 0,
+                sequence=section.sequence,
+            )
+            for section in sections
+            if section.kind == SummarySectionKind.OUTLINE
+        ]
+
+        notes = [
+            NoteGroup(
+                chapter=section.title,
+                # Stored as one body with newline-separated bullets; split here
+                # so the client renders a list rather than parsing prose.
+                bullets=[
+                    line.strip() for line in (section.body or "").splitlines() if line.strip()
+                ],
+            )
+            for section in sections
+            if section.kind == SummarySectionKind.NOTES
+        ]
+
         return SummaryOut(
             meeting_id=meeting.id,
-            overview=summary.overview if summary else None,
-            provider=summary.provider if summary else "mock",
-            is_stale=summary.is_stale if summary else False,
-            generated_at=summary.generated_at if summary else None,
+            overview=summary.overview,
+            keywords=[k.term for k in meeting.keywords],
+            outline=outline,
+            notes=notes,
+            provider=summary.provider,
+            model=summary.model,
+            is_stale=summary.is_stale,
+            generated_at=summary.generated_at,
         )
+
+    def regenerate_summary(self, meeting: Meeting) -> SummaryOut:
+        """Regenerate, idempotently under concurrent calls (T-17.8).
+
+        Two clicks on `Regenerate` — or a double-submit — must not produce two
+        generations. The guard is a conditional UPDATE, not a read-then-write:
+
+            UPDATE summaries SET is_generating = 1
+            WHERE id = ? AND is_generating = 0
+
+        Exactly one caller sees `rowcount == 1`; the loser returns the CURRENT
+        summary rather than an error, because from the user's point of view a
+        regeneration is already happening and that is what they asked for.
+
+        A `SELECT ... then UPDATE` has a window between the two where both
+        callers see "not generating" — which is precisely the race being closed,
+        and it is wide enough to hit with two clicks.
+        """
+        summary = meeting.summary
+        if summary is None:
+            return SummaryOut(meeting_id=meeting.id, provider="mock")
+
+        # `CursorResult` is what an UPDATE actually returns; the annotation on
+        # `Session.execute` is the wider `Result`, which has no `rowcount`.
+        claimed = cast(
+            "CursorResult[Any]",
+            self.db.execute(
+                update(Summary)
+                .where(Summary.id == summary.id, Summary.is_generating.is_(False))
+                .values(is_generating=True)
+            ),
+        )
+        self.db.commit()
+
+        if claimed.rowcount == 0:
+            # Someone else is already doing it. Answering with the current
+            # summary is more useful than a 409 the UI would have to explain.
+            self.db.refresh(summary)
+            return self.to_summary(meeting)
+
+        try:
+            # T-29 swaps this for a real provider call. Everything around it —
+            # the claim, the transaction, the stale flag — is the part that has
+            # to be right before the part that costs money is wired in.
+            summary.generated_at = datetime.now(UTC)
+            summary.is_stale = False
+        finally:
+            # ALWAYS released, including on a provider failure. A stuck flag
+            # would make Regenerate permanently do nothing, with no way back.
+            summary.is_generating = False
+            self.db.commit()
+
+        self.db.refresh(summary)
+        return self.to_summary(meeting)
 
     # ── Writes ──────────────────────────────────────────────────────────────
 

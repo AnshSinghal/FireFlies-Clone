@@ -53,6 +53,18 @@ class ActionItemNotFoundError(NotFoundError):
     code = "ACTION_ITEM_NOT_FOUND"
 
 
+class SegmentNotFoundError(NotFoundError):
+    code = "SEGMENT_NOT_FOUND"
+
+
+class SpeakerNotFoundError(NotFoundError):
+    code = "SPEAKER_NOT_FOUND"
+
+
+class MediaNotFoundError(NotFoundError):
+    code = "MEDIA_NOT_FOUND"
+
+
 class GoneError(AppException):
     """410, not 404.
 

@@ -10,12 +10,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-
-class MatchRange(BaseModel):
-    """Character offsets of a matched term within a snippet."""
-
-    start: int
-    end: int
+from app.schemas.common import MatchRange
 
 
 class MeetingHit(BaseModel):

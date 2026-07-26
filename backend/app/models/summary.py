@@ -65,6 +65,12 @@ class Summary(Base, TimestampMixin):
     #: because the trigger is an explicit event, not a clock race.
     is_stale: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    #: Claimed by whichever caller wins the conditional UPDATE in
+    #: `regenerate_summary` (T-17.8). A boolean rather than a lock because it
+    #: has to survive across requests and processes, which an in-process lock
+    #: does not.
+    is_generating: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     meeting: Mapped[Meeting] = relationship(back_populates="summary")
     sections: Mapped[list[SummarySection]] = relationship(
         back_populates="summary",

@@ -122,3 +122,23 @@ def query_counter(db_engine: Engine) -> Iterator[list[str]]:
         yield statements
     finally:
         event.remove(db_engine, "after_cursor_execute", record)
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limit() -> Iterator[None]:
+    """Empty the rate-limiter between tests.
+
+    The limiter keys on client address and TestClient uses the same one for
+    every request, so its counters accumulate across the WHOLE session. Two
+    regenerate tests passed alone and 429'd in the full run — a textbook shared
+    fixture leaking between tests, and one that would have been blamed on
+    concurrency rather than on the limiter.
+
+    Autouse: any test that hits a limited endpoint has this problem, and
+    remembering to opt in is exactly what does not happen.
+    """
+    from app.core.rate_limit import limiter
+
+    limiter.reset()
+    yield
+    limiter.reset()

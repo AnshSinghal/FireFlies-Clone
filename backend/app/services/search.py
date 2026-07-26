@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING
 
 from app.db.search import search_segments
 from app.models import Meeting
-from app.schemas.search import MatchRange, MeetingHit, SearchResults, TranscriptHit
+from app.schemas.common import MatchRange
+from app.schemas.search import MeetingHit, SearchResults, TranscriptHit
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
