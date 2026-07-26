@@ -120,7 +120,9 @@ test.describe('states', () => {
     await page.goto('/notebook')
 
     const skeletons = page.getByTestId('meeting-row-skeleton')
-    await expect(skeletons.first()).toBeVisible()
+    // The delayed response gives a wide window, but CI is slow enough that the
+    // default 5s can still expire before first paint.
+    await expect(skeletons.first()).toBeVisible({ timeout: 15_000 })
     await expect(skeletons).toHaveCount(8)
     expect((await skeletons.first().boundingBox())!.height).toBe(72)
 
@@ -151,7 +153,7 @@ test.describe('states', () => {
     await page.goto('/notebook')
 
     const skeleton = page.getByTestId('meeting-list-skeleton')
-    await expect(skeleton).toBeVisible()
+    await expect(skeleton).toBeVisible({ timeout: 15_000 })
 
     // A heading placeholder sits above the first card, as it does in the list.
     const firstCardTop = await skeleton.evaluate((el) => {

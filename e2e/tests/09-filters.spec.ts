@@ -205,8 +205,11 @@ test.describe('filters panel', () => {
     const empty = page.getByTestId('notebook-empty')
     await expect(empty).toBeVisible()
     // Different copy from "no data at all" — reusing one for both is on the
-    // do-not-ship list.
-    await expect(empty).toContainText('No meetings match your search')
+    // do-not-ship list. T-16 split this into its own variant, which also echoes
+    // the filter responsible.
+    await expect(empty).toHaveAttribute('data-variant', 'no-matches')
+    await expect(empty).toContainText('No meetings match your filters')
+    await expect(empty).toContainText('> 60 min')
   })
 
   test('T13-G · three filters intersect and the badge counts groups', async ({ page }) => {
