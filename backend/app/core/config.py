@@ -9,10 +9,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 # The canonical .env lives at the repo root, one level above backend/, so a
 # single file configures both apps. Under Docker there is no file at all and the
@@ -31,7 +31,14 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./fireflies.db"
 
     # ── HTTP ────────────────────────────────────────────────────────────────
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    # NoDecode is load-bearing. For complex types pydantic-settings JSON-decodes
+    # the environment value *before* any validator runs, so the perfectly
+    # ordinary `CORS_ORIGINS=http://a,http://b` that docker-compose and the
+    # .env template both use would blow up as invalid JSON. NoDecode hands the
+    # raw string to the validator below instead.
+    cors_origins: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["http://localhost:3000"]
+    )
 
     # ── AI ──────────────────────────────────────────────────────────────────
     ai_provider: Literal["mock", "openai", "anthropic"] = "mock"

@@ -61,9 +61,7 @@ def test_routers_do_not_touch_the_orm() -> None:
         ),
     ],
 )
-def test_checker_catches_orm_access(
-    tmp_path: Path, source: str, expected_fragment: str
-) -> None:
+def test_checker_catches_orm_access(tmp_path: Path, source: str, expected_fragment: str) -> None:
     routers = tmp_path / "app" / "api" / "v1" / "routers"
     routers.mkdir(parents=True)
     (routers / "offending.py").write_text(source, encoding="utf-8")
