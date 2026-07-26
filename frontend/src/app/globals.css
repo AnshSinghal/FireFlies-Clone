@@ -90,6 +90,51 @@
   }
 
   /*
+   * The volume slider (T-19.7).
+   *
+   * A range input's track and thumb are shadow-DOM pseudo-elements that no
+   * utility class can reach, so they are styled here — the one control in the
+   * app that genuinely cannot be expressed in Tailwind. The vendor prefixes
+   * cannot be combined into one rule: a selector list containing an unknown
+   * pseudo-element is discarded WHOLE by every engine, so `::-webkit-` and
+   * `::-moz-` sharing a comma would style neither.
+   */
+  .ff-range {
+    appearance: none;
+    background: transparent;
+  }
+
+  .ff-range::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--ff-surface-2);
+  }
+
+  .ff-range::-moz-range-track {
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--ff-surface-2);
+  }
+
+  .ff-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    /* Centres a 12px thumb on a 4px track: (4 - 12) / 2. */
+    margin-top: -4px;
+    border-radius: 9999px;
+    background: var(--ff-accent);
+  }
+
+  .ff-range::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: none;
+    border-radius: 9999px;
+    background: var(--ff-accent);
+  }
+
+  /*
    * Toast entrance (T-09). A keyframe rather than a Tailwind transition because
    * it has to run once on mount, and there is no "before mount" state to
    * transition from.

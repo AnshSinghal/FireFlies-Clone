@@ -14,6 +14,7 @@
  */
 
 import * as Primitive from '@radix-ui/react-dropdown-menu'
+import { Check } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
@@ -194,5 +195,56 @@ export function DropdownSub({
         </Primitive.SubContent>
       </Primitive.Portal>
     </Primitive.Sub>
+  )
+}
+
+/**
+ * A pick-one group inside a menu — playback speed, sort order (T-19.6).
+ *
+ * Radix's radio parts rather than plain items with a hand-drawn tick: they set
+ * `role="menuitemradio"` and `aria-checked`, so a screen reader announces the
+ * current choice instead of reading seven identical-sounding numbers.
+ */
+export function DropdownRadioGroup({
+  value,
+  onValueChange,
+  children,
+}: {
+  value: string
+  onValueChange: (value: string) => void
+  children: ReactNode
+}) {
+  return (
+    <Primitive.RadioGroup value={value} onValueChange={onValueChange}>
+      {children}
+    </Primitive.RadioGroup>
+  )
+}
+
+export function DropdownRadioItem({
+  value,
+  children,
+  testId,
+}: {
+  value: string
+  children: ReactNode
+  testId?: string
+}) {
+  return (
+    <Primitive.RadioItem
+      value={value}
+      data-testid={testId}
+      // `pl-8` reserves the indicator's column on EVERY row, so the labels stay
+      // in one line rather than shifting as the selection moves.
+      className={cn(
+        'relative flex cursor-pointer items-center py-2 pl-8 pr-3 text-body text-primary outline-none',
+        'transition-colors duration-fast data-[highlighted]:bg-surface-hover',
+      )}
+    >
+      <Primitive.ItemIndicator className="absolute left-3 text-accent">
+        <Check size={14} strokeWidth={2.5} />
+      </Primitive.ItemIndicator>
+      {children}
+    </Primitive.RadioItem>
   )
 }

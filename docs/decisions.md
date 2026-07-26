@@ -1369,6 +1369,121 @@ finally failed.
 
 ---
 
+## ADR-055 — The player's timeline is the meeting's duration, not the media file's
+
+**Context.** `sample-meeting.m4a` is eighteen minutes of filtered noise, shared
+by two meetings that are nine and seventeen minutes long. Two clocks are
+therefore available: what the file says, and what the meeting says.
+
+**Decision.** `duration_seconds` from the meeting. The transcript timestamps,
+the outline's `start_ms` and the `?t=` links are all expressed against it, so
+letting the file's duration drive the seekbar would put every chapter tick and
+every transcript sync in the wrong place — and it would do so differently for
+each meeting.
+
+**Consequence.** The audio can outlast the timeline; playback stops at the
+meeting's end and the remainder is never reachable. That is the right way round
+— the alternative is a seekbar whose marks do not line up with anything.
+
+---
+
+## ADR-056 — One player interface, two transports, reconciled declaratively
+
+**Context.** Six of the eight seeded meetings have no media at all, so a player
+built directly on `<audio>` would be inert on most of the app's data. The engine
+therefore drives either a media element or a virtual clock behind one interface.
+
+The first version called `media.play()` from the play button. It worked, then
+failed under parallel test load in a way that took three passes to see: press
+play before `loadedmetadata` arrives and the virtual clock starts; metadata then
+lands, the engine switches to the media element, and the clock begins reading
+`currentTime` from an element nobody ever started. The playhead snapped back to
+zero and froze, with no error anywhere — `readyState` 4, `paused` true, and a
+button reading "Pause".
+
+**Decision.** `isPlaying` is the single source of truth and an effect
+RECONCILES the element to it, keyed on the transport. A transport change is
+then just another reason to re-run the effect, and the handoff carries the
+virtual clock's position across so playback continues from where the user is.
+
+The same class of bug produced the second fix in this task: `loadedmetadata`
+can fire before the listener is attached, so the engine also CHECKS
+`readyState` rather than only subscribing. An event that has already happened
+never arrives again.
+
+**Consequence.** Playback state lives in one place and the element follows it.
+Calling `play()` from an effect rather than from the click handler is inside
+Chromium's user-activation window in the normal case; when a slow load pushes
+it outside, the promise rejects and the player falls back to the virtual clock
+with the note T-19.14 asks for. That is a real behaviour, not a workaround.
+
+---
+
+## ADR-057 — The playback clock is an interval, not `requestAnimationFrame`
+
+**Context.** The plan specifies rAF for the virtual clock. rAF is tied to
+PAINTING: a backgrounded, occluded or throttled page stops receiving frames.
+
+**Decision.** `setInterval` at 10Hz, with every tick working from the elapsed
+time it MEASURES rather than assuming it ran on schedule.
+
+Audio does not stop when you switch tabs, so its clock must not either — with
+rAF the playhead would freeze while the sound kept going and the two would
+disagree by however long the page was out of sight. Delta-based arithmetic also
+means a throttled interval (browsers clamp hidden tabs to 1Hz) still keeps
+correct time; it simply updates less often while nobody is watching.
+
+**Consequence.** 10Hz would visibly step, so the seekbar's fill carries a
+matching linear CSS transition and the browser interpolates between commits:
+ten state updates a second, sixty frames of motion. The easing must be
+`linear` — an ease curve accelerates and decelerates ten times a second, which
+reads as stuttering rather than as smoothing.
+
+---
+
+## ADR-058 — Bespoke media controls live in `components/ui`
+
+**Context.** The play circle, the chapter tick and the volume slider are not
+`Button`, `IconButton` or `Input`. `cn` joins classes without resolving
+conflicts — a deliberate choice — so passing `size-10 rounded-full` to a button
+that already declares `h-btn-md` and `rounded-md` yields a control whose
+appearance depends on the order Tailwind emitted its utilities.
+
+**Decision.** Three new primitives in `components/ui/media-controls.tsx`, each
+carrying ONE complete class set. The lint rule banning raw `<button>` and
+`<input>` under `features/**` pushed this, and it pushed the right way: the
+alternative was three hand-rolled controls in a feature folder, each with its
+own focus ring to get subtly wrong.
+
+The volume control is a native `range` rather than a Radix slider. It is the
+one input the platform already gets right — keyboard, touch, screen readers and
+RTL all work with no code — and the only thing missing is the paint, which the
+`.ff-range` block supplies. Those pseudo-element rules cannot be combined into
+one selector list: a list containing an unknown pseudo-element is discarded
+whole, so `::-webkit-` and `::-moz-` sharing a comma would style neither.
+
+---
+
+## ADR-059 — Decoding the waveform waits for idle
+
+**Context.** Drawing a real waveform means fetching the whole media file and
+decoding it — the same file the `<audio>` element is fetching to start playing.
+Racing it costs the thing the user actually asked for: under four parallel test
+workers, playback took seconds to start because the decode had the bandwidth.
+
+**Decision.** The decode is deferred to `requestIdleCallback` (a timeout where
+that is unavailable), and the seeded pseudo-waveform is shown until it lands.
+The strip is a decoration; playback is the feature.
+
+**Consequence.** The strip changes once, a second or two after opening a
+meeting that has audio. Worth it. The seeded waveform is also what every
+meeting WITHOUT media shows, so the fallback is a first-class path rather than
+a degraded one — and it is deterministic, seeded from the meeting id, because
+`Math.random()` would produce a different picture on every render and turn a
+decoration into a source of false visual-regression diffs.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
@@ -1381,3 +1496,5 @@ Tracked so they are not silently defaulted. Each becomes an ADR when settled.
 | ~~4~~ | ~~`/` welcome screen vs Home dropped from the nav~~ | ✅ T-06 — `/` redirects, Home removed |
 | ~~5~~ | ~~Filters panel: draft-then-Apply vs live-apply~~ | ✅ ADR-039 — draft-then-Apply |
 | ~~6~~ | ~~Notebook layout: cards vs column table~~ | ✅ ADR-036 — cards, with the plan's testids and behaviour kept |
+| 8 | With any dropdown open, axe reports `aria-hidden-focus`: Radix marks the rest of the page `aria-hidden`, and the skip link stays focusable inside it. Identical for the T-18 kebab and the T-19 rate menu, so it belongs to the Dropdown primitive rather than to either caller. | T-42 |
+| 7 | `text-muted` fails AA contrast on `surface-0`. Found by an axe sweep during T-19: 20 serious violations on the Notepad, every one of them muted text or a speaker colour, none introduced by that task — sidebar headings, transcript timestamps and the metadata line have carried it since T-04. The fix is a token change, not a component change. | T-38.5, which owns re-checking every token pair, with T-42 verifying |
