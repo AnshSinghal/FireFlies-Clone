@@ -371,6 +371,40 @@ commits.
 
 ---
 
+## ADR-019 · Seeded meetings are 5–17 minutes, not the plan's 14–55
+
+**Date:** 2026-07-26 · **Task:** T-05 · **Status:** Accepted
+
+**Context.** PLAN.md T-05.1 specifies eight meetings running 14:47 to 55:32. Durations are **derived**
+from the transcript (T-05.10) rather than authored, so a meeting is exactly as long as what is
+actually said in it. The eight fixtures total 607 segments of genuine dialogue; timed at 150 wpm
+that is roughly 67 minutes of speech, producing meetings of 5 to 17 minutes.
+
+Hitting the plan's table would need roughly 2,500 segments — about four times the dialogue written
+here, and the bulk of the remaining effort in the task.
+
+Two things were considered and rejected:
+
+- **Inflating the inter-speaker gaps to reach the target durations.** This is the tempting one, and
+  it is a fabrication: two of the meetings have real audio attached, so a listener scrubbing the
+  player would hear thirty seconds of nothing between lines. The number would be right and the
+  artefact would be wrong.
+- **Hardcoding `duration_seconds`.** That breaks the derivation the schema depends on and would fail
+  T05-B, which exists precisely to stop the denormalised column drifting from the transcript.
+
+**Decision.** Keep derived durations. One honest adjustment was made: the gap range moved from the
+plan's 200–600ms to 700–2,600ms, because 200ms is the rhythm of a fast two-person exchange and a
+meeting has thinking time, unmuting and pauses. That is a correction to an unrealistic assumption,
+not a lever pulled to reach a number — and it is documented in `timing.py` as such.
+
+**Consequences.** Durations read as varied and plausible (4:57 through 17:02) but shorter than a real
+company's calendar. The longest meeting is 159 segments, which is still enough for virtualisation to
+be a genuine and measurable improvement in T-20. Every seeded value remains internally consistent,
+which is what the tests can actually verify. Extending the fixtures later requires no code change —
+only more dialogue in the JSON.
+
+---
+
 ## ADR-005 · Frontend consumes the API over HTTP from the browser, not via RSC
 
 *(Placeholder — to be written during T-06 when the data layer lands.)*

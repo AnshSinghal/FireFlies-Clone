@@ -138,8 +138,13 @@ http://localhost:8000/docs
 Populate the database with realistic demo data:
 
 ```bash
-make seed
+make seed-demo    # reset, seed, validate, and print a summary
 ```
+
+Eight meetings with genuine transcripts — 607 segments, 38 action items across every badge state,
+15 people, dated from today back to two months ago so every date filter has data on both sides.
+Timings, durations and talk-time are **derived from the transcripts**, never authored, so nothing in
+the seed can contradict itself.
 
 ### Manual (no Docker)
 

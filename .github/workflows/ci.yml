@@ -106,6 +106,19 @@ jobs:
       - run: uv run pytest -q
         working-directory: backend
 
+      # Seed the real database and check every invariant (T-05.14). The unit
+      # tests seed into a throwaway database; this proves the migrate-then-seed
+      # path a fresh deploy actually takes.
+      - name: Seed and validate demo data
+        working-directory: backend
+        env:
+          DATABASE_URL: sqlite:///./ci-seed.db
+          SEED_ANCHOR_DATE: '2026-07-26T09:00:00Z'
+        run: |
+          uv run alembic upgrade head
+          uv run python -m app.seed.seed --reset
+          uv run python -m app.seed.validate
+
   playwright:
     name: End-to-end
     runs-on: ubuntu-latest
