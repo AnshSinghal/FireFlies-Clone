@@ -22,6 +22,7 @@ from app.schemas.common import Page
 from app.schemas.meeting import (
     BulkDeleteRequest,
     BulkDeleteResponse,
+    BulkRestoreResponse,
     Facets,
     MeetingCreate,
     MeetingDetail,
@@ -206,3 +207,17 @@ def restore_meeting(db: DbSession, meeting_id: int) -> MeetingDetail:
 def bulk_delete(db: DbSession, payload: BulkDeleteRequest) -> BulkDeleteResponse:
     deleted, failed = MeetingService(db).bulk_soft_delete(payload.ids)
     return BulkDeleteResponse(deleted=deleted, failed=failed)
+
+
+@router.post(
+    "/bulk-restore",
+    response_model=BulkRestoreResponse,
+    summary="Restore several meetings",
+    description=(
+        "The undo half of a bulk delete. Reports per-id failures the same way, "
+        "so an Undo that only half-works says so rather than appearing to fail."
+    ),
+)
+def bulk_restore(db: DbSession, payload: BulkDeleteRequest) -> BulkRestoreResponse:
+    restored, failed = MeetingService(db).bulk_restore(payload.ids)
+    return BulkRestoreResponse(restored=restored, failed=failed)

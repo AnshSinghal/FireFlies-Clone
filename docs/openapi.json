@@ -52,9 +52,33 @@
           }
         },
         "required": [
-          "deleted"
+          "deleted",
+          "failed"
         ],
         "title": "BulkDeleteResponse",
+        "type": "object"
+      },
+      "BulkRestoreResponse": {
+        "description": "The undo half of a bulk delete (T-14.5).\n\nSeparate from `BulkDeleteResponse` rather than reusing it with a renamed\nfield: they mean different things, and a shared shape would make\n`{\"deleted\": 3}` the response to a restore.",
+        "properties": {
+          "failed": {
+            "description": "Ids that could not be restored, e.g. never deleted.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Failed",
+            "type": "array"
+          },
+          "restored": {
+            "title": "Restored",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "restored",
+          "failed"
+        ],
+        "title": "BulkRestoreResponse",
         "type": "object"
       },
       "ChannelOut": {
@@ -1677,6 +1701,58 @@
           }
         },
         "summary": "Delete several meetings",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
+    "/api/v1/meetings/bulk-restore": {
+      "post": {
+        "description": "The undo half of a bulk delete. Reports per-id failures the same way, so an Undo that only half-works says so rather than appearing to fail.",
+        "operationId": "bulk_restore_api_v1_meetings_bulk_restore_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDeleteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkRestoreResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Restore several meetings",
         "tags": [
           "meetings"
         ]

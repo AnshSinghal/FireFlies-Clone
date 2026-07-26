@@ -6,6 +6,7 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
+import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils/cn'
 
 /**
@@ -38,68 +39,119 @@ interface PaginationProps {
   page: number
   totalPages: number
   onPageChange: (page: number) => void
+  /** Enables the `Showing 1–20 of 47` summary and the page-size select. */
+  total?: number
+  pageSize?: number
+  onPageSizeChange?: (size: number) => void
+  /** Fired on hover of Next, to prefetch what the user is about to ask for. */
+  onPrefetchNext?: () => void
   className?: string
 }
 
-export function Pagination({ page, totalPages, onPageChange, className }: PaginationProps) {
+/** The plan's three sizes. Beyond 100 the page is slower than paging. */
+export const PAGE_SIZES = [20, 50, 100] as const
+
+export function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+  total,
+  pageSize,
+  onPageSizeChange,
+  onPrefetchNext,
+  className,
+}: PaginationProps) {
+  // Hidden entirely for a single page — a lone disabled `[1]` is noise that
+  // implies there is somewhere else to go (T-14.10).
   if (totalPages <= 1) return null
 
   const pages = pageWindow(page, totalPages)
+  const first = total !== undefined && pageSize ? (page - 1) * pageSize + 1 : 0
+  const last = total !== undefined && pageSize ? Math.min(page * pageSize, total) : 0
 
   return (
     <nav
       aria-label="Pagination"
       data-testid="pagination"
-      className={cn('flex items-center justify-center gap-1', className)}
+      className={cn('flex flex-wrap items-center justify-between gap-3', className)}
     >
-      <button
-        type="button"
-        onClick={() => onPageChange(page - 1)}
-        disabled={page <= 1}
-        aria-label="Previous page"
-        data-testid="pagination-prev"
-        className="flex h-btn-sm w-btn-sm items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-      >
-        <ChevronLeft size={16} strokeWidth={2} />
-      </button>
-
-      {pages.map((entry, i) =>
-        entry === 'gap' ? (
-          <span key={`gap-${i}`} aria-hidden="true" className="px-1 text-body text-muted">
-            …
+      {total !== undefined && pageSize ? (
+        <div className="flex items-center gap-3">
+          <span className="tnum text-sm text-muted" data-testid="pagination-summary">
+            Showing {first}–{last} of {total}
           </span>
-        ) : (
-          <button
-            key={entry}
-            type="button"
-            onClick={() => onPageChange(entry)}
-            // `aria-current`, not `aria-selected` — this is the current page of
-            // a set, not a selected option in a listbox.
-            aria-current={entry === page ? 'page' : undefined}
-            aria-label={`Page ${entry}`}
-            data-testid={`pagination-page-${entry}`}
-            className={cn(
-              'tnum flex h-btn-sm min-w-btn-sm items-center justify-center rounded-md px-2 text-body-strong transition-colors duration-fast',
-              entry === page
-                ? 'bg-accent-subtle text-accent'
-                : 'text-secondary hover:bg-surface-hover hover:text-primary',
-            )}
-          >
-            {entry}
-          </button>
-        ),
+          {onPageSizeChange && (
+            <Select
+              label="Per page"
+              hideLabel
+              value={String(pageSize)}
+              onValueChange={(value) => onPageSizeChange(Number(value))}
+              options={PAGE_SIZES.map((size) => ({
+                value: String(size),
+                label: `${size} per page`,
+              }))}
+              testId="page-size-select"
+            />
+          )}
+        </div>
+      ) : (
+        <span />
       )}
 
-      <button
-        type="button"
-        onClick={() => onPageChange(page + 1)}
-        disabled={page >= totalPages}
-        aria-label="Next page"
-        data-testid="pagination-next"
-        className="flex h-btn-sm w-btn-sm items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-      >
-        <ChevronRight size={16} strokeWidth={2} />
-      </button>
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          aria-label="Previous page"
+          data-testid="pagination-prev"
+          className="flex h-btn-sm w-btn-sm items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+        >
+          <ChevronLeft size={16} strokeWidth={2} />
+        </button>
+
+        {pages.map((entry, i) =>
+          entry === 'gap' ? (
+            <span key={`gap-${i}`} aria-hidden="true" className="px-1 text-body text-muted">
+              …
+            </span>
+          ) : (
+            <button
+              key={entry}
+              type="button"
+              onClick={() => onPageChange(entry)}
+              // `aria-current`, not `aria-selected` — this is the current page of
+              // a set, not a selected option in a listbox.
+              aria-current={entry === page ? 'page' : undefined}
+              aria-label={`Page ${entry}`}
+              data-testid={`pagination-page-${entry}`}
+              className={cn(
+                'tnum flex h-btn-sm min-w-btn-sm items-center justify-center rounded-md px-2 text-body-strong transition-colors duration-fast',
+                entry === page
+                  ? 'bg-accent-subtle text-accent'
+                  : 'text-secondary hover:bg-surface-hover hover:text-primary',
+              )}
+            >
+              {entry}
+            </button>
+          ),
+        )}
+
+        <button
+          type="button"
+          onClick={() => onPageChange(page + 1)}
+          // Prefetch what the user is about to ask for. A hover is a strong
+          // enough signal, and the query cache makes a wasted one free.
+          onPointerEnter={onPrefetchNext}
+          onFocus={onPrefetchNext}
+          disabled={page >= totalPages}
+          aria-label="Next page"
+          data-testid="pagination-next"
+          className="flex h-btn-sm w-btn-sm items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+        >
+          <ChevronRight size={16} strokeWidth={2} />
+        </button>
+      </div>
     </nav>
   )
 }

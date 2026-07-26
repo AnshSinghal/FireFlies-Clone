@@ -612,3 +612,48 @@ def test_the_to_date_filter_uses_a_half_open_upper_bound(db: Session):
     # `<` and not `<=`: the bound is the START of the next day.
     assert "meetings.started_at <" in sql
     assert "meetings.started_at <=" not in sql
+
+
+# ── Bulk operations (T-14.5, T-14.6) ────────────────────────────────────────
+
+
+def test_bulk_delete_reports_partial_failure(client: TestClient, library: Session):
+    """An already-deleted id is REPORTED, not fatal.
+
+    Aborting the batch would leave the user guessing which of three deletes
+    happened; the partial result is what lets the UI say "2 of 3 deleted".
+    """
+    ids = [m.id for m in library.execute(Meeting.not_deleted()).scalars()][:2]
+
+    body = client.post("/api/v1/meetings/bulk-delete", json={"ids": [*ids, 9999]}).json()
+
+    assert body["deleted"] == 2
+    assert body["failed"] == [9999]
+    assert client.get("/api/v1/meetings").json()["total"] == 2
+
+
+def test_bulk_restore_undoes_a_bulk_delete(client: TestClient, library: Session):
+    ids = [m.id for m in library.execute(Meeting.not_deleted()).scalars()][:2]
+    client.post("/api/v1/meetings/bulk-delete", json={"ids": ids})
+    assert client.get("/api/v1/meetings").json()["total"] == 2
+
+    body = client.post("/api/v1/meetings/bulk-restore", json={"ids": ids}).json()
+
+    assert body["restored"] == 2
+    assert body["failed"] == []
+    assert client.get("/api/v1/meetings").json()["total"] == 4
+
+
+def test_bulk_restore_reports_ids_that_were_never_deleted(client: TestClient, library: Session):
+    live = [m.id for m in library.execute(Meeting.not_deleted()).scalars()][:1]
+
+    body = client.post("/api/v1/meetings/bulk-restore", json={"ids": live}).json()
+
+    assert body["restored"] == 0
+    assert body["failed"] == live
+
+
+def test_bulk_endpoints_reject_an_empty_batch(client: TestClient, library: Session):
+    # A no-op request is a client bug; answering 200 hides it.
+    for path in ("bulk-delete", "bulk-restore"):
+        assert client.post(f"/api/v1/meetings/{path}", json={"ids": []}).status_code == 422

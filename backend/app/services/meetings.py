@@ -367,3 +367,24 @@ class MeetingService:
 
         self.db.commit()
         return deleted, failed
+
+    def bulk_restore(self, meeting_ids: list[int]) -> tuple[int, list[int]]:
+        """Undo a bulk delete (T-14.5).
+
+        Mirrors `bulk_soft_delete` exactly, including the partial result: an id
+        that was never deleted is reported rather than aborting the batch, so an
+        Undo that half-works says so instead of appearing to fail entirely.
+        """
+        restored = 0
+        failed: list[int] = []
+
+        for meeting_id in meeting_ids:
+            meeting = self.db.get(Meeting, meeting_id)
+            if meeting is None or meeting.deleted_at is None:
+                failed.append(meeting_id)
+                continue
+            meeting.deleted_at = None
+            restored += 1
+
+        self.db.commit()
+        return restored, failed

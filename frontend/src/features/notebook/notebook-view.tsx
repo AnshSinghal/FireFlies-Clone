@@ -16,16 +16,25 @@ import { Checkbox } from '@/components/ui/controls'
 import { EmptyInbox, EmptySearch, EmptyState } from '@/components/ui/empty-state'
 import { Pagination } from '@/components/ui/pagination'
 import { MeetingListSkeleton } from '@/components/ui/skeleton'
-import { ApiError } from '@/lib/api/client'
-import { useMeetingFacets, useMeetings } from '@/lib/api/meetings'
+import { useQueryClient } from '@tanstack/react-query'
+
+import { useToast } from '@/components/ui/toast'
+import { useBulkDelete, useBulkRestore } from '@/lib/api/bulk'
+import { ApiError, api } from '@/lib/api/client'
+import { toApiParams, useMeetingFacets, useMeetings } from '@/lib/api/meetings'
+import { qk } from '@/lib/api/query-keys'
 import type { MeetingListItem } from '@/lib/api/types'
 import { isTypingTarget } from '@/lib/hooks/use-command-palette'
-import { useDeleteWithUndo } from '@/lib/hooks/use-delete-with-undo'
+import { UNDO_WINDOW_MS, useDeleteWithUndo } from '@/lib/hooks/use-delete-with-undo'
+import { useSelection } from '@/lib/hooks/use-selection'
 import { useLocalStorage } from '@/lib/hooks/use-local-storage'
 import { useNotebookParams } from '@/lib/hooks/use-query-params'
+import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { pluralize } from '@/lib/utils/format'
 
 import { RemovableChip } from '@/components/ui/chip'
+
+import { BulkBar } from './bulk-bar'
 
 import { activeFilterChips, draftFromFilters, filtersFromDraft } from './filter-presets'
 import { FiltersPanel } from './filters-panel'
@@ -131,10 +140,33 @@ export function NotebookView() {
 
   const { value: view, setValue: setView } = useLocalStorage<ViewMode>(VIEW_STORAGE_KEY, 'list')
 
-  const [selected, setSelected] = useState<ReadonlySet<number>>(new Set())
   const activeQuickFilters = readQuickFilters(filters)
-
   const items = useMemo(() => data?.items ?? [], [data])
+  const pageIds = useMemo(() => items.map((m) => m.id), [items])
+
+  const selection = useSelection(pageIds)
+  const bulkDelete = useBulkDelete()
+  const bulkRestore = useBulkRestore()
+  const toast = useToast()
+  const client = useQueryClient()
+
+  /*
+   * Selection is cleared when the FILTERS change, and said out loud (T-14.1).
+   *
+   * It survives paging deliberately — three on page 1 plus two on page 2 means
+   * five — but a filter change can remove rows the user picked from the result
+   * set entirely, and silently bulk-deleting something they can no longer see
+   * is the worst outcome available here.
+   */
+  const filterKey = JSON.stringify({ ...filters, page: undefined })
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey)
+  if (filterKey !== lastFilterKey) {
+    setLastFilterKey(filterKey)
+    if (selection.count > 0) {
+      selection.clear()
+      toast.info(`Selection cleared — ${pluralize(selection.count, 'meeting')} deselected`)
+    }
+  }
 
   /*
    * Grouping only makes sense for a chronological sort. Sorted by title, every
@@ -148,25 +180,36 @@ export function NotebookView() {
     [items, grouped],
   )
 
-  const toggleSelected = useCallback((id: number, next: boolean) => {
-    setSelected((current) => {
-      const copy = new Set(current)
-      if (next) copy.add(id)
-      else copy.delete(id)
-      return copy
-    })
-  }, [])
+  const removeSelected = useCallback(async () => {
+    const ids = [...selection.selected]
 
-  const toggleGroup = useCallback((groupItems: MeetingListItem[], next: boolean) => {
-    setSelected((current) => {
-      const copy = new Set(current)
-      for (const meeting of groupItems) {
-        if (next) copy.add(meeting.id)
-        else copy.delete(meeting.id)
-      }
-      return copy
+    const result = await bulkDelete.mutateAsync(ids)
+    selection.clear()
+
+    if (result.failed.length > 0) {
+      // "2 of 3 deleted" rather than a bare success — the user is entitled to
+      // know their batch was not applied whole (T-14.6).
+      toast.warning(`${result.deleted} of ${ids.length} deleted`)
+      return
+    }
+
+    const deletedIds = ids.filter((id) => !result.failed.includes(id))
+    toast.success({
+      message: `${pluralize(result.deleted, 'meeting')} deleted`,
+      duration: UNDO_WINDOW_MS,
+      action: {
+        label: 'Undo',
+        // Same constraint as the single-row undo (ADR-026): this handler
+        // outlives the rows it came from, so it must not depend on any of them
+        // still being mounted.
+        onClick: () => {
+          bulkRestore.mutate(deletedIds, {
+            onSuccess: () => toast.success(TOAST_MESSAGES.meetingRestored),
+          })
+        },
+      },
     })
-  }, [])
+  }, [selection, bulkDelete, bulkRestore, toast])
 
   const toggleQuickFilter = useCallback(
     (id: QuickFilterId) => {
@@ -259,38 +302,74 @@ export function NotebookView() {
       {data && items.length > 0 && view === 'list' && (
         <GroupedList
           groups={groups}
-          selected={selected}
-          onToggleSelected={toggleSelected}
-          onToggleGroup={toggleGroup}
+          selection={selection}
           query={filters.q}
           onDelete={(id) => void deleteWithUndo(id)}
         />
       )}
 
-      {data && data.total_pages > 1 && (
-        <Pagination page={data.page} totalPages={data.total_pages} onPageChange={setPage} />
+      {data && (
+        <Pagination
+          page={data.page}
+          totalPages={data.total_pages}
+          onPageChange={(next) => {
+            setPage(next)
+            // Smoothly, and only on a deliberate page change — the user is
+            // asking for different rows and should be looking at the top of
+            // them (T-14.8).
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          total={data.total}
+          pageSize={filters.pageSize}
+          onPageSizeChange={(size) => setFilter({ page_size: size === 20 ? null : size })}
+          onPrefetchNext={() =>
+            void client.prefetchQuery({
+              queryKey: qk.meetings.list({ ...filters, page: data.page + 1 }),
+              queryFn: ({ signal }) =>
+                api.get('/api/v1/meetings', {
+                  signal,
+                  params: { ...toApiParams(filters), page: data.page + 1 },
+                }),
+            })
+          }
+        />
       )}
+
+      <BulkBar
+        count={selection.count}
+        total={data?.total ?? 0}
+        canSelectAllMatching={selection.pageState === 'all' && (data?.total ?? 0) > selection.count}
+        onSelectAllMatching={() =>
+          // Honest about its scope: it selects what is ON THIS PAGE plus a
+          // promise, which this build cannot keep without fetching every id.
+          // So it fetches them.
+          void selectEveryMatch()
+        }
+        onClear={selection.clear}
+        onDelete={removeSelected}
+      />
     </div>
   )
+
+  async function selectEveryMatch() {
+    const all = await api.get<{ items: Array<{ id: number }> }>('/api/v1/meetings', {
+      params: { ...toApiParams(filters), page: 1, page_size: 100 },
+    })
+    selection.setMany(
+      all.items.map((m) => m.id),
+      true,
+    )
+  }
 }
 
 interface GroupedListProps {
   groups: Array<{ key: string; label: string; items: MeetingListItem[] }>
-  selected: ReadonlySet<number>
-  onToggleSelected: (id: number, next: boolean) => void
-  onToggleGroup: (items: MeetingListItem[], next: boolean) => void
+  selection: ReturnType<typeof useSelection<number>>
   query?: string
   onDelete: (id: number) => void
 }
 
-function GroupedList({
-  groups,
-  selected,
-  onToggleSelected,
-  onToggleGroup,
-  query,
-  onDelete,
-}: GroupedListProps) {
+function GroupedList({ groups, selection, query, onDelete }: GroupedListProps) {
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups])
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -328,15 +407,16 @@ function GroupedList({
       // Space on a focused link scrolls the page and stealing that is worse
       // than not having the shortcut.
       event.preventDefault()
-      onToggleSelected(activeId, !selected.has(activeId))
+      selection.toggle(activeId, !selection.isSelected(activeId))
     }
   }
 
   return (
     <div ref={listRef} onKeyDown={onKeyDown} className="space-y-6" data-testid="meeting-list">
       {groups.map((group) => {
-        const allSelected = group.items.every((m) => selected.has(m.id))
-        const someSelected = group.items.some((m) => selected.has(m.id))
+        const groupIds = group.items.map((m) => m.id)
+        const allSelected = groupIds.every((id) => selection.isSelected(id))
+        const someSelected = groupIds.some((id) => selection.isSelected(id))
 
         return (
           <section key={group.key} className="space-y-2">
@@ -346,7 +426,7 @@ function GroupedList({
                   // Indeterminate when only part of the day is selected — a
                   // plain unchecked box would claim nothing in it is.
                   checked={allSelected ? true : someSelected ? 'indeterminate' : false}
-                  onCheckedChange={(next) => onToggleGroup(group.items, next)}
+                  onCheckedChange={(next) => selection.setMany(groupIds, next)}
                   ariaLabel={`Select all meetings on ${group.label}`}
                   testId={`select-group-${group.key}`}
                 />
@@ -359,9 +439,10 @@ function GroupedList({
                 <MeetingRow
                   key={meeting.id}
                   meeting={meeting}
-                  selected={selected.has(meeting.id)}
-                  onSelectedChange={(next) => onToggleSelected(meeting.id, next)}
-                  anySelected={selected.size > 0}
+                  selected={selection.isSelected(meeting.id)}
+                  onSelectedChange={(next) => selection.toggle(meeting.id, next)}
+                  onShiftSelect={() => selection.selectRange(meeting.id)}
+                  anySelected={selection.count > 0}
                   query={query}
                   onDelete={onDelete}
                   tabIndex={meeting.id === activeId ? 0 : -1}
