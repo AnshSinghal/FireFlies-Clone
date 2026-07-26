@@ -405,15 +405,61 @@ only more dialogue in the JSON.
 
 ---
 
-## ADR-005 · Frontend consumes the API over HTTP from the browser, not via RSC
+## ADR-005 · Client-side data fetching, not RSC
 
-*(Placeholder — to be written during T-06 when the data layer lands.)*
+**Date:** 2026-07-26 · **Task:** T-06 · **Status:** Accepted
 
-The plan mandates TanStack Query, URL-as-state and optimistic mutations, which makes nearly every
-page a client component and leaves App Router's server rendering largely unused. That is a
-defensible trade — cache invalidation across the notebook/drawer/notepad surfaces is the hard part
-of this app, and Query solves it — but it needs writing down, because "why App Router if everything
-is `"use client"`?" is the obvious interview question.
+**Context.** App Router makes server components the default, and fetching in an RSC would mean
+smaller bundles and no client-side loading state. This app does the opposite: every data-touching
+page is `"use client"` and reads through TanStack Query. That deserves an explicit defence, because
+*"why App Router if everything is a client component?"* is the obvious question.
+
+**Decision.** Client-side fetching, for three reasons RSC does not serve:
+
+1. **Cross-surface cache invalidation is the hard part of this app.** Ticking an action item in the
+   Notepad has to update the Notebook row's "N open" badge and the details drawer (T-24.12). Under
+   RSC that is a router refresh which refetches the whole tree; with a shared query cache it is one
+   `invalidateQueries` against a nested key.
+2. **Optimistic updates.** The graded interactions — checkbox toggles, inline title edits, undoable
+   deletes — must apply in under 100ms and roll back on failure. That is client state by definition.
+3. **URL-as-state with instant feedback.** Filters live in the query string and must be shareable,
+   but a server round-trip per keystroke is not acceptable; the cache serves the previous page while
+   the next loads.
+
+**Consequences.** App Router earns its place through file-based routing, layouts, `next/font`,
+streaming boundaries and `loading.tsx`/`error.tsx` — not through server rendering of data. Bundles
+are larger than an RSC-first build would be. If this app ever grows a genuinely static, read-only
+surface — a publicly shared transcript, say — that route should be an RSC, because none of the three
+reasons above apply to it.
+
+---
+
+## ADR-020 · Three CSS Grid traps, all of which failed silently
+
+**Date:** 2026-07-26 · **Task:** T-06.2/T-06.10 · **Status:** Accepted
+
+**Context.** The shell is CSS Grid, and building it hit three failures in a row that shared a shape:
+no console error, nothing obviously wrong in the CSS, and a visibly broken page.
+
+1. **`1fr` does not mean "shrinkable".** A track sized `1fr` still floors at its content's
+   min-width, so the topbar's natural width (440px) became the column width inside a 393px viewport
+   — and the horizontal scrollbar appeared on the *page* rather than on the offending element. Fixed
+   with `minmax(0, 1fr)`, needed on the outer **and** inner grid; missing it on either is enough.
+2. **`display: none` removes an element from grid PLACEMENT.** Hiding the sidebar at mobile meant
+   `<main>` auto-placed into the first track — the 0px rail column — and rendered a completely blank
+   page below the topbar. Fixed by declaring a single column below `md` rather than a zero-width
+   rail track.
+3. **`min-height: auto` on grid items.** Same family: an overflowing `<main>` stretches its row so
+   the page scrolls instead of the panel. `min-h-0` is the one line that makes "only panel interiors
+   scroll" (T-18.10) work at all.
+
+**Decision.** All three fixed at the shell with the reasoning inline, since the Notepad's two
+resizable panels (T-18) sit inside this grid and would otherwise hit every one of them again.
+
+**Consequences.** The `scrollWidth - clientWidth` assertion in the responsive tests is what catches
+this class of bug. None of the three produced an error, and two were visible only in a screenshot —
+which is a good argument for the responsive tests existing at all rather than being deferred to a
+manual pass.
 
 ---
 
@@ -426,6 +472,6 @@ Tracked so they are not silently defaulted. Each becomes an ADR when settled.
 | ~~1~~ | ~~Speaker colour authority~~ | ✅ ADR-013 |
 | ~~2~~ | ~~FTS5 rows survive a meeting's soft delete~~ | ✅ ADR-014 |
 | ~~3~~ | ~~Who composes the five summary sections~~ | ✅ ADR-015 |
-| 4 | Whether `/` becomes a real welcome screen or Home is dropped from the nav (it can never be active while `/` redirects) | T-07 |
+| ~~4~~ | ~~`/` welcome screen vs Home dropped from the nav~~ | ✅ T-06 — `/` redirects, Home removed |
 | 5 | Filters panel: draft-then-Apply vs live-apply (T-13.5 offers both; pick one, be consistent) | T-13 |
 | 6 | Notebook layout: the reference screenshots show date-grouped **cards**, PLAN.md A2.1 specifies a **column table**. Grading is a screenshot comparison, so the screenshot probably wins — but the plan's `data-testid` names and hover spec are the test contract | T-12 |
