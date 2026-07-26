@@ -85,7 +85,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           className="min-w-0 overflow-y-auto bg-surface-0"
           data-testid="main-content"
         >
-          <div className="mx-auto w-full max-w-content px-4 py-6 md:px-6">{children}</div>
+          {/*
+            FULL HEIGHT and no padding.
+
+            It used to be `px-4 py-6` on an auto-height div, which meant `h-full`
+            on a page resolved against nothing and grew to its content — so the
+            Notepad's panels never became scroll containers and the whole page
+            scrolled instead, taking the header with it.
+
+            Padding is now a per-page decision, because it is one: the Notebook
+            wants it and the Notepad is a full-bleed workspace.
+          */}
+          <div className="mx-auto flex h-full w-full max-w-content flex-col">{children}</div>
         </main>
       </div>
 

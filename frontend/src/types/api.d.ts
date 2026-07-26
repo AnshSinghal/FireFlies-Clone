@@ -996,15 +996,15 @@ export interface components {
        */
       is_stale: boolean
       /** Keywords */
-      keywords?: string[]
+      keywords: string[]
       /** Meeting Id */
       meeting_id: number
       /** Model */
       model?: string | null
       /** Notes */
-      notes?: components['schemas']['NoteGroup'][]
+      notes: components['schemas']['NoteGroup'][]
       /** Outline */
-      outline?: components['schemas']['OutlineEntry'][]
+      outline: components['schemas']['OutlineEntry'][]
       /** Overview */
       overview?: string | null
       /**

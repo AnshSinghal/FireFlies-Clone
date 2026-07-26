@@ -37,9 +37,14 @@ class SummaryOut(BaseModel):
 
     meeting_id: int
     overview: str | None = None
-    keywords: list[str] = Field(default_factory=list)
-    outline: list[OutlineEntry] = Field(default_factory=list)
-    notes: list[NoteGroup] = Field(default_factory=list)
+    # NO DEFAULTS on the lists. Any default — `default_factory=list` or
+    # `default=[]` — makes the field non-required in OpenAPI, so the generated
+    # client types them `T[] | undefined` and every consumer null-checks an
+    # absence the API never produces. Same defect as `action_item_counts` in
+    # T-05 and `failed` in T-14; the service always sends all three.
+    keywords: list[str]
+    outline: list[OutlineEntry]
+    notes: list[NoteGroup]
 
     provider: str = Field(description="Which provider produced this. Surfaced in the UI.")
     model: str | None = None

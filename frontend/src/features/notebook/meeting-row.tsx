@@ -32,7 +32,9 @@ import { Dropdown, DropdownItem, DropdownSeparator, DropdownSub } from '@/compon
 import { Highlighter } from '@/components/ui/highlighter'
 import { IconButton } from '@/components/ui/icon-button'
 import { Tooltip } from '@/components/ui/tooltip'
+
 import type { MeetingListItem } from '@/lib/api/types'
+import { rememberNotebookUrl } from '@/lib/notebook-return'
 import { cn } from '@/lib/utils/cn'
 import { formatDuration, formatFullDate, formatRelativeDate, formatTime } from '@/lib/utils/format'
 
@@ -48,6 +50,7 @@ interface MeetingRowProps {
   query?: string
   onDelete: (id: number) => void
   onShowDetails: (id: number) => void
+  onPrefetch: () => void
   /** Roving tabindex: only the focused row is tabbable (T-12.12). */
   tabIndex: number
   onFocus: () => void
@@ -62,6 +65,7 @@ export function MeetingRow({
   query,
   onDelete,
   onShowDetails,
+  onPrefetch,
   tabIndex,
   onFocus,
 }: MeetingRowProps) {
@@ -102,6 +106,14 @@ export function MeetingRow({
         data-testid={`meeting-row-${meeting.id}`}
         tabIndex={tabIndex}
         onFocus={onFocus}
+        onClick={() => {
+          // Remember the filtered view so Back returns to it rather than to a
+          // bare /notebook with the user's filters silently discarded (T-18.2).
+          rememberNotebookUrl(window.location.pathname + window.location.search)
+        }}
+        // Hovering is a strong enough signal that the click is coming, and the
+        // query cache makes a wasted prefetch free (T-18.12).
+        onPointerEnter={onPrefetch}
         className="flex h-full items-center gap-3 rounded-lg px-3 focus-visible:outline-none"
       >
         {/*

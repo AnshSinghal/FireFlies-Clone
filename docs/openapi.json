@@ -1319,6 +1319,9 @@
         },
         "required": [
           "meeting_id",
+          "keywords",
+          "outline",
+          "notes",
           "provider"
         ],
         "title": "SummaryOut",

@@ -237,7 +237,8 @@ export function NotebookView() {
   )
 
   return (
-    <div data-testid="notebook-page" className="space-y-6">
+    // Its own padding, now that the shell no longer imposes any.
+    <div data-testid="notebook-page" className="space-y-6 px-4 py-6 md:px-6">
       <header className="flex items-baseline gap-3">
         <h1 className="text-display text-primary">Meetings</h1>
         {data && (
@@ -330,6 +331,12 @@ export function NotebookView() {
           query={filters.q}
           onDelete={(id) => void deleteWithUndo(id)}
           onShowDetails={showDetails}
+          onPrefetch={(id) =>
+            void client.prefetchQuery({
+              queryKey: qk.meetings.detail(id),
+              queryFn: ({ signal }) => api.get(`/api/v1/meetings/${id}`, { signal }),
+            })
+          }
         />
       )}
 
@@ -410,9 +417,17 @@ interface GroupedListProps {
   query?: string
   onDelete: (id: number) => void
   onShowDetails: (id: number) => void
+  onPrefetch: (id: number) => void
 }
 
-function GroupedList({ groups, selection, query, onDelete, onShowDetails }: GroupedListProps) {
+function GroupedList({
+  groups,
+  selection,
+  query,
+  onDelete,
+  onShowDetails,
+  onPrefetch,
+}: GroupedListProps) {
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups])
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -489,6 +504,7 @@ function GroupedList({ groups, selection, query, onDelete, onShowDetails }: Grou
                   query={query}
                   onDelete={onDelete}
                   onShowDetails={onShowDetails}
+                  onPrefetch={() => onPrefetch(meeting.id)}
                   tabIndex={meeting.id === activeId ? 0 : -1}
                   onFocus={() => setPreferredId(meeting.id)}
                 />
