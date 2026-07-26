@@ -15,33 +15,62 @@ test.describe('design tokens', () => {
   })
 
   // T02-E
-  test('every focusable control shows the accent focus ring', async ({ page }) => {
-    const focusable = page.locator(
-      '#main, button, a[href], input, [tabindex]:not([tabindex="-1"])',
-    )
-    const count = await focusable.count()
-    expect(count).toBeGreaterThan(4)
+  test('every focusable control shows the accent focus ring when tabbed to', async ({ page }) => {
+    /*
+     * Driven by real Tab presses, not element.focus().
+     *
+     * :focus-visible is gated on input modality — Chromium will not match it for
+     * a button focused by script when the last interaction was not a keypress.
+     * A programmatic version of this test passes on a machine where you have
+     * already typed and fails on a fresh CI runner, which is exactly what
+     * happened. Tabbing is also what T02-E actually asks for.
+     */
+    const visited: string[] = []
 
-    const accent = await page.evaluate(() =>
-      getComputedStyle(document.documentElement).getPropertyValue('--ff-accent').trim(),
-    )
-    expect(accent).toBeTruthy()
+    for (let i = 0; i < 25; i += 1) {
+      await page.keyboard.press('Tab')
 
-    for (let i = 0; i < count; i += 1) {
-      const el = focusable.nth(i)
-      await el.focus()
+      const info = await page.evaluate(() => {
+        const el = document.activeElement
+        if (!el || el === document.body || el === document.documentElement) return null
 
-      const { shadow, outline } = await el.evaluate((node) => {
-        const s = getComputedStyle(node)
-        return { shadow: s.boxShadow, outline: s.outlineStyle }
+        // Next's dev overlay injects its own focusable button into the page.
+        // It is not our UI and is not subject to our focus-ring rule, so it
+        // must not be asserted on — and it does not exist in a prod build.
+        if (!el.closest('[data-testid="tokens-page"]')) return { outside: true as const }
+
+        const s = getComputedStyle(el)
+        return {
+          outside: false as const,
+          label:
+            el.getAttribute('data-testid') ??
+            el.getAttribute('placeholder') ??
+            el.textContent?.trim().slice(0, 24) ??
+            el.tagName,
+          shadow: s.boxShadow,
+          outline: s.outlineStyle,
+          focusVisible: el.matches(':focus-visible'),
+        }
       })
 
-      // The global :focus-visible rule swaps the outline for a 4px ring. A
-      // control with neither is invisible to keyboard users.
-      const hasRing = shadow !== 'none' && shadow.includes('4px')
-      const hasOutline = outline !== 'none'
-      expect(hasRing || hasOutline, `element ${i} has no visible focus indicator`).toBe(true)
+      if (!info) break
+      if (info.outside) continue
+      if (visited.includes(info.label) && visited.length > 3) break
+      visited.push(info.label)
+
+      // The global :focus-visible rule replaces the outline with a 4px ring.
+      // A control showing neither is invisible to keyboard users.
+      const hasRing = info.shadow !== 'none' && info.shadow.includes('4px')
+      const hasOutline = info.outline !== 'none'
+
+      expect(
+        hasRing || hasOutline,
+        `"${info.label}" has no visible focus indicator ` +
+          `(focus-visible=${info.focusVisible}, shadow=${info.shadow}, outline=${info.outline})`,
+      ).toBe(true)
     }
+
+    expect(visited.length, `tabbed through: ${visited.join(', ')}`).toBeGreaterThan(3)
   })
 
   // T02-F
