@@ -26,4 +26,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Migrations run before the server starts, so a fresh volume comes up with a
+# working schema rather than 500ing on the first query. Idempotent by design:
+# `upgrade head` on an already-current database is a no-op.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]

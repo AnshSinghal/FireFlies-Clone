@@ -1,8 +1,8 @@
 """Demo data seeder.
 
 Entry point exists from T-01 so `make seed` is wired end to end and the command
-in the README is real rather than aspirational. The data itself arrives in T-05,
-once the schema lands in T-03.
+in the README is real rather than aspirational. The schema it writes into landed
+in T-03; the data itself arrives in T-05.
 
 Contract (T-05.9): running this twice must never duplicate. Default mode upserts
 on a stable ``seed_key``; ``--reset`` drops and recreates.
@@ -19,8 +19,7 @@ def seed(*, reset: bool = False) -> int:
     if reset:
         print("seed: --reset acknowledged (nothing to drop yet)")
 
-    print("seed: no data to load — the seeder is implemented in T-05.")
-    print("seed: the schema it writes into lands first, in T-03.")
+    print("seed: schema is ready; no demo data yet — the seeder lands in T-05.")
     return 0
 
 
