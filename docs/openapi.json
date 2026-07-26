@@ -195,6 +195,25 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "MatchRange": {
+        "description": "Character offsets of a matched term within a snippet.",
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "MatchRange",
+        "type": "object"
+      },
       "MediaType": {
         "enum": [
           "audio",
@@ -389,6 +408,43 @@
           "updated_at"
         ],
         "title": "MeetingDetail",
+        "type": "object"
+      },
+      "MeetingHit": {
+        "description": "A meeting whose title or overview matched.",
+        "properties": {
+          "duration_seconds": {
+            "title": "Duration Seconds",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/MatchRange"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "started_at",
+          "duration_seconds",
+          "matches"
+        ],
+        "title": "MeetingHit",
         "type": "object"
       },
       "MeetingListItem": {
@@ -699,6 +755,42 @@
         "title": "ProcessingStatus",
         "type": "string"
       },
+      "SearchResults": {
+        "description": "Grouped, because the two kinds of hit mean different things.\n\nA title match is \"this meeting is about X\"; a transcript match is \"X was\nsaid at 18:42\". Flattening them loses that distinction and makes the\ndropdown harder to scan.",
+        "properties": {
+          "meetings": {
+            "items": {
+              "$ref": "#/components/schemas/MeetingHit"
+            },
+            "title": "Meetings",
+            "type": "array"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "total": {
+            "description": "Combined count across both groups.",
+            "title": "Total",
+            "type": "integer"
+          },
+          "transcripts": {
+            "items": {
+              "$ref": "#/components/schemas/TranscriptHit"
+            },
+            "title": "Transcripts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "query",
+          "meetings",
+          "transcripts",
+          "total"
+        ],
+        "title": "SearchResults",
+        "type": "object"
+      },
       "SidebarChannels": {
         "description": "Everything the rail's CHANNELS section needs, in one request.\n\nThe two built-in views are counts rather than channel rows \u2014 \"My Meetings\"\nand \"All Meetings\" are filters over the same data, not stored channels \u2014\nso returning them alongside avoids the client making three calls to render\none list.",
         "properties": {
@@ -827,6 +919,53 @@
           "color"
         ],
         "title": "TagRef",
+        "type": "object"
+      },
+      "TranscriptHit": {
+        "description": "A transcript line that matched, with enough context to be worth showing.",
+        "properties": {
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/MatchRange"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "meeting_id": {
+            "title": "Meeting Id",
+            "type": "integer"
+          },
+          "meeting_title": {
+            "title": "Meeting Title",
+            "type": "string"
+          },
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "integer"
+          },
+          "snippet": {
+            "title": "Snippet",
+            "type": "string"
+          },
+          "speaker": {
+            "title": "Speaker",
+            "type": "string"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "segment_id",
+          "meeting_id",
+          "meeting_title",
+          "speaker",
+          "start_ms",
+          "snippet",
+          "matches"
+        ],
+        "title": "TranscriptHit",
         "type": "object"
       },
       "UserOut": {
@@ -1642,6 +1781,75 @@
         "summary": "Regenerate a meeting summary",
         "tags": [
           "summaries"
+        ]
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "description": "FTS5-ranked, grouped into title matches and transcript matches. Snippets carry match RANGES rather than markup \u2014 the client wraps them, so transcript text containing HTML is rendered rather than executed. Queries shorter than two characters return nothing.",
+        "operationId": "search_api_v1_search_get",
+        "parameters": [
+          {
+            "description": "Search term. Treated literally, not as a pattern.",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "Search term. Treated literally, not as a pattern.",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Max hits per group.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "description": "Max hits per group.",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResults"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Search meetings and transcripts",
+        "tags": [
+          "search"
         ]
       }
     }

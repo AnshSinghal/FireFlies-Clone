@@ -17,6 +17,7 @@ See docs/schema.md, "Two problems found while drawing this".
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -24,6 +25,41 @@ from sqlalchemy import text
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+
+#: Runs of word characters and apostrophes. Everything else — `*`, `"`, `:`,
+#: `(`, `-`, `^`, `NEAR` punctuation — is FTS5 *syntax*, and a user typing it
+#: into a search box means the character, not the operator.
+_TOKEN = re.compile(r"[\w']+", re.UNICODE)
+
+#: Single characters are dropped: as a prefix term `a*` matches most of the
+#: corpus, which is slow and useless. Same reasoning as the service's
+#: two-character floor, applied per token.
+_MIN_TOKEN_LENGTH = 2
+
+
+def to_fts_query(raw: str) -> str:
+    """Turn user input into a safe FTS5 MATCH expression.
+
+    Interpolating raw input is not an injection risk here — the value is bound,
+    so it cannot escape into SQL — but FTS5 parses the bound string as its own
+    query language. `a.*b` raises `fts5: syntax error near "."` and a search box
+    that 500s on punctuation is worse than one that finds nothing.
+
+    Each token is quoted as a phrase (so it is matched literally) and joined by
+    implicit AND. The final token gets a `*` so results narrow as the user types
+    rather than appearing only on word boundaries.
+
+    Returns `""` when nothing usable survives; callers treat that as no match.
+    """
+    tokens = [t for t in _TOKEN.findall(raw) if len(t) >= _MIN_TOKEN_LENGTH]
+    if not tokens:
+        return ""
+
+    # Double quotes are the only character meaningful *inside* a phrase, and
+    # FTS5 escapes them by doubling.
+    quoted = [f'"{t.replace(chr(34), chr(34) * 2)}"' for t in tokens]
+    quoted[-1] += "*"
+    return " ".join(quoted)
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,13 +118,14 @@ def search_segments(
     default, never HTML — T-35.2 requires the server to return structured
     ranges rather than markup the client would have to trust.
     """
-    if not query.strip():
+    match = to_fts_query(query)
+    if not match:
         return []
 
     rows = session.execute(
         _SEARCH_SQL,
         {
-            "query": query,
+            "query": match,
             "meeting_id": meeting_id,
             "limit": limit,
             "offset": offset,

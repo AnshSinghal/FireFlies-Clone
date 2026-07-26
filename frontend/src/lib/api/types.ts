@@ -34,6 +34,11 @@ export type ErrorDetail = Schemas['ErrorDetail']
 export type BulkDeleteRequest = Schemas['BulkDeleteRequest']
 export type BulkDeleteResponse = Schemas['BulkDeleteResponse']
 
+export type SearchResults = Schemas['SearchResults']
+export type MeetingHit = Schemas['MeetingHit']
+export type TranscriptHit = Schemas['TranscriptHit']
+export type MatchRange = Schemas['MatchRange']
+
 /**
  * The paginated envelope, generic over its item type.
  *

@@ -176,6 +176,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/search': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Search meetings and transcripts
+     * @description FTS5-ranked, grouped into title matches and transcript matches. Snippets carry match RANGES rather than markup — the client wraps them, so transcript text containing HTML is rendered rather than executed. Queries shorter than two characters return nothing.
+     */
+    get: operations['search_api_v1_search_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -298,6 +318,16 @@ export interface components {
       version: string
     }
     /**
+     * MatchRange
+     * @description Character offsets of a matched term within a snippet.
+     */
+    MatchRange: {
+      /** End */
+      end: number
+      /** Start */
+      start: number
+    }
+    /**
      * MediaType
      * @enum {string}
      */
@@ -382,6 +412,22 @@ export interface components {
        */
       updated_at: string
       visibility: components['schemas']['Visibility']
+    }
+    /**
+     * MeetingHit
+     * @description A meeting whose title or overview matched.
+     */
+    MeetingHit: {
+      /** Duration Seconds */
+      duration_seconds: number
+      /** Id */
+      id: number
+      /** Matches */
+      matches: components['schemas']['MatchRange'][]
+      /** Started At */
+      started_at: string
+      /** Title */
+      title: string
     }
     /**
      * MeetingListItem
@@ -514,6 +560,27 @@ export interface components {
      */
     ProcessingStatus: 'pending' | 'processing' | 'ready' | 'failed'
     /**
+     * SearchResults
+     * @description Grouped, because the two kinds of hit mean different things.
+     *
+     *     A title match is "this meeting is about X"; a transcript match is "X was
+     *     said at 18:42". Flattening them loses that distinction and makes the
+     *     dropdown harder to scan.
+     */
+    SearchResults: {
+      /** Meetings */
+      meetings: components['schemas']['MeetingHit'][]
+      /** Query */
+      query: string
+      /**
+       * Total
+       * @description Combined count across both groups.
+       */
+      total: number
+      /** Transcripts */
+      transcripts: components['schemas']['TranscriptHit'][]
+    }
+    /**
      * SidebarChannels
      * @description Everything the rail's CHANNELS section needs, in one request.
      *
@@ -566,6 +633,26 @@ export interface components {
       id: number
       /** Name */
       name: string
+    }
+    /**
+     * TranscriptHit
+     * @description A transcript line that matched, with enough context to be worth showing.
+     */
+    TranscriptHit: {
+      /** Matches */
+      matches: components['schemas']['MatchRange'][]
+      /** Meeting Id */
+      meeting_id: number
+      /** Meeting Title */
+      meeting_title: string
+      /** Segment Id */
+      segment_id: number
+      /** Snippet */
+      snippet: string
+      /** Speaker */
+      speaker: string
+      /** Start Ms */
+      start_ms: number
     }
     /**
      * UserOut
@@ -1150,6 +1237,49 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  search_api_v1_search_get: {
+    parameters: {
+      query: {
+        /** @description Search term. Treated literally, not as a pattern. */
+        q: string
+        /** @description Max hits per group. */
+        limit?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SearchResults']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */

@@ -1,16 +1,22 @@
 'use client'
 
 /**
- * Command palette scaffold (T-06.11).
+ * The ⌘K binding (T-06.11, T-08.4).
  *
- * Registered NOW, before the transcript find bar in T-22 claims ⌘F, so the two
- * shortcuts are designed against each other rather than discovered in conflict.
+ * Registered in one place, before the transcript find bar in T-22 claims ⌘F, so
+ * the two shortcuts are designed against each other rather than discovered in
+ * conflict.
  *
- * The palette itself is wired to global search in T-35; this owns the shortcut
- * and the open/closed state.
+ * **This is a shortcut, not a piece of state.** The first version owned an
+ * `isOpen` boolean and the search field mirrored it into its own state in an
+ * effect. That is a cascading render, and worse, it let the two copies
+ * disagree: clicking outside closed the field but left the flag true, so the
+ * next ⌘K toggled the stale flag to false and appeared to do nothing. Firing a
+ * callback means there is exactly one copy of "is the search open", owned by
+ * the component that renders it.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 
 /** True when focus is somewhere that a bare keystroke means text, not a command. */
 export function isTypingTarget(target: EventTarget | null): boolean {
@@ -19,28 +25,35 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
 }
 
-export function useCommandPalette() {
-  const [isOpen, setIsOpen] = useState(false)
+interface CommandShortcutHandlers {
+  /** ⌘K / Ctrl+K. */
+  onTrigger: () => void
+  /** Escape, from anywhere in the window. */
+  onEscape?: () => void
+}
 
-  const open = useCallback(() => setIsOpen(true), [])
-  const close = useCallback(() => setIsOpen(false), [])
+export function useCommandPalette({ onTrigger, onEscape }: CommandShortcutHandlers) {
+  // Handlers are read through a ref so a caller can pass inline arrows without
+  // re-registering the window listener on every render.
+  const handlers = useRef({ onTrigger, onEscape })
+  useEffect(() => {
+    handlers.current = { onTrigger, onEscape }
+  })
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      // ⌘K / Ctrl+K. `preventDefault` because Firefox binds ⌘K to its own
-      // search bar, which would steal the keystroke.
+      // `preventDefault` because Firefox binds ⌘K to its own search bar, which
+      // would otherwise steal the keystroke.
       if (event.key === 'k' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
-        setIsOpen((current) => !current)
+        handlers.current.onTrigger()
         return
       }
 
-      if (event.key === 'Escape') setIsOpen(false)
+      if (event.key === 'Escape') handlers.current.onEscape?.()
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
-
-  return { isOpen, open, close }
 }
