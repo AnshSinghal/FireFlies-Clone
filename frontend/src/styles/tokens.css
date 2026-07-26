@@ -137,6 +137,10 @@
   --ff-font-sans: Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   /* ── Radius ─────────────────────────────────────────────────────────────── */
+  /* Error codes, ids and anything meant to be copied verbatim (T-16.5).
+     System stacks only — no webfont, so it costs nothing to load. */
+  --ff-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
   --ff-radius-sm: 6px;
   --ff-radius-md: 8px;
   --ff-radius-lg: 12px;

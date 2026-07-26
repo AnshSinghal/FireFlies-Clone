@@ -1160,6 +1160,58 @@ should follow from that rather than from a guess.
 
 ---
 
+## ADR-047 · One StateView, four variants, four sets of copy
+
+**Date:** 2026-07-27 · **Task:** T-16.12 · **Status:** Accepted
+
+**Context.** Empty, no-matches, no-results, error and offline had each been written where they were
+needed. That is how four different situations quietly collapse into one "No data" screen — which
+PLAN.md puts on the do-not-ship list, and rightly: the user's NEXT ACTION differs in each case. With
+no meetings they need to create one; with a filter on they need to relax it; with a search term they
+need to change it; with a failed request they need to retry.
+
+**Decision.** One `StateView` driven by a variant, with the copy and the call to action supplied per
+use.
+
+The visual language cannot drift because there is one component; the messages cannot merge because
+they are arguments. The filtered-empty state also ECHOES the active filters, so the user can see
+which one to relax rather than clearing everything to find out.
+
+**Consequences.** A test asserts the three empty variants produce different text, which is the
+property that actually matters and the one most likely to erode.
+
+---
+
+## ADR-048 · Playwright glob `?` is a wildcard, and it cost an hour
+
+**Date:** 2026-07-27 · **Task:** T-16 · **Status:** Accepted
+
+**Context.** Three T-16 tests failed in ways that pointed at the app: the empty state "not
+rendering", the error state "not appearing". The page was in fact showing "Something went wrong".
+
+`page.route('**/api/v1/meetings?*')` looks like "the meetings list with a query string". In
+Playwright's glob syntax `?` is a SINGLE-CHARACTER WILDCARD, so it also matches
+`/api/v1/meetings/facets`. Every one of those tests was stubbing or failing the facets request too.
+
+**Decision.** Route interception uses a URL predicate — `(url) => url.pathname === '/api/v1/meetings'`
+— wherever the distinction matters.
+
+**Consequences.** Two real product bugs were hiding behind the misdirection and are fixed:
+
+`Button asChild` threw. Radix's `Slot` clones a single child, and the component renders three slots
+(leading, children, trailing); two being `undefined` still counts as three, so every
+`<Button asChild>` crashed into the route error boundary. It now renders children alone when
+`asChild`, since a consumer in that mode composes its own icons.
+
+The loading skeleton did not reserve the date-group headings the real list has, so the first row
+jumped ~30px when data landed — exactly the shift a skeleton exists to prevent.
+
+A third fix was to a TEST rather than the app: T16-D failed only its first request, but the query
+client retries a retryable error once, so the automatic retry succeeded and the error state never
+appeared. It was asserting against a recovery it had itself made possible.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

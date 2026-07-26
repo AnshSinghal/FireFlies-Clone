@@ -124,11 +124,29 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       )}
       {...props}
     >
-      {leading}
-      {/* `iconOnly` still renders its children into an sr-only span rather than
-          dropping them, so the accessible name survives. */}
-      {iconOnly ? <span className="sr-only">{children}</span> : children}
-      {rightIcon}
+      {/*
+        With `asChild`, ONLY the children are rendered.
+
+        Radix's `Slot` clones a single child element, and this component
+        normally renders three slots — leading, children, trailing. Two of them
+        being `undefined` still counts as three children, so `Slot` threw
+        `React.Children.only expected to receive a single React element child`
+        and the route's error boundary swallowed it into "Something went wrong".
+
+        A consumer using `asChild` composes its own icons inside the element it
+        passes, which is the only thing that can work here.
+      */}
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {leading}
+          {/* `iconOnly` still renders its children into an sr-only span rather
+              than dropping them, so the accessible name survives. */}
+          {iconOnly ? <span className="sr-only">{children}</span> : children}
+          {rightIcon}
+        </>
+      )}
     </Component>
   )
 })

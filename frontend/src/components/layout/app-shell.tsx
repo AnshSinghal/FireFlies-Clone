@@ -22,6 +22,7 @@ import { useSidebar } from '@/lib/hooks/use-sidebar'
 
 import { SidebarNav } from './sidebar'
 import { SidebarDrawer } from './sidebar-drawer'
+import { ConnectionStatus } from './connection-status'
 import { Topbar } from './topbar'
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -38,7 +39,15 @@ export function AppShell({ children }: { children: ReactNode }) {
        * `--rail-w` carries the collapse state, so the width transition is one
        * animated custom property rather than conditional classes.
        */
-      className="grid h-screen grid-cols-[minmax(0,1fr)] grid-rows-[56px_1fr] bg-surface-0"
+      /*
+        THREE rows, not two. Adding the connection status as a third child of a
+        two-row grid auto-places it into an implicit row, which works by
+        accident until something depends on the explicit track list — the same
+        family of silent grid failure as ADR-020.
+
+        `auto` because the row is 2px normally and a full banner when offline.
+      */
+      className="grid h-screen grid-cols-[minmax(0,1fr)] grid-rows-[56px_auto_minmax(0,1fr)] bg-surface-0"
       style={
         {
           '--rail-expanded': collapsed ? '64px' : '240px',
@@ -51,6 +60,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         toggleRef={toggleRef}
         onCollapse={toggleCollapsed}
       />
+
+      {/* Directly under the topbar: both states it renders describe the whole
+          page rather than any one panel. */}
+      <ConnectionStatus />
 
       {/*
         `minmax(0, 1fr)` again on the content column, and ONE column below `md`:

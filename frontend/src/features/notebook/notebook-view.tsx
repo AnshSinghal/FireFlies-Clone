@@ -9,11 +9,12 @@
  * reference before, the reference won (ADR-011, ADR-021). See ADR-036.
  */
 
+import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/controls'
-import { EmptyInbox, EmptySearch, EmptyState } from '@/components/ui/empty-state'
+import { StateView } from '@/components/ui/state-view'
 import { Pagination } from '@/components/ui/pagination'
 import { MeetingListSkeleton } from '@/components/ui/skeleton'
 import { useQueryClient } from '@tanstack/react-query'
@@ -306,7 +307,16 @@ export function NotebookView() {
       {isError && <ErrorState error={error} onRetry={() => void refetch()} />}
 
       {data && items.length === 0 && (
-        <NotebookEmpty hasQuery={Boolean(filters.q) || chips.length > 0} />
+        <NotebookEmpty
+          query={filters.q}
+          chips={chips}
+          onClearFilters={() => setFilter(clearedFilters())}
+          onClearSearch={() => {
+            setSearch('')
+            setSearchKey('')
+            setFilter({ q: null })
+          }}
+        />
       )}
 
       {data && items.length > 0 && view === 'grid' && (
@@ -491,18 +501,76 @@ function GroupedList({ groups, selection, query, onDelete, onShowDetails }: Grou
   )
 }
 
-function NotebookEmpty({ hasQuery }: { hasQuery: boolean }) {
-  // Two genuinely different situations, two different messages (T-13.10).
-  // Reusing one for both is on the do-not-ship list.
+function NotebookEmpty({
+  query,
+  chips,
+  onClearFilters,
+  onClearSearch,
+}: {
+  query?: string
+  chips: readonly { id: string; label: string }[]
+  onClearFilters: () => void
+  onClearSearch: () => void
+}) {
+  /*
+   * THREE genuinely different situations, three different screens (T-16.1–3).
+   *
+   * Collapsing them into one "No data" message is on the do-not-ship list, and
+   * for good reason: the user's next action differs in each case. With no
+   * meetings at all they need to create one; with a filter on they need to
+   * relax it; with a search term they need to change it. A shared message tells
+   * them none of that.
+   */
+  if (query) {
+    return (
+      <StateView
+        variant="no-results"
+        testId="notebook-empty"
+        title={`No results for “${query}”`}
+        body="Try a different search term, or check the spelling."
+        action={
+          <Button variant="secondary" onClick={onClearSearch} data-testid="empty-clear-search">
+            Clear search
+          </Button>
+        }
+      />
+    )
+  }
+
+  if (chips.length > 0) {
+    return (
+      <StateView
+        variant="no-matches"
+        testId="notebook-empty"
+        title="No meetings match your filters"
+        body="Nothing here fits every filter you have on."
+        // Echoing the active filters, so the user can see WHICH one to relax
+        // rather than clearing all of them to find out.
+        detail={chips.map((chip) => chip.label).join(' · ')}
+        action={
+          <Button variant="primary" onClick={onClearFilters} data-testid="empty-clear-filters">
+            Clear all filters
+          </Button>
+        }
+      />
+    )
+  }
+
   return (
-    <EmptyState
+    <StateView
+      variant="empty"
       testId="notebook-empty"
-      illustration={hasQuery ? <EmptySearch /> : <EmptyInbox />}
-      title={hasQuery ? 'No meetings match your search' : 'No meetings yet'}
-      body={
-        hasQuery
-          ? 'Try a different term, or clear the search to see everything.'
-          : 'Upload a transcript or create a meeting to get started.'
+      title="No meetings yet"
+      body="Upload a transcript or create a meeting to get started."
+      action={
+        <Button variant="primary" asChild data-testid="empty-upload">
+          <Link href="/upload?tab=upload">Upload transcript</Link>
+        </Button>
+      }
+      secondaryAction={
+        <Button variant="secondary" asChild data-testid="empty-create">
+          <Link href="/upload?tab=manual">Create manually</Link>
+        </Button>
       }
     />
   )
@@ -514,16 +582,19 @@ function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => void })
     error instanceof Error ? error.message : 'Something went wrong loading your meetings.'
 
   return (
-    <EmptyState
+    <StateView
+      variant="error"
       testId="notebook-error"
       title="Couldn't load meetings"
       body={message}
+      // The code in muted mono, for whoever is reading the console beside this.
+      // Deliberately quiet: it is a handle for a bug report, not the message.
+      detail={<code className="font-mono">{code}</code>}
       action={
         <Button variant="primary" onClick={onRetry} data-testid="notebook-retry">
           Try again
         </Button>
       }
-      secondaryAction={<code className="text-xs text-muted">{code}</code>}
     />
   )
 }
