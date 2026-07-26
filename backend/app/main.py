@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from slowapi.errors import RateLimitExceeded
 
+from app.api.responses import DEFAULT as DEFAULT_RESPONSES
 from app.api.v1.routers import api_router
 from app.api.v1.routers import health as health_router
 from app.core.config import Settings, get_settings
@@ -60,6 +61,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
+        # Every operation documents the catch-all, so ErrorResponse is always in
+        # the schema and the generated client can type a failure.
+        responses=DEFAULT_RESPONSES,
     )
 
     app.state.settings = settings

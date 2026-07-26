@@ -10,6 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response, status
 
+from app.api.responses import UNAVAILABLE
 from app.core.config import Settings, get_settings
 from app.core.deps import DbSession
 from app.schemas.health import HealthResponse
@@ -27,7 +28,7 @@ router = APIRouter(tags=["health"])
         "Returns **503** when the database cannot be reached, so a host's health "
         "check takes the instance out of rotation rather than serving errors."
     ),
-    responses={503: {"description": "A dependency is unreachable."}},
+    responses=UNAVAILABLE,
 )
 def health(
     db: DbSession,

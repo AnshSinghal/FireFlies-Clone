@@ -191,6 +191,37 @@ export interface components {
        */
       failed?: number[]
     }
+    /** ErrorDetail */
+    ErrorDetail: {
+      /**
+       * Code
+       * @description Stable machine-readable identifier; safe to branch on.
+       */
+      code: string
+      /**
+       * Details
+       * @description Field-level errors, keyed by dotted path, when applicable.
+       */
+      details?: {
+        [key: string]: unknown
+      }
+      /**
+       * Message
+       * @description Human-readable explanation. Wording may change.
+       */
+      message: string
+    }
+    /**
+     * ErrorResponse
+     * @description Every non-2xx response body in the API has this shape.
+     *
+     *     Nested under a single `error` key rather than flattened, so a client can
+     *     tell an error from a successful payload without inspecting the status code —
+     *     which matters for the fetch wrapper in T-06.4.
+     */
+    ErrorResponse: {
+      error: components['schemas']['ErrorDetail']
+    }
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -315,7 +346,7 @@ export interface components {
      *     the row clamps it to a single line anyway.
      */
     MeetingListItem: {
-      action_item_counts?: components['schemas']['ActionItemCounts']
+      action_item_counts: components['schemas']['ActionItemCounts']
       /** Duration Seconds */
       duration_seconds: number
       /**
@@ -551,12 +582,23 @@ export interface operations {
           'application/json': components['schemas']['HealthResponse']
         }
       }
-      /** @description A dependency is unreachable. */
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description A dependency is unavailable. */
       503: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
       }
     }
   }
@@ -576,6 +618,24 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['UserOut']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description A dependency is unavailable. */
+      503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
     }
@@ -616,6 +676,15 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
     }
   }
   create_meeting_api_v1_meetings_post: {
@@ -640,13 +709,22 @@ export interface operations {
           'application/json': components['schemas']['MeetingDetail']
         }
       }
-      /** @description Validation Error */
+      /** @description Invalid payload; `details` is keyed by field path. */
       422: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['HTTPValidationError']
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
     }
@@ -682,6 +760,15 @@ export interface operations {
           'application/json': components['schemas']['HTTPValidationError']
         }
       }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
     }
   }
   get_meeting_api_v1_meetings__meeting_id__get: {
@@ -709,14 +796,18 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
       }
       /** @description Deleted, but restorable. */
       410: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
       }
       /** @description Validation Error */
       422: {
@@ -725,6 +816,15 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
     }
@@ -747,6 +847,24 @@ export interface operations {
         }
         content?: never
       }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
       /** @description Validation Error */
       422: {
         headers: {
@@ -754,6 +872,15 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
     }
@@ -782,13 +909,40 @@ export interface operations {
           'application/json': components['schemas']['MeetingDetail']
         }
       }
-      /** @description Validation Error */
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
       422: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['HTTPValidationError']
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
     }
@@ -813,6 +967,24 @@ export interface operations {
           'application/json': components['schemas']['MeetingDetail']
         }
       }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
       /** @description Validation Error */
       422: {
         headers: {
@@ -820,6 +992,15 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
     }
@@ -844,6 +1025,24 @@ export interface operations {
           'application/json': components['schemas']['SummaryOut']
         }
       }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
       /** @description Validation Error */
       422: {
         headers: {
@@ -858,7 +1057,18 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
       }
     }
   }
