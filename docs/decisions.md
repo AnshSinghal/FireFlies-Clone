@@ -143,6 +143,49 @@ upgrade.
 
 ---
 
+## ADR-009 · `NoDecode` on every list-typed setting
+
+**Date:** 2026-07-26 · **Task:** T-01.5 · **Status:** Accepted
+
+**Context.** `CORS_ORIGINS=http://localhost:3100` crashed the app at import time with
+`error parsing value for field "cors_origins"`. For complex field types (anything list- or
+dict-shaped) pydantic-settings runs `json.loads` on the environment value inside `EnvSettingsSource`,
+*before* field validators run — so a `mode="before"` validator that splits on commas never gets a
+chance, and the ordinary comma-separated form used by both `.env.example` and `docker-compose.yml`
+is rejected as invalid JSON.
+
+Worth noting how this surfaced: the default value made it invisible locally, and it only appeared
+once something actually set the variable. It would otherwise have shown up as a container that
+refuses to boot.
+
+**Decision.** Annotate the field `Annotated[list[str], NoDecode]`, which passes the raw string to the
+validator, and cover it with parametrised tests including the empty and space-padded cases.
+
+**Consequences.** Any future list- or dict-typed setting needs the same annotation. The tests in
+`tests/test_config.py` document why, so the next person adding one has a worked example rather than a
+puzzle.
+
+---
+
+## ADR-010 · The E2E suite runs on dedicated ports
+
+**Date:** 2026-07-26 · **Task:** T-01.10 · **Status:** Accepted
+
+**Context.** With `reuseExistingServer: true` (the usual local default) the first smoke run tested an
+entirely different application — an unrelated project was already serving port 3000, Playwright
+reused it, and the suite dutifully asserted against someone else's page. Playwright cannot tell our
+dev server from anyone else's; it only checks whether the port answers.
+
+**Decision.** The suite runs the app on 3100/8100 with `reuseExistingServer: false`, overridable via
+`E2E_FRONTEND_PORT` / `E2E_BACKEND_PORT`.
+
+**Consequences.** Playwright always starts and owns the servers it tests, so a run cannot be
+contaminated by whatever else is listening, and `make dev` can stay up on 3000/8000 while the suite
+runs. The cost is a few seconds of startup per run, since nothing is ever reused. Cheap, against a
+failure mode that produces confidently wrong results rather than an error.
+
+---
+
 ## ADR-005 · Frontend consumes the API over HTTP from the browser, not via RSC
 
 *(Placeholder — to be written during T-06 when the data layer lands.)*
