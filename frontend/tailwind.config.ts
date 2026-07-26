@@ -155,6 +155,8 @@ const config: Config = {
 
     fontFamily: {
       sans: ['var(--ff-font-sans)', 'system-ui', 'sans-serif'],
+      // For values meant to be read character by character — error codes, ids.
+      mono: ['var(--ff-font-mono)', 'monospace'],
     },
 
     // ── Shape & elevation ────────────────────────────────────────────────────

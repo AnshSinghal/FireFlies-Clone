@@ -79,18 +79,49 @@ export function MeetingRowSkeleton() {
   )
 }
 
+/**
+ * How many cards sit under each date heading while loading.
+ *
+ * The real list is grouped by day, and the headings take vertical space. A flat
+ * run of cards therefore starts its first row ~30px higher than the real list
+ * does, and everything jumps down when the data lands — which is precisely the
+ * shift a skeleton exists to prevent (T16-F).
+ *
+ * The exact grouping is unknowable in advance; what matters is that a heading
+ * is reserved above the first card, which is where the offset comes from.
+ */
+const SKELETON_GROUPS = [2, 3, 3]
+
 export function MeetingListSkeleton({ rows = 8 }: { rows?: number }) {
+  const groups: number[] = []
+  let remaining = rows
+  for (const size of SKELETON_GROUPS) {
+    if (remaining <= 0) break
+    groups.push(Math.min(size, remaining))
+    remaining -= size
+  }
+  if (remaining > 0) groups.push(remaining)
+
   return (
     <div
       data-testid="meeting-list-skeleton"
       aria-busy="true"
       aria-label="Loading meetings"
-      // Matches the real list's card gap, so the whole block is the same
+      // Matches the real list's group spacing, so the whole block is the same
       // height as what replaces it.
-      className="space-y-2"
+      className="space-y-6"
     >
-      {Array.from({ length: rows }, (_, index) => (
-        <MeetingRowSkeleton key={index} />
+      {groups.map((size, groupIndex) => (
+        <div key={groupIndex} className="space-y-2">
+          {/* The date heading, at the same height as the real one. */}
+          <div className="flex items-center gap-2.5 px-1">
+            <Skeleton variant="rect" className="h-4 w-4 shrink-0" />
+            <Skeleton variant="text" className="h-[22px] w-24" />
+          </div>
+          {Array.from({ length: size }, (_, index) => (
+            <MeetingRowSkeleton key={index} />
+          ))}
+        </div>
       ))}
     </div>
   )

@@ -103,6 +103,11 @@
     animation: ff-modal-in var(--ff-dur-base) var(--ff-ease);
   }
 
+  /* The background-refetch bar (T-16.6): a stripe travelling left to right. */
+  .ff-indeterminate {
+    animation: ff-indeterminate 1.1s var(--ff-ease) infinite;
+  }
+
   /* The details drawer slides in from the right (T-15.2). */
   .ff-drawer {
     animation: ff-slide-in var(--ff-dur-slow) var(--ff-ease);
@@ -127,6 +132,15 @@
     );
     background-size: 200% 100%;
     animation: ff-shimmer 1.4s var(--ff-ease) infinite;
+  }
+}
+
+@keyframes ff-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(400%);
   }
 }
 
@@ -228,5 +242,12 @@
   .ff-shimmer {
     animation: none !important;
     background-image: none;
+  }
+
+  /* A travelling stripe is motion for its own sake; a static bar still says
+     "working" without moving anything. */
+  .ff-indeterminate {
+    animation: none !important;
+    width: 100%;
   }
 }
