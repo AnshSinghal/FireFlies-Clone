@@ -1,0 +1,55 @@
+# Development stack: `make dev` brings both apps up from a fresh clone.
+# Production deployment is separate — see T-44.
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - '8000:8000'
+    environment:
+      # The database lives on a named volume, not in the image, so it survives
+      # `docker compose down` and rebuilds. Four slashes = absolute path.
+      DATABASE_URL: sqlite:////data/fireflies.db
+      CORS_ORIGINS: http://localhost:3000
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      AI_API_KEY: ${AI_API_KEY:-}
+      MEDIA_DIR: /app/media
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+      SEED_ANCHOR_DATE: ${SEED_ANCHOR_DATE:-}
+    volumes:
+      # Source is bind-mounted so --reload picks up edits.
+      - ./backend:/app
+      # ...but not over the virtualenv, which is built for the container's
+      # platform and must not be shadowed by the host's.
+      - backend_venv:/app/.venv
+      - db_data:/data
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - '3000:3000'
+    environment:
+      # Resolved by the BROWSER, not from inside the container — so it stays
+      # localhost rather than the compose service name.
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+      - frontend_next:/app/.next
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  db_data:
+  backend_venv:
+  frontend_node_modules:
+  frontend_next:

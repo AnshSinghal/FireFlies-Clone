@@ -1,0 +1,65 @@
+.DEFAULT_GOAL := help
+.PHONY: help dev down logs seed seed-reset test test-backend e2e lint lint-frontend lint-backend \
+        typecheck format install clean
+
+# ─────────────────────────────────────────────────────────────────────────────
+help: ## Show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+
+# ── Running ──────────────────────────────────────────────────────────────────
+dev: ## Start both apps via Docker Compose
+	docker compose up --build
+
+down: ## Stop everything
+	docker compose down
+
+logs: ## Tail logs from both services
+	docker compose logs -f
+
+# ── Data ─────────────────────────────────────────────────────────────────────
+seed: ## Populate the demo database (idempotent)
+	cd backend && uv run python -m app.seed.seed
+
+seed-reset: ## Drop and repopulate the demo database
+	cd backend && uv run python -m app.seed.seed --reset
+
+# ── Tests ────────────────────────────────────────────────────────────────────
+test: test-backend ## Run the backend test suite
+
+test-backend:
+	cd backend && uv run pytest -q
+
+e2e: ## Run the Playwright end-to-end suite
+	cd e2e && npm test
+
+# ── Quality gates ────────────────────────────────────────────────────────────
+lint: lint-backend lint-frontend ## Lint everything and check backend layering
+
+lint-backend:
+	cd backend && uv run ruff check .
+	cd backend && uv run ruff format --check .
+	python3 scripts/check_layering.py backend
+
+lint-frontend:
+	cd frontend && npm run lint
+	cd frontend && npm run format:check
+
+typecheck: ## Typecheck both apps
+	cd backend && uv run mypy app
+	cd frontend && npm run typecheck
+
+format: ## Auto-format everything
+	cd backend && uv run ruff format .
+	cd backend && uv run ruff check --fix .
+	cd frontend && npm run format
+
+# ── Setup ────────────────────────────────────────────────────────────────────
+install: ## Install dependencies for both apps (no Docker)
+	cd backend && uv sync
+	cd frontend && npm install
+
+clean: ## Remove build artefacts and caches
+	rm -rf frontend/.next frontend/node_modules
+	rm -rf backend/.venv backend/.pytest_cache backend/.mypy_cache backend/.ruff_cache
+	find . -type d -name __pycache__ -prune -exec rm -rf {} +
