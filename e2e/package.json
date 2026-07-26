@@ -1,0 +1,14 @@
+{
+  "name": "fireflies-e2e",
+  "private": true,
+  "description": "Playwright end-to-end suite. Owns its own dependencies so Playwright never leaks into the app bundle.",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.0"
+  }
+}

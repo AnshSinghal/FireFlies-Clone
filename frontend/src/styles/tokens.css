@@ -1,0 +1,123 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS — the only file in this repo that may contain a hex code.
+   Values transcribed from design.md §3. Consumed by tailwind.config.ts.
+
+   ⚠️ PROVISIONAL (T-01). Two things land in T-02:
+      1. The palette is not yet calibrated against real Fireflies screenshots.
+         design.md §3.0 lists the eight surfaces to sample. Until then these are
+         a researched starting point, not measured truth.
+      2. This is currently a single flat layer. T-02.3 splits it into a
+         primitive layer (--ff-blue-600: #2A6EF4) and a semantic layer
+         (--ff-accent: var(--ff-blue-600)) so dark mode re-points semantics
+         instead of redefining forty values.
+
+   Components consume the SEMANTIC names only. A component that needs a
+   bespoke dark-mode override is a bug in this file, not in the component.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Typography ─────────────────────────────────────────────────────────── */
+  /* Overridden by next/font in T-02.5; this is the fallback chain. */
+  --ff-font-sans: Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* ── Accent ─────────────────────────────────────────────────────────────── */
+  --ff-accent: #2a6ef4; /* [CALIBRATE] primary button fill        */
+  --ff-accent-hover: #1f5bd4;
+  --ff-accent-pressed: #1848ac;
+  --ff-accent-subtle: #eaf1fe; /* [CALIBRATE] active nav bg, active transcript line */
+  --ff-accent-border: #bbd3fb;
+
+  /* ── Brand ──────────────────────────────────────────────────────────────── */
+  --ff-brand-amber: #f5b301; /* [CALIBRATE] firefly mark, AI badges    */
+
+  /* ── Surfaces ───────────────────────────────────────────────────────────── */
+  --ff-surface-0: #ffffff; /* cards, topbar, panels, table rows      */
+  --ff-surface-1: #f7f8fa; /* [CALIBRATE] app background, left rail  */
+  --ff-surface-2: #eff1f5; /* [CALIBRATE] table header, chip default */
+  --ff-surface-hover: #f2f4f7;
+
+  /* ── Borders ────────────────────────────────────────────────────────────── */
+  --ff-border-subtle: #e4e7ec;
+  --ff-border-strong: #cfd4dc;
+
+  /* ── Text ───────────────────────────────────────────────────────────────── */
+  --ff-text-primary: #101828; /* [CALIBRATE] headings, meeting titles   */
+  --ff-text-secondary: #475467;
+  --ff-text-muted: #98a2b3; /* [CALIBRATE] timestamps, column headers */
+  --ff-text-inverse: #ffffff;
+
+  /* ── Status ─────────────────────────────────────────────────────────────── */
+  --ff-success: #12b76a;
+  --ff-success-subtle: #ecfdf3;
+  --ff-warning: #f79009;
+  --ff-danger: #f04438;
+  --ff-danger-subtle: #fef3f2;
+
+  /* ── Search highlighting ────────────────────────────────────────────────── */
+  --ff-highlight: #ffe9a8;
+  --ff-highlight-active: #ffc933;
+
+  /* ── Speaker palette (design.md §3.4) ───────────────────────────────────── */
+  /* Assigned by stable hash of the speaker's name, never by array position, so
+     a speaker keeps their colour across transcript, outline and avatars. */
+  --ff-speaker-0: #2a6ef4;
+  --ff-speaker-1: #12b76a;
+  --ff-speaker-2: #f5b301;
+  --ff-speaker-3: #9e77ed;
+  --ff-speaker-4: #f04438;
+  --ff-speaker-5: #06aed4;
+  --ff-speaker-6: #ee46bc;
+  --ff-speaker-7: #f79009;
+
+  /* ── Radius ─────────────────────────────────────────────────────────────── */
+  --ff-radius-sm: 6px;
+  --ff-radius-md: 8px;
+  --ff-radius-lg: 12px;
+  --ff-radius-full: 999px;
+
+  /* ── Elevation ──────────────────────────────────────────────────────────── */
+  --ff-shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --ff-shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.1), 0 1px 2px rgba(16, 24, 40, 0.06);
+  --ff-shadow-md: 0 4px 8px -2px rgba(16, 24, 40, 0.1), 0 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --ff-shadow-lg: 0 12px 16px -4px rgba(16, 24, 40, 0.08), 0 4px 6px -2px rgba(16, 24, 40, 0.03);
+  --ff-shadow-focus: 0 0 0 4px rgba(42, 110, 244, 0.24);
+
+  /* ── Motion ─────────────────────────────────────────────────────────────── */
+  --ff-dur-fast: 120ms;
+  --ff-dur-base: 200ms;
+  --ff-dur-slow: 320ms;
+  --ff-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DARK THEME (T-38)
+   Elevation here is conveyed by LIGHTER SURFACES, not by shadows — modals and
+   popovers sit on --ff-surface-2 and shadows fall away to near-invisible.
+   The light accent fails contrast on dark, hence the lifted blue.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+[data-theme='dark'] {
+  --ff-surface-0: #161a22;
+  --ff-surface-1: #0f1218;
+  --ff-surface-2: #1f242e;
+  --ff-surface-hover: #232935;
+
+  --ff-border-subtle: #2a313d;
+  --ff-border-strong: #3a4351;
+
+  --ff-text-primary: #f2f4f7;
+  --ff-text-secondary: #b4bcc9;
+  --ff-text-muted: #79839a;
+
+  --ff-accent: #5b8def;
+  --ff-accent-subtle: #18243c;
+
+  --ff-highlight: #6b5714;
+
+  /* Shadows recede; surfaces do the lifting. */
+  --ff-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --ff-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.32);
+  --ff-shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.36);
+  --ff-shadow-lg: 0 12px 16px -4px rgba(0, 0, 0, 0.4);
+  --ff-shadow-focus: 0 0 0 4px rgba(91, 141, 239, 0.32);
+}
