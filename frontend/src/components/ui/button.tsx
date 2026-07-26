@@ -96,6 +96,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return (
     <Component
       ref={ref}
+      /*
+       * `type="button"` by default. HTML's default is `submit`, so a Button
+       * inside a form submits it — which is never what a Cancel or a toolbar
+       * control means. Overridable via props for the one button that IS the
+       * submit.
+       */
+      type={asChild ? undefined : 'button'}
       // `aria-busy` rather than swapping the label: a screen reader should hear
       // "Save, busy", not lose the button's name mid-action.
       aria-busy={loading || undefined}

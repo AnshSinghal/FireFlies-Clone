@@ -92,14 +92,33 @@ export default defineConfig({
       },
     },
     {
-      command: `cd ../frontend && npm run dev -- --port ${FRONTEND_PORT}`,
+      /*
+       * A PRODUCTION build, not `next dev`.
+       *
+       * The dev server compiles routes and RSC payloads on demand, so the first
+       * client navigation in each worker took many seconds — which surfaced as
+       * a debounced write to the URL "not happening" and cost an afternoon
+       * before the cause was clear. Warming the routes with a plain fetch did
+       * not help, because the flight path is compiled separately.
+       *
+       * Building first removes that entire class of flakiness AND means the
+       * suite exercises what actually ships: minified, with production React
+       * and no StrictMode double-invocation. It costs ~40s of build time once
+       * per run, against several seconds of compile stalls per worker.
+       */
+      command: `cd ../frontend && npm run build && npm run start -- --port ${FRONTEND_PORT}`,
       url: FRONTEND_URL,
       reuseExistingServer: false,
-      timeout: 120_000,
+      // Generous: the build is inside this budget.
+      timeout: 300_000,
       stdout: 'pipe',
       stderr: 'pipe',
       env: {
         NEXT_PUBLIC_API_URL: BACKEND_URL,
+        // The /dev/* surfaces are what several specs exercise, and they are
+        // closed in a production build unless asked for. A real deployment
+        // never sets this.
+        NEXT_PUBLIC_ENABLE_DEV_SURFACES: 'true',
       },
     },
   ],

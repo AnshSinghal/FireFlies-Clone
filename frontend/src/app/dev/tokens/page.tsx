@@ -12,6 +12,8 @@
  */
 
 import { notFound } from 'next/navigation'
+
+import { DEV_SURFACES_ENABLED } from '@/lib/dev-surfaces'
 import { useEffect, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -128,7 +130,7 @@ function toHex(value: string): string {
 // ── Page ────────────────────────────────────────────────────────────────────
 
 export default function TokensPage() {
-  if (process.env.NODE_ENV === 'production') notFound()
+  if (!DEV_SURFACES_ENABLED) notFound()
 
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [resolved, setResolved] = useState<Record<string, string>>({})

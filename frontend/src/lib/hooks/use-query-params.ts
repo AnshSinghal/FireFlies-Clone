@@ -14,7 +14,7 @@
  * rather than defaults to inherit.
  */
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 
 export type ParamValue = string | number | boolean | null | undefined | string[]
@@ -34,7 +34,6 @@ export interface SetParamsOptions {
 }
 
 export function useQueryParams() {
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
@@ -72,10 +71,29 @@ export function useQueryParams() {
       const query = next.toString()
       const url = query ? `${pathname}?${query}` : pathname
 
-      const navigate = options.history === 'replace' ? router.replace : router.push
-      navigate(url, { scroll: options.scroll ?? false })
+      /*
+       * `history.pushState`, not `router.push`.
+       *
+       * Next's App Router treats a search-param change as a navigation: it
+       * fetches a fresh RSC payload for the route before the URL updates. On a
+       * page whose data is fetched client-side that round-trip buys nothing,
+       * and it is slow enough to be visible — a filter chip took seconds to
+       * clear, and the whole panel felt broken.
+       *
+       * Next 15+ integrates the native history methods with `usePathname` and
+       * `useSearchParams` precisely for this: the URL updates synchronously,
+       * the hooks re-render, and Back still works because a real history entry
+       * is created.
+       */
+      if (options.history === 'replace') {
+        window.history.replaceState(null, '', url)
+      } else {
+        window.history.pushState(null, '', url)
+      }
+
+      if (options.scroll) window.scrollTo({ top: 0 })
     },
-    [pathname, router, searchParams],
+    [pathname, searchParams],
   )
 
   const getParam = useCallback((key: string) => searchParams.get(key), [searchParams])
@@ -95,10 +113,11 @@ export function useQueryParams() {
 
   const clearParams = useCallback(
     (options: SetParamsOptions = {}) => {
-      const navigate = options.history === 'replace' ? router.replace : router.push
-      navigate(pathname, { scroll: options.scroll ?? false })
+      // Same mechanism as `setParams`, for the same reason.
+      if (options.history === 'replace') window.history.replaceState(null, '', pathname)
+      else window.history.pushState(null, '', pathname)
     },
-    [pathname, router],
+    [pathname],
   )
 
   return { params, getParam, getAll, getNumber, setParams, clearParams }

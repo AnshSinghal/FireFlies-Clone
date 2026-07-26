@@ -9,6 +9,7 @@
  */
 
 import { LayoutGrid, List, SlidersHorizontal } from 'lucide-react'
+import { forwardRef, type ButtonHTMLAttributes } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Badge, ToggleChip } from '@/components/ui/chip'
@@ -47,38 +48,52 @@ export type QuickFilterId = (typeof QUICK_FILTERS)[number]['id']
 interface NotebookToolbarProps {
   query: string
   onQueryChange: (value: string) => void
+  /** Fires once typing settles — this is what writes to the URL. */
+  onQueryCommit: (value: string) => void
   sort: string
   onSortChange: (value: string) => void
   view: NotebookView
   onViewChange: (view: NotebookView) => void
   active: readonly QuickFilterId[]
   onToggleQuickFilter: (id: QuickFilterId) => void
-  /** Drives the count badge on the Filters button. */
-  activeFilterCount: number
-  onOpenFilters: () => void
+  /** The FiltersPanel renders its own trigger, so the toolbar is handed one. */
+  filtersTrigger: React.ReactNode
   searching: boolean
+  searchRef?: React.Ref<HTMLInputElement>
 }
 
 export function NotebookToolbar({
   query,
   onQueryChange,
+  onQueryCommit,
   sort,
   onSortChange,
   view,
   onViewChange,
   active,
   onToggleQuickFilter,
-  activeFilterCount,
-  onOpenFilters,
+  filtersTrigger,
   searching,
+  searchRef,
 }: NotebookToolbarProps) {
   return (
     <div className="space-y-3" data-testid="notebook-toolbar">
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1 sm:max-w-search">
           <SearchInput
+            ref={searchRef}
             value={query}
             onChange={onQueryChange}
+            onDebouncedChange={onQueryCommit}
+            // Escape clears rather than blurring: in a search field the thing
+            // you want undone is the query, not the focus (T-13.11).
+            onKeyDown={(event) => {
+              if (event.key === 'Escape' && query) {
+                event.preventDefault()
+                onQueryChange('')
+                onQueryCommit('')
+              }
+            }}
             ariaLabel="Search meetings"
             placeholder="Search by title or keyword"
             loading={searching}
@@ -86,21 +101,7 @@ export function NotebookToolbar({
           />
         </div>
 
-        <Button
-          variant="secondary"
-          onClick={onOpenFilters}
-          data-testid="notebook-filters-button"
-          leftIcon={<SlidersHorizontal size={16} strokeWidth={1.75} />}
-          rightIcon={
-            activeFilterCount > 0 ? (
-              <Badge variant="accent" shape="count">
-                {activeFilterCount}
-              </Badge>
-            ) : undefined
-          }
-        >
-          Filters
-        </Button>
+        {filtersTrigger}
 
         <Select
           label="Sort by"
@@ -175,3 +176,41 @@ function ViewButton({
     />
   )
 }
+
+/**
+ * The Filters button, exported so the panel can own it as its own trigger.
+ *
+ * Radix needs the trigger inside the Popover to wire `aria-expanded`, focus
+ * return and outside-click detection — a button rendered elsewhere that merely
+ * flips an `open` prop gets none of that.
+ *
+ * `forwardRef` and `...props` are LOad-BEARING. `Popover.Trigger asChild` uses
+ * Radix's `Slot`, which clones its immediate child and hands it the trigger's
+ * props and ref. When that child is a component rather than a DOM element,
+ * anything it does not forward is silently dropped — the first version of this
+ * swallowed every one of them, and the panel simply never opened, with no
+ * error anywhere.
+ */
+export const FiltersButton = forwardRef<
+  HTMLButtonElement,
+  { activeCount: number } & ButtonHTMLAttributes<HTMLButtonElement>
+>(function FiltersButton({ activeCount, ...props }, ref) {
+  return (
+    <Button
+      ref={ref}
+      variant="secondary"
+      data-testid="filters-button"
+      leftIcon={<SlidersHorizontal size={16} strokeWidth={1.75} />}
+      rightIcon={
+        activeCount > 0 ? (
+          <Badge variant="accent" shape="count">
+            {activeCount}
+          </Badge>
+        ) : undefined
+      }
+      {...props}
+    >
+      Filters
+    </Button>
+  )
+})

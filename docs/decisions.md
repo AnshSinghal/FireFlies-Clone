@@ -968,6 +968,106 @@ anything touching this area — one green run does not distinguish "fixed" from 
 
 ---
 
+## ADR-039 · The filters panel is draft-then-Apply
+
+**Date:** 2026-07-27 · **Task:** T-13.5 · **Status:** Accepted · **Closes pending decision #5**
+
+**Context.** T-13.5 offers both models and requires a choice. The panel has seven sections: host,
+participants, date, duration, tags, channel and an action-items switch.
+
+**Decision.** Draft-then-Apply.
+
+Live-apply means a request per checkbox. A user narrowing by host, then date, then duration fires
+three or more round-trips and watches the list churn under them — and the intermediate states are
+ones nobody asked to see. With seven sections that is the common path, not an edge case.
+
+The plan's own specification points the same way: a sticky footer holding `Clear all` and `Apply`,
+and a discard-with-toast on dismissal, only mean anything if the changes are drafts.
+
+**The cost, and what pays for it.** Draft models are confusing when the user cannot tell what is
+committed. Two things resolve that: the active-filter chip row above the list always shows the
+APPLIED state, and dismissing a dirty panel says `Filters not applied` rather than silently
+discarding six clicks.
+
+**Consequences.** The draft is reseeded from the applied state each time the panel OPENS, keyed on
+`open` rather than on the applied filters — reseeding while the panel is open would wipe the user's
+in-progress edits the moment anything else touched the URL.
+
+---
+
+## ADR-040 · The e2e suite runs against a production build
+
+**Date:** 2026-07-27 · **Task:** T-13 · **Status:** Accepted
+
+**Context.** Three T-13 search tests failed in the suite and passed alone. The symptom was that a
+debounced write to the URL "never happened" — so the obvious suspects were the debounce, the
+controlled input, and the fixed clock. None of them was the cause.
+
+`next dev` compiles routes and RSC payloads on demand. With four Playwright workers, the first
+client navigation in each worker waited seconds on the dev compiler, and the URL only updates once
+that navigation commits. Warming the routes with a plain fetch did not help, because the flight path
+is compiled separately.
+
+**Decision.** The `webServer` runs `next build && next start`.
+
+Beyond removing that class of flakiness, it means the suite exercises what actually ships: minified,
+production React, no StrictMode double-invocation of effects.
+
+**Consequences.** ~40 seconds of build time per run, against several seconds of compile stalls per
+worker. The `/dev/*` surfaces were gated on `NODE_ENV === 'production'`, which meant "these pages
+exist only where we do not test them" — they now check an explicit
+`NEXT_PUBLIC_ENABLE_DEV_SURFACES` flag that only the e2e config sets. Two of the three were not
+gated at all and would have shipped; that is now fixed.
+
+---
+
+## ADR-041 · Search-param changes use history.pushState, not the router
+
+**Date:** 2026-07-27 · **Task:** T-13.8 · **Status:** Accepted
+
+**Context.** With the production build in place, filter chips and `Clear all` still took seconds to
+take effect and often appeared not to work at all.
+
+Next's App Router treats a search-param change as a navigation: it fetches a fresh RSC payload for
+the route before the URL updates. Every page in this app fetches its data client-side through
+TanStack Query (ADR-005), so that round-trip returns a payload nothing consumes — pure latency on
+the interaction the Notebook is built around.
+
+**Decision.** `setParams` uses `window.history.pushState` / `replaceState`. Next 15+ integrates the
+native history methods with `usePathname` and `useSearchParams` for exactly this case: the URL
+updates synchronously, the hooks re-render, and Back still works because a real history entry is
+created.
+
+**Consequences.** Filtering is instant. `router` is no longer needed in `useQueryParams` at all. Any
+future page that DOES render server-side must not use this hook for its filters — it would update
+the URL without re-rendering the server component. Nothing does today, and ADR-005 explains why.
+
+---
+
+## ADR-042 · A debounced input must not fire on mount
+
+**Date:** 2026-07-27 · **Task:** T-13.1 · **Status:** Accepted
+
+**Context.** With the two fixes above in place, filter chips *still* did nothing on any page opened
+with query parameters — while the same controls worked from a bare `/notebook`. React was hydrated,
+handlers fired, and local-state controls responded.
+
+`SearchInput`'s debounce effect ran on mount and reported the initial value as though the user had
+typed it. On the Notebook that meant every page load rewrote the URL ~250ms later, and a click
+landing inside that window had its navigation clobbered by the rewrite.
+
+**Decision.** The effect skips its first run.
+
+**The general shape.** "Notify when this value changes" and "notify with this value" are different
+contracts, and `useEffect` gives you the second by default. Any debounced callback wired to a
+controlled input has this bug latent in it.
+
+**Consequences.** A caller that genuinely wants the initial value can read it directly — it is the
+value they passed in. The bug took three wrong hypotheses to find because every symptom pointed at
+navigation; the lesson recorded here is that a spurious *write* looks exactly like a failed write.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
@@ -978,5 +1078,5 @@ Tracked so they are not silently defaulted. Each becomes an ADR when settled.
 | ~~2~~ | ~~FTS5 rows survive a meeting's soft delete~~ | ✅ ADR-014 |
 | ~~3~~ | ~~Who composes the five summary sections~~ | ✅ ADR-015 |
 | ~~4~~ | ~~`/` welcome screen vs Home dropped from the nav~~ | ✅ T-06 — `/` redirects, Home removed |
-| 5 | Filters panel: draft-then-Apply vs live-apply (T-13.5 offers both; pick one, be consistent) | T-13 |
+| ~~5~~ | ~~Filters panel: draft-then-Apply vs live-apply~~ | ✅ ADR-039 — draft-then-Apply |
 | ~~6~~ | ~~Notebook layout: cards vs column table~~ | ✅ ADR-036 — cards, with the plan's testids and behaviour kept |

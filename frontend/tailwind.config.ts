@@ -205,6 +205,7 @@ const config: Config = {
         'avatar-md': '32px',
         'avatar-lg': '40px',
         drawer: '420px',
+        panel: '380px',
         flyout: '320px',
         toast: '380px',
       },

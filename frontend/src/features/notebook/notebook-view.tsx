@@ -9,7 +9,7 @@
  * reference before, the reference won (ADR-011, ADR-021). See ADR-036.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/controls'
@@ -17,17 +17,23 @@ import { EmptyInbox, EmptySearch, EmptyState } from '@/components/ui/empty-state
 import { Pagination } from '@/components/ui/pagination'
 import { MeetingListSkeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api/client'
-import { useMeetings } from '@/lib/api/meetings'
+import { useMeetingFacets, useMeetings } from '@/lib/api/meetings'
 import type { MeetingListItem } from '@/lib/api/types'
+import { isTypingTarget } from '@/lib/hooks/use-command-palette'
 import { useDeleteWithUndo } from '@/lib/hooks/use-delete-with-undo'
 import { useLocalStorage } from '@/lib/hooks/use-local-storage'
 import { useNotebookParams } from '@/lib/hooks/use-query-params'
 import { pluralize } from '@/lib/utils/format'
 
+import { RemovableChip } from '@/components/ui/chip'
+
+import { activeFilterChips, draftFromFilters, filtersFromDraft } from './filter-presets'
+import { FiltersPanel } from './filters-panel'
 import { groupByDate } from './group-by-date'
 import { MeetingGrid } from './meeting-grid'
 import { MeetingRow } from './meeting-row'
 import {
+  FiltersButton,
   NotebookToolbar,
   type NotebookView as ViewMode,
   type QuickFilterId,
@@ -36,10 +42,92 @@ import { quickFilterParams, readQuickFilters } from './quick-filters'
 
 export const VIEW_STORAGE_KEY = 'ff.notebook.view'
 
+/** Every filter key the panel and chips can set, nulled. */
+function clearedFilters(): Record<string, null> {
+  return {
+    host: null,
+    participant: null,
+    from: null,
+    to: null,
+    min_duration: null,
+    max_duration: null,
+    tags: null,
+    channel: null,
+    has_action_items: null,
+  }
+}
+
+/**
+ * Remove exactly one chip's keys.
+ *
+ * A tag chip owns `tags:<name>` rather than the whole `tags` array, so removing
+ * `#urgent` leaves `#sales` alone — otherwise one ✕ would clear them all.
+ */
+function removeChip(
+  keys: readonly string[],
+  filters: { tags: string[] },
+): Record<string, string[] | null> {
+  const updates: Record<string, string[] | null> = {}
+
+  for (const key of keys) {
+    if (key.startsWith('tags:')) {
+      const tag = key.slice('tags:'.length)
+      const remaining = filters.tags.filter((t) => t !== tag)
+      updates.tags = remaining.length > 0 ? remaining : null
+    } else {
+      updates[key] = null
+    }
+  }
+  return updates
+}
+
 export function NotebookView() {
-  const { filters, activeFilterCount, setFilter, setPage } = useNotebookParams()
+  const { filters, setFilter, setPage } = useNotebookParams()
   const { data, isPending, isFetching, isError, error, refetch } = useMeetings(filters)
+  const { data: facets } = useMeetingFacets()
   const deleteWithUndo = useDeleteWithUndo()
+
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  /*
+   * `/` focuses the search (T-13.11) — unless the user is already typing, in
+   * which case a slash is a slash. Same guard the ⌘K binding uses.
+   */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== '/' || isTypingTarget(event.target)) return
+      event.preventDefault()
+      searchRef.current?.focus()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
+  const chips = useMemo(() => activeFilterChips(filters), [filters])
+
+  /*
+   * The search field is LOCAL state, debounced into the URL.
+   *
+   * It was bound straight to `filters.q`, which meant every keystroke made a
+   * router round-trip before the character appeared — and typing "a/b" quickly
+   * produced "b", because the next keystroke landed before the value came
+   * back. A controlled input must never wait on navigation to echo.
+   *
+   * Seeded from the URL and re-seeded when the URL changes for a reason other
+   * than typing (Back, a shared link, Clear all), which `queryKey` captures.
+   */
+  const urlQuery = filters.q ?? ''
+  const [search, setSearch] = useState(urlQuery)
+  const [searchKey, setSearchKey] = useState(urlQuery)
+  // Compared against the NORMALISED value. Comparing `filters.q` directly
+  // loops forever once the query is cleared: it is `undefined` while the state
+  // holds `''`, so the guard never settles and React re-renders until it gives
+  // up.
+  if (urlQuery !== searchKey) {
+    setSearchKey(urlQuery)
+    setSearch(urlQuery)
+  }
 
   const { value: view, setValue: setView } = useLocalStorage<ViewMode>(VIEW_STORAGE_KEY, 'list')
 
@@ -102,34 +190,66 @@ export function NotebookView() {
       </header>
 
       <NotebookToolbar
-        query={filters.q ?? ''}
-        onQueryChange={(value) =>
+        query={search}
+        onQueryChange={setSearch}
+        onQueryCommit={(value) => {
           // `replace`, not push: one character typed must not cost one Back
           // press. A deliberate filter change still pushes.
+          setSearchKey(value)
           setFilter({ q: value }, { history: 'replace' })
-        }
+        }}
         sort={filters.sort}
         onSortChange={(value) => setFilter({ sort: value === '-started_at' ? null : value })}
         view={view}
         onViewChange={setView}
         active={activeQuickFilters}
         onToggleQuickFilter={toggleQuickFilter}
-        activeFilterCount={activeFilterCount}
-        // T-13 builds the real panel. Until then the button toggles the one
-        // filter the toolbar cannot otherwise reach, rather than being a dead
-        // control that does nothing when clicked.
-        onOpenFilters={() =>
-          setFilter({ has_action_items: filters.hasActionItems ? null : 'true' })
+        searchRef={searchRef}
+        filtersTrigger={
+          <FiltersPanel
+            open={filtersOpen}
+            onOpenChange={setFiltersOpen}
+            applied={draftFromFilters(filters)}
+            facets={facets}
+            activeCount={chips.length}
+            onApply={(draft) => setFilter(filtersFromDraft(draft))}
+            onClear={() => setFilter(clearedFilters())}
+            // GROUPS, not values: `from` and `to` are one date filter, so the
+            // chips are the right thing to count — there is exactly one per
+            // group by construction.
+            trigger={<FiltersButton activeCount={chips.length} />}
+          />
         }
         searching={isFetching && !isPending}
       />
+
+      {chips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2" data-testid="active-filter-chips">
+          {chips.map((chip) => (
+            <RemovableChip
+              key={chip.id}
+              label={chip.label}
+              testId={`active-filter-chip-${chip.id}`}
+              onRemove={() => setFilter(removeChip(chip.keys, filters))}
+            />
+          ))}
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => setFilter(clearedFilters())}
+            data-testid="active-filters-clear"
+          >
+            Clear all
+          </Button>
+        </div>
+      )}
 
       {isPending && <MeetingListSkeleton />}
 
       {isError && <ErrorState error={error} onRetry={() => void refetch()} />}
 
       {data && items.length === 0 && (
-        <NotebookEmpty hasQuery={Boolean(filters.q) || activeFilterCount > 0} />
+        <NotebookEmpty hasQuery={Boolean(filters.q) || chips.length > 0} />
       )}
 
       {data && items.length > 0 && view === 'grid' && (

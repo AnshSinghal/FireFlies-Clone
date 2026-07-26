@@ -20,7 +20,36 @@ const DB_FILE = path.join(BACKEND, 'e2e.db')
 export const E2E_ANCHOR = '2026-07-26T09:00:00Z'
 export const E2E_DATABASE_URL = 'sqlite:///./e2e.db'
 
-export default function globalSetup(): void {
+/**
+ * Ask Next to compile the routes the suite uses, before any test runs.
+ *
+ * `webServer.url` only proves the dev server is LISTENING. Next compiles a
+ * route on its first request, so whichever test lands there first pays several
+ * seconds of build time — and the tests that failed for it were always the
+ * first in their worker, never the same ones twice.
+ *
+ * The symptom was specific and misleading: the page rendered (the server had
+ * HTML) but interactions did nothing for a while, so a debounced write to the
+ * URL looked like a broken debounce rather than a cold build.
+ */
+async function warmRoutes(baseURL: string): Promise<void> {
+  const routes = ['/notebook', '/dev/components', '/dev/toasts', '/dev/tokens']
+
+  await Promise.all(
+    routes.map(async (route) => {
+      try {
+        await fetch(new URL(route, baseURL))
+      } catch {
+        // A route that fails to warm is not a setup failure — the test that
+        // needs it will report a much clearer error than this would.
+      }
+    }),
+  )
+}
+
+export default async function globalSetup(config: {
+  projects: Array<{ use: { baseURL?: string } }>
+}): Promise<void> {
   /*
    * The database file is NOT deleted here, deliberately.
    *
@@ -50,4 +79,7 @@ export default function globalSetup(): void {
   run('uv run alembic upgrade head')
   run('uv run python -m app.seed.seed --reset --quiet')
   run('uv run python -m app.seed.validate')
+
+  const baseURL = config.projects.find((p) => p.use.baseURL)?.use.baseURL
+  if (baseURL) await warmRoutes(baseURL)
 }

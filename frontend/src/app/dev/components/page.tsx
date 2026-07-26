@@ -10,6 +10,7 @@
  */
 
 import { Archive, Copy, Download, Pencil, Plus, Share2, Trash2 } from 'lucide-react'
+import { notFound } from 'next/navigation'
 import { useState, type ReactNode } from 'react'
 
 import { Avatar, AvatarGroup } from '@/components/ui/avatar'
@@ -37,6 +38,7 @@ import { SearchInput } from '@/components/ui/search-input'
 import { Select } from '@/components/ui/select'
 import { MeetingRowSkeleton, Skeleton, SkeletonText } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
+import { DEV_SURFACES_ENABLED } from '@/lib/dev-surfaces'
 
 const PEOPLE = [
   { name: 'Priya Raghunathan' },
@@ -61,6 +63,9 @@ function Section({ title, children, id }: { title: string; children: ReactNode; 
 }
 
 export default function ComponentGalleryPage() {
+  // Dev/test tooling; never part of the shipped app.
+  if (!DEV_SURFACES_ENABLED) notFound()
+
   const toast = useToast()
 
   const [loading, setLoading] = useState(false)

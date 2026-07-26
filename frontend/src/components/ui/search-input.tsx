@@ -89,8 +89,26 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
     notify.current = onDebouncedChange
   })
 
+  /*
+   * Skips the FIRST run.
+   *
+   * Without this the effect fires once on mount and reports the initial value
+   * as though the user had typed it. On the Notebook that meant every page load
+   * rewrote the URL ~250ms later — and a click landing inside that window had
+   * its navigation clobbered by the rewrite, so filter chips and Clear all
+   * silently did nothing on any page opened with query parameters.
+   *
+   * The symptom pointed everywhere except here: React was hydrated, handlers
+   * fired, and the same controls worked from an unparameterised URL.
+   */
+  const settled = useRef(false)
   useEffect(() => {
+    if (!settled.current) {
+      settled.current = true
+      return
+    }
     if (!notify.current) return
+
     const timer = setTimeout(() => notify.current?.(value), debounceMs)
     return () => clearTimeout(timer)
   }, [value, debounceMs])
