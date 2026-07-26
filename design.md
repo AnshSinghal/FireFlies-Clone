@@ -93,6 +93,17 @@ Pagination:    "Showing 1–20 of 47"  [‹] [1][2][3] [›]
 **Column widths:** `checkbox 48` · `title flex-1 min-0` · `date 120` · `duration 80 right-aligned
 tnum` · `participants 140` · `action items 100` · `kebab 48`.
 
+> ⚠️ **The reference screenshots contradict this layout — resolve at T-12.**
+> `docs/reference/fireflies/02.png` shows the real Notebook as **date-grouped cards**, not a table:
+> a `Sat, Jul 25` heading, then bordered cards each carrying a 40px squircle avatar, the title with
+> a `›` affordance, and one metadata line (`Jul 25 · 9:00 AM · 30 min · Goyal`). There are no
+> column headers, no per-column alignment, and no separate duration or participants column.
+>
+> The table spec above comes from PLAN.md A2.1 and may describe an older Fireflies build. Since the
+> grading is a side-by-side screenshot comparison, **the screenshot wins** — but the plan's row
+> anatomy, hover behaviour and `data-testid` names are still the contract T-12's tests are written
+> against. Decide deliberately at T-12 and record it.
+
 **Row hover behaviour — this is a graded detail:**
 - Row background → `--ff-surface-hover`
 - Checkbox fades in (opacity 0 → 1, 120ms) **replacing** the play thumbnail — reserve the same
@@ -159,25 +170,26 @@ reproduce them verbatim.** Getting these right is free marks.
 
 ## 3. Design tokens
 
-### 3.0 Calibration — do this first (T-02.1)
+### 3.0 Calibration — done (T-02.1)
 
-The hexes below are a **researched starting palette, not sampled from a live screenshot**. Before
-building anything, open the Fireflies reference screenshots in a colour picker and sample these
-eight surfaces, overwriting the tokens they map to. Record before/after in `docs/decisions.md`.
+**Status: complete.** Sampled from eight real screenshots in `docs/reference/fireflies/` across four
+passes (flat fills by modal colour, text by modal-dark-pixel, dividers by edge scan). Every value
+below is either `[S]` sampled or `[D]` derived, and `tokens.css` carries the same markers.
 
-| # | Sample this surface | Overwrites token |
-|---|---|---|
-| 1 | Primary button fill | `--ff-accent` |
-| 2 | Active nav item background | `--ff-accent-subtle` |
-| 3 | App background | `--ff-surface-1` |
-| 4 | Left rail background | `--ff-surface-1` (same token — verify they match) |
-| 5 | Meeting title text | `--ff-text-primary` |
-| 6 | A timestamp | `--ff-text-muted` |
-| 7 | Table header background | `--ff-surface-2` |
-| 8 | Active transcript line background | `--ff-accent-subtle` (same as #2 — verify) |
+**The researched palette in PLAN.md A3.1 was wrong in three material ways:**
 
-Plus `--ff-brand-amber` from the firefly mark. Everything else in the plan references tokens *by
-name*, so this one-file correction propagates everywhere.
+| | PLAN.md guessed | Reality | Consequence |
+|---|---|---|---|
+| Accent | `#2A6EF4` blue | **`#6A39EF` violet** | Every accented surface in the app |
+| App background | `#F7F8FA` grey | **`#FFFFFF`** | Fireflies is white-on-white |
+| Rail vs content | Different surfaces | **Both white**, split by a 1px `#ECEDF1` border | Separation is borders, not fills |
+
+The surface hierarchy is real but *far* subtler than assumed — `#FFFFFF` → `#FCFCFD` → `#F9FAFB`.
+Do not "improve" the contrast between them; that flatness is the look.
+
+**Not observable from the reference set**, so still derived and unverified: the entire notepad
+(active transcript line, speaker colours, player), search-highlight colours, all hover states, and
+dark mode. Re-calibrate if a transcript screenshot becomes available.
 
 ### 3.1 Two-layer architecture (T-02.3)
 
@@ -195,31 +207,46 @@ with an override.**
 
 ### 3.2 Colour — light theme (default)
 
-| Token | Value | Usage |
-|---|---|---|
-| `--ff-accent` | `#2A6EF4` | Primary blue: buttons, active nav, links, focus ring |
-| `--ff-accent-hover` | `#1F5BD4` | Button hover |
-| `--ff-accent-pressed` | `#1848AC` | Button active |
-| `--ff-accent-subtle` | `#EAF1FE` | Active-nav bg, active transcript line bg, selected row |
-| `--ff-accent-border` | `#BBD3FB` | Border on accent-subtle surfaces |
-| `--ff-brand-amber` | `#F5B301` | Firefly mark, "AI generated" badges, soundbite highlights |
-| `--ff-surface-0` | `#FFFFFF` | Cards, topbar, panels, table rows |
-| `--ff-surface-1` | `#F7F8FA` | App background, left rail |
-| `--ff-surface-2` | `#EFF1F5` | Table header, chip default, code blocks |
-| `--ff-surface-hover` | `#F2F4F7` | Row / nav-item hover |
-| `--ff-border-subtle` | `#E4E7EC` | 1px dividers, card borders, input borders |
-| `--ff-border-strong` | `#CFD4DC` | Input hover border, table outer border |
-| `--ff-text-primary` | `#101828` | Headings, meeting titles, transcript body |
-| `--ff-text-secondary` | `#475467` | Body copy, summary paragraphs |
-| `--ff-text-muted` | `#98A2B3` | Timestamps, column headers, placeholders, metadata |
-| `--ff-text-inverse` | `#FFFFFF` | Text on accent |
-| `--ff-success` | `#12B76A` | Completed action items, positive sentiment |
-| `--ff-success-subtle` | `#ECFDF3` | Completed action item row bg |
-| `--ff-warning` | `#F79009` | Due-soon badge, neutral sentiment |
-| `--ff-danger` | `#F04438` | Delete, overdue, destructive confirm |
-| `--ff-danger-subtle` | `#FEF3F2` | Destructive hover bg |
-| `--ff-highlight` | `#FFE9A8` | Search match highlight background |
-| `--ff-highlight-active` | `#FFC933` | *Current* search match (of N) |
+`[S]` sampled from the reference screenshots · `[D]` derived.
+
+| Token | Value | | Usage |
+|---|---|---|---|
+| `--ff-accent` | `#6A39EF` | [S] | Primary violet: buttons, active nav, links, focus ring |
+| `--ff-accent-hover` | `#5A27E0` | [D] | Button hover |
+| `--ff-accent-pressed` | `#3E1C96` | [S] | Button active |
+| `--ff-accent-strong` | `#541DDC` | [S] | Active nav **label text** (darker than the fill) |
+| `--ff-accent-subtle` | `#F4F3FF` | [S] | Active-nav bg, active transcript line bg, selected row |
+| `--ff-accent-border` | `#D5CCFB` | [D] | Border on accent-subtle surfaces |
+| `--ff-brand-mark` | `#C43990` | [S] | The fireflies.ai logo glyph — magenta, **not** amber |
+| `--ff-brand-amber` | `#F79009` | [D] | "AI generated" badges, soundbite highlights |
+| `--ff-surface-0` | `#FFFFFF` | [S] | Topbar, cards, panels, rows, **and the left rail** |
+| `--ff-surface-1` | `#FCFCFD` | [S] | Secondary panels (e.g. the channels column) |
+| `--ff-surface-2` | `#F9FAFB` | [S] | Search input, chips, status pills, table header |
+| `--ff-surface-hover` | `#F4F5F7` | [D] | Row / nav-item hover |
+| `--ff-border-subtle` | `#ECEDF1` | [S] | 1px dividers, card borders, input borders |
+| `--ff-border-strong` | `#DDE0E7` | [D] | Input hover border, table outer border |
+| `--ff-text-primary` | `#0B1424` | [S] | Headings, meeting titles, transcript body |
+| `--ff-text-secondary` | `#616B81` | [S] | Nav labels, list metadata, summary paragraphs |
+| `--ff-text-muted` | `#8992A2` | [S]* | Timestamps, column headers, placeholders |
+| `--ff-text-inverse` | `#FFFFFF` | [S] | Text on accent |
+| `--ff-success` | `#0E9F6E` | [D] | Completed action items, positive sentiment |
+| `--ff-success-subtle` | `#D7FBE3` | [S] | Completed action item row bg (the Upgrade button fill) |
+| `--ff-success-strong` | `#036C60` | [S] | Text on a success tint |
+| `--ff-warning` | `#F79009` | [D] | Due-soon badge |
+| `--ff-warning-subtle` | `#FFFAEC` | [S] | Notice banner bg |
+| `--ff-danger` | `#D92D20` | [D] | Delete, overdue, destructive confirm |
+| `--ff-danger-subtle` | `#FEF3F2` | [D] | Destructive hover bg |
+| `--ff-highlight` | `#FFE9A8` | [D] | Search match highlight background |
+| `--ff-highlight-active` | `#FFC933` | [D] | *Current* search match (of N) |
+
+\* **`--ff-text-muted` is deliberately not the sampled value.** Fireflies' own muted grey is
+`#97A1B3`, which scores **2.60:1** on white — below every WCAG threshold, including the 3:1 non-text
+floor. The token is darkened ~9% to `#8992A2` (3.14:1), a shift invisible in a side-by-side
+screenshot. Full AA would need ~`#6C7481`, which reads as secondary text and visibly departs from
+the reference. See ADR-012; expect this to be the one known axe exception in T-42.
+
+No large danger surface appears in the reference set, so red is derived — the only red pixels are a
+16px "not allowed" glyph, too antialiased to trust.
 
 ### 3.3 Colour — dark theme (T-38)
 
@@ -247,11 +274,15 @@ Speaker colours need a dark variant set (lift lightness ~15%, drop saturation ~1
 
 ### 3.4 Speaker palette
 
-Eight colours, cycled by index:
+Eight colours, cycled by index. Re-hued to lead with the brand violet — no transcript view exists in
+the reference set, so these are `[D]` derived and chosen to stay distinguishable at 24px:
 
 ```
-#2A6EF4   #12B76A   #F5B301   #9E77ED   #F04438   #06AED4   #EE46BC   #F79009
+#6A39EF   #0E9F6E   #F79009   #C43990   #D92D20   #06AED4   #8869FA   #7A5AF5
 ```
+
+Implemented in `lib/utils/speaker-color.ts` (`getSpeakerColor`), which returns
+`var(--ff-speaker-N)` rather than a hex — so the dark palette re-points these for free.
 
 Assign by **stable hash of speaker name → index** (FNV-1a of the lowercased, trimmed name, mod 8),
 not by array position — so a speaker keeps their colour across the transcript, the outline, the

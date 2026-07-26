@@ -186,6 +186,61 @@ failure mode that produces confidently wrong results rather than an error.
 
 ---
 
+## ADR-011 · The palette is violet, and the plan's researched values were wrong
+
+**Date:** 2026-07-26 · **Task:** T-02.1 · **Status:** Accepted
+
+**Context.** PLAN.md A3.1 supplied a researched palette explicitly flagged as unsampled. Eight real
+screenshots of the product became available and were sampled in four passes: flat fills by modal
+colour, text by most-common-dark-pixel (antialiasing makes a naive average far too light), dividers
+by single-pixel edge scan, and glyphs by most-saturated-pixel. Screenshots are committed to
+`docs/reference/fireflies/`.
+
+**Three findings contradicted the plan materially:**
+
+1. **The accent is `#6A39EF` violet, not `#2A6EF4` blue.** This touches every accented surface in
+   the product — buttons, active nav, links, focus ring, selected rows, the active transcript line.
+   Building on the blue would have made the clone wrong at a glance, which is precisely what the
+   side-by-side comparison grades.
+2. **Fireflies is white-on-white.** The plan assumed a `#F7F8FA` app background against white cards.
+   In reality the topbar, left rail, main content and cards are all `#FFFFFF`, separated by a 1px
+   `#ECEDF1` border. The surface hierarchy exists but is far subtler than assumed:
+   `#FFFFFF` → `#FCFCFD` → `#F9FAFB`, the last being the search input and status chips.
+3. **The logo mark is magenta (`#C43990`), not amber.** Amber does appear, but as the notice-banner
+   tint `#FFFAEC`. A separate `--ff-brand-mark` token now carries the magenta.
+
+**Decision.** Overwrite the palette with sampled values, marking every token `[S]` sampled or `[D]`
+derived in both `tokens.css` and `design.md`.
+
+**Consequences.** Because every component consumes semantic tokens, this was a one-file correction
+with no component churn — which is the entire argument for building T-02 before any feature.
+Substantial surface area remains uncalibrated: the whole notepad (active transcript line, speaker
+colours, player), search-highlight colours, every hover state, and dark mode. Those are marked `[D]`
+and should be re-sampled if a transcript screenshot appears.
+
+---
+
+## ADR-012 · `--ff-text-muted` deviates from the reference for accessibility
+
+**Date:** 2026-07-26 · **Task:** T-02.1 (test T02-G) · **Status:** Accepted
+
+**Context.** Fireflies' sampled muted grey is `#97A1B3`, used for timestamps, metadata and column
+headers. On white it scores **2.60:1** — failing WCAG AA (4.5:1), AA-large (3:1), and even the 3:1
+non-text floor. PLAN.md T02-G asks for ≥4.5:1 on this exact pairing, so the plan's own two goals —
+pixel fidelity and contrast compliance — are in direct conflict here. Reaching 4.5:1 needs roughly
+`#6C7481`, which reads as secondary body text and is visibly darker in a side-by-side.
+
+**Decision.** Darken ~9% to `#8992A2` (3.14:1) and assert a 3:1 floor rather than 4.5:1. Every other
+pairing in the file is held to 4.5:1.
+
+**Consequences.** A shift invisible at normal zoom buys a genuine improvement, but the app is still
+not AA on metadata text and axe will flag it in T-42 — knowingly, once, with this entry as the
+justification. If accessibility is later prioritised over fidelity, the single-token change to
+`#6C7481` is all that is required. The trade-off is enforced by a test
+(`src/styles/tokens.test.ts`), so silently regressing past 3:1 breaks the build.
+
+---
+
 ## ADR-005 · Frontend consumes the API over HTTP from the browser, not via RSC
 
 *(Placeholder — to be written during T-06 when the data layer lands.)*

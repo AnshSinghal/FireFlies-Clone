@@ -34,10 +34,24 @@ const config: Config = {
         pressed: 'var(--ff-accent-pressed)',
         subtle: 'var(--ff-accent-subtle)',
         border: 'var(--ff-accent-border)',
+        strong: 'var(--ff-accent-strong)',
       },
 
       brand: {
+        mark: 'var(--ff-brand-mark)',
         amber: 'var(--ff-brand-amber)',
+      },
+
+      // Assigned by hashing the speaker's name — see lib/utils/speaker-color.ts.
+      speaker: {
+        0: 'var(--ff-speaker-0)',
+        1: 'var(--ff-speaker-1)',
+        2: 'var(--ff-speaker-2)',
+        3: 'var(--ff-speaker-3)',
+        4: 'var(--ff-speaker-4)',
+        5: 'var(--ff-speaker-5)',
+        6: 'var(--ff-speaker-6)',
+        7: 'var(--ff-speaker-7)',
       },
 
       surface: {
@@ -57,9 +71,11 @@ const config: Config = {
       success: {
         DEFAULT: 'var(--ff-success)',
         subtle: 'var(--ff-success-subtle)',
+        strong: 'var(--ff-success-strong)',
       },
       warning: {
         DEFAULT: 'var(--ff-warning)',
+        subtle: 'var(--ff-warning-subtle)',
       },
       danger: {
         DEFAULT: 'var(--ff-danger)',

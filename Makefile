@@ -25,10 +25,13 @@ seed-reset: ## Drop and repopulate the demo database
 	cd backend && uv run python -m app.seed.seed --reset
 
 # ── Tests ────────────────────────────────────────────────────────────────────
-test: test-backend ## Run the backend test suite
+test: test-backend test-frontend ## Run both unit test suites
 
 test-backend:
 	cd backend && uv run pytest -q
+
+test-frontend:
+	cd frontend && npm test
 
 e2e: ## Run the Playwright end-to-end suite
 	cd e2e && npm test
