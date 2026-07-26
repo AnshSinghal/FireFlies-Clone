@@ -37,6 +37,8 @@ interface HighlighterProps {
    * the user has stepped to one.
    */
   activeIndex?: number
+  /** Forwarded to the wrapper, so a highlighted string is still addressable. */
+  testId?: string
 }
 
 /**
@@ -113,12 +115,13 @@ export function Highlighter({
   className,
   markClassName = 'bg-accent-subtle font-semibold text-accent',
   activeIndex,
+  testId,
 }: HighlighterProps): ReactNode {
   const effective = ranges ?? (query ? findRanges(text, query) : [])
   const parts = splitByRanges(text, effective)
 
   return (
-    <span className={className}>
+    <span className={className} data-testid={testId}>
       {parts.map((part, i) =>
         part.match ? (
           // `rounded-none` because a `<mark>` inside a single word should not

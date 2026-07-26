@@ -865,6 +865,79 @@ better structure rather than a worse one (ADR-017, ADR-031).
 
 ---
 
+## ADR-036 · The Notebook is a date-grouped card list, not a column table
+
+**Date:** 2026-07-27 · **Task:** T-12 · **Status:** Accepted · **Closes pending decision #6**
+
+**Context.** design.md §2.2 flagged this at the start and deferred it to T-12. PLAN.md A2.1 and the
+T-12 row spec describe a dense column table: 72px rows, a sticky header, and columns for date,
+duration, participants and action items. `docs/reference/fireflies/02.png` shows something else
+entirely — meetings as **bordered cards in a vertical list, grouped under date headings**
+(`Sat, Jul 25`), each card carrying a leading tile, a title, and one metadata line reading
+`Jul 25 · 9:00 AM · 30 min · Goyal`. No columns. No table header.
+
+This is the third time the plan's researched values have conflicted with the reference, after the
+accent colour (ADR-011) and the rail metrics (ADR-021).
+
+**Decision.** Follow the reference, for the same reason as the previous two: the project is graded
+on looking like Fireflies, and a side-by-side comparison is where a wrong layout is most obvious.
+
+The plan's own ❌ list is satisfied rather than contradicted. It rules out *"a card grid by default
+(Fireflies' primary view is the list)"* — and this **is** a list. The card grid is T-12.13's
+opt-in Grid view, behind the segmented toggle, exactly where the plan puts it.
+
+**What was kept from the plan.** Everything that is not the column geometry: the leading
+thumbnail/checkbox cross-fade with a reserved 40×40 box, the roving-tabindex keyboard navigation,
+the kebab with its submenus, the avatar group with counted overflow, the action-item badge as a
+badge rather than a bare number, every `data-testid`, and — as it turned out — the 72px height,
+which the card is pinned to via the `row` token.
+
+The reference's cards carry less information than the plan's rows. Where the API has more to show,
+it is shown: participants and action items sit at the trailing edge of the card, and a
+transcript-only search hit adds a `match_context` line (T-11.3). Matching the reference's *layout*
+does not mean matching its *feature set* downward.
+
+**Consequences.** Two test cases were adapted, with the reasoning inline in the spec rather than
+silently rewritten:
+
+- **T12-B** asserted `height === 72` on a table row. The card is pinned to the same token, so the
+  assertion survives unchanged — and the skeleton now mirrors the card's box model rather than
+  maintaining its own height, which is what stops the two drifting.
+- **T12-I** asserted a sticky column header at `y=56`. This layout has no column header, so there is
+  nothing to stick. The property it protected — the topbar surviving a long scroll — is already
+  covered by T08-K.
+
+Grouping is suppressed when the sort is not chronological: a title-sorted list would put every
+meeting under its own date heading, which is noise rather than structure.
+
+---
+
+## ADR-037 · Every test that writes lives in one file
+
+**Date:** 2026-07-27 · **Task:** T-12 · **Status:** Accepted · **Extends ADR-027**
+
+**Context.** ADR-027 gave writing tests their own Playwright project so they could not race the
+readers. T-12 added a second mutating spec, and the suite went intermittently red again: `T09-A`
+deleted the first row while the notebook's kebab test was counting rows.
+
+`fullyParallel: false` serialises tests within a **file**. Files still run in parallel across
+workers. So one mutating file was safe and two were not — and the failure rate was about one run in
+three, which is the worst possible frequency: often enough to matter, rare enough to be dismissed as
+a flake.
+
+**Decision.** All `@mutates` tests live in `tests/90-mutations.spec.ts`. The rule is short enough to
+hold in review: **if a test writes, it goes there, and it restores what it changed.**
+
+**Rejected: `workers: 1`.** Playwright has no per-project worker count, so this would serialise the
+entire suite — a 1.5-minute run becomes several minutes to protect four tests.
+
+**Consequences.** Mutating coverage is not co-located with the feature it exercises, which is a real
+cost to discoverability; the file's header comment explains why, and each test names the task it
+belongs to. Three consecutive full-suite runs were clean before merging, which is now the bar for
+anything touching this area — one green run does not distinguish "fixed" from "got lucky".
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
@@ -876,4 +949,4 @@ Tracked so they are not silently defaulted. Each becomes an ADR when settled.
 | ~~3~~ | ~~Who composes the five summary sections~~ | ✅ ADR-015 |
 | ~~4~~ | ~~`/` welcome screen vs Home dropped from the nav~~ | ✅ T-06 — `/` redirects, Home removed |
 | 5 | Filters panel: draft-then-Apply vs live-apply (T-13.5 offers both; pick one, be consistent) | T-13 |
-| 6 | Notebook layout: the reference screenshots show date-grouped **cards**, PLAN.md A2.1 specifies a **column table**. Grading is a screenshot comparison, so the screenshot probably wins — but the plan's `data-testid` names and hover spec are the test contract | T-12 |
+| ~~6~~ | ~~Notebook layout: cards vs column table~~ | ✅ ADR-036 — cards, with the plan's testids and behaviour kept |
