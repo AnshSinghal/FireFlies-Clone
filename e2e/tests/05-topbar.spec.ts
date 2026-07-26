@@ -40,8 +40,9 @@ test.describe('topbar', () => {
 
   test('T08-A · ⌘K focuses the search and opens the dropdown', async ({ page }) => {
     // From the page body, not from the input — the point is that it works from
-    // anywhere.
-    await page.getByTestId('notebook-page').click()
+    // anywhere. The H1 rather than the container's centre: the Notebook is now
+    // a list of cards, and clicking the middle of it navigates to a meeting.
+    await page.getByRole('heading', { name: 'Meetings', level: 1 }).click()
     await expect(page.locator(SEARCH)).not.toBeFocused()
 
     await page.keyboard.press('ControlOrMeta+k')
@@ -155,7 +156,7 @@ test.describe('topbar', () => {
 
   test('T08-G · clicking outside closes the dropdown', async ({ page }) => {
     await openSearch(page)
-    await page.getByTestId('notebook-page').click({ position: { x: 10, y: 10 } })
+    await page.getByRole('heading', { name: 'Meetings', level: 1 }).click()
     await expect(page.getByTestId('topbar-search-results')).toBeHidden()
   })
 

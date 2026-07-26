@@ -81,12 +81,22 @@ interface AvatarGroupProps {
   size?: AvatarSize
   /** Shown before the `+N` overflow chip. */
   max?: number
+  /**
+   * The TRUE participant count, when `people` is only a preview.
+   *
+   * The API sends five participants per row but reports the real total, so
+   * `+N` must be computed from the total — otherwise a meeting with 24 people
+   * shows `+2`. Names are only listed for the ones actually supplied; padding
+   * the array with "Participant 6" would put fabricated data in a tooltip.
+   */
+  total?: number
   className?: string
 }
 
-export function AvatarGroup({ people, size = 'md', max = 3, className }: AvatarGroupProps) {
+export function AvatarGroup({ people, size = 'md', max = 3, total, className }: AvatarGroupProps) {
   const shown = people.slice(0, max)
-  const hidden = people.slice(max)
+  const named = people.slice(max)
+  const overflow = Math.max(named.length, (total ?? people.length) - shown.length)
 
   return (
     <span
@@ -109,8 +119,8 @@ export function AvatarGroup({ people, size = 'md', max = 3, className }: AvatarG
         </span>
       ))}
 
-      {hidden.length > 0 && (
-        <Tooltip content={<OverflowNames names={hidden.map((p) => p.name)} />}>
+      {overflow > 0 && (
+        <Tooltip content={<OverflowNames names={named.map((p) => p.name)} total={overflow} />}>
           <span
             data-testid="avatar-overflow"
             tabIndex={0}
@@ -124,13 +134,16 @@ export function AvatarGroup({ people, size = 'md', max = 3, className }: AvatarG
              * actually makes the hidden participants discoverable, and the
              * tooltip is the sighted-pointer convenience on top.
              */
-            aria-label={overflowLabel(hidden.map((p) => p.name))}
+            aria-label={overflowLabel(
+              named.map((p) => p.name),
+              overflow,
+            )}
             className={cn(
               '-ml-2 inline-flex shrink-0 items-center justify-center rounded-full bg-surface-2 font-medium text-secondary ring-2 ring-surface',
               SIZE[size],
             )}
           >
-            +{hidden.length}
+            +{overflow}
           </span>
         </Tooltip>
       )}
@@ -141,17 +154,18 @@ export function AvatarGroup({ people, size = 'md', max = 3, className }: AvatarG
 /** Capped the same way the tooltip is, so the two never disagree. */
 const OVERFLOW_NAMES_SHOWN = 10
 
-export function overflowLabel(names: readonly string[]): string {
+export function overflowLabel(names: readonly string[], total = names.length): string {
   const shown = names.slice(0, OVERFLOW_NAMES_SHOWN)
-  const rest = names.length - shown.length
+  const rest = total - shown.length
   const list = shown.join(', ')
+  if (!list) return `${total} more ${total === 1 ? 'participant' : 'participants'}`
   return rest > 0 ? `${list}, and ${rest} more` : list
 }
 
-function OverflowNames({ names }: { names: string[] }): ReactNode {
+function OverflowNames({ names, total }: { names: string[]; total: number }): ReactNode {
   // Capped, because 21 names in a tooltip is a wall the user cannot scroll.
   const SHOWN = OVERFLOW_NAMES_SHOWN
-  const rest = names.length - SHOWN
+  const rest = total - Math.min(names.length, SHOWN)
 
   return (
     <span className="block space-y-0.5">
@@ -161,6 +175,7 @@ function OverflowNames({ names }: { names: string[] }): ReactNode {
         </span>
       ))}
       {rest > 0 && <span className="block text-muted">and {rest} more</span>}
+      {names.length === 0 && <span className="block text-muted">{total} more</span>}
     </span>
   )
 }

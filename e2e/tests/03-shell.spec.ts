@@ -163,7 +163,10 @@ test('skeleton rows are the same height as real rows', async ({ page }) => {
   await page.unrouteAll({ behavior: 'ignoreErrors' })
   await expect(page.getByTestId('meeting-list')).toBeVisible({ timeout: 15_000 })
 
-  const rowBox = await page.getByTestId('meeting-row-1').boundingBox()
+  // The CARD, not the anchor inside it: the card is what occupies space in the
+  // list, so it is what the skeleton has to match. `meeting-row-<id>` is the
+  // link, which sits inside the card's border and is therefore 2px shorter.
+  const rowBox = await page.getByTestId('meeting-row').first().boundingBox()
 
   expect(skeletonBox).not.toBeNull()
   expect(rowBox).not.toBeNull()

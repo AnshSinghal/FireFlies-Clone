@@ -14,8 +14,11 @@
  */
 
 import * as Primitive from '@radix-ui/react-dropdown-menu'
+import Link from 'next/link'
 import type { ReactNode } from 'react'
 
+import { useToast } from '@/components/ui/toast'
+import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { cn } from '@/lib/utils/cn'
 
 interface DropdownProps {
@@ -70,6 +73,16 @@ interface DropdownItemProps {
   disabled?: boolean
   danger?: boolean
   testId?: string
+  /** Navigates. Rendered as a real anchor so ⌘-click and middle-click work. */
+  href?: string
+  /**
+   * Renders a `Soon` badge and raises the coming-soon toast on select.
+   *
+   * Clickable-and-explains rather than inert, for the same reason as
+   * `MenuItem`: a row that silently does nothing leaves the user unable to
+   * tell "not built" from "broken".
+   */
+  soon?: boolean
 }
 
 export function DropdownItem({
@@ -80,11 +93,36 @@ export function DropdownItem({
   disabled,
   danger,
   testId,
+  href,
+  soon,
 }: DropdownItemProps) {
+  const toast = useToast()
+
+  const label = (
+    <>
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {soon && (
+        <span className="shrink-0 rounded-full bg-surface-2 px-1.5 py-0.5 text-xs text-muted">
+          Soon
+        </span>
+      )}
+      {shortcut && <span className="shrink-0 text-xs text-muted">{shortcut}</span>}
+    </>
+  )
+
   return (
     <Primitive.Item
       disabled={disabled}
-      onSelect={onSelect}
+      onSelect={() => {
+        if (soon) {
+          toast.info(TOAST_MESSAGES.comingSoon)
+          return
+        }
+        onSelect?.()
+      }}
+      // `asChild` when there is an href, so the item IS the anchor rather than
+      // wrapping one — a div that calls router.push() is not a link.
+      asChild={Boolean(href)}
       data-testid={testId}
       className={cn(
         'flex cursor-pointer items-center gap-2.5 px-3 py-2 text-body outline-none transition-colors duration-fast',
@@ -97,11 +135,21 @@ export function DropdownItem({
           : 'text-primary data-[highlighted]:text-primary',
       )}
     >
-      {icon && (
-        <span className={cn('shrink-0', danger ? 'text-danger' : 'text-muted')}>{icon}</span>
+      {href ? (
+        <Link href={href}>
+          {icon && (
+            <span className={cn('shrink-0', danger ? 'text-danger' : 'text-muted')}>{icon}</span>
+          )}
+          {label}
+        </Link>
+      ) : (
+        <>
+          {icon && (
+            <span className={cn('shrink-0', danger ? 'text-danger' : 'text-muted')}>{icon}</span>
+          )}
+          {label}
+        </>
       )}
-      <span className="min-w-0 flex-1 truncate">{children}</span>
-      {shortcut && <span className="shrink-0 text-xs text-muted">{shortcut}</span>}
     </Primitive.Item>
   )
 }

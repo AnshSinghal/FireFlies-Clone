@@ -17,7 +17,7 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 
-export type ParamValue = string | number | boolean | null | undefined
+export type ParamValue = string | number | boolean | null | undefined | string[]
 
 export interface SetParamsOptions {
   /**
@@ -54,6 +54,11 @@ export function useQueryParams() {
         // clean URL rather than `?q=&host=`.
         if (value === null || value === undefined || value === '') {
           next.delete(key)
+        } else if (Array.isArray(value)) {
+          // Repeated params, matching how the API reads them. `delete` first,
+          // or toggling a tag off would leave the old value beside the new one.
+          next.delete(key)
+          for (const item of value) next.append(key, String(item))
         } else {
           next.set(key, String(value))
         }
@@ -75,6 +80,9 @@ export function useQueryParams() {
 
   const getParam = useCallback((key: string) => searchParams.get(key), [searchParams])
 
+  /** Every value for a repeated key — `?tags=a&tags=b` → `['a', 'b']`. */
+  const getAll = useCallback((key: string) => searchParams.getAll(key), [searchParams])
+
   const getNumber = useCallback(
     (key: string, fallback: number) => {
       const raw = searchParams.get(key)
@@ -93,8 +101,18 @@ export function useQueryParams() {
     [pathname, router],
   )
 
-  return { params, getParam, getNumber, setParams, clearParams }
+  return { params, getParam, getAll, getNumber, setParams, clearParams }
 }
+
+/**
+ * Excluded from the Filters badge count.
+ *
+ * `sort`, `page` and `page_size` are not filters: a badge reading "3" on a
+ * default view that merely happens to be sorted sends the user hunting for
+ * filters to clear. `q` is excluded too — it has its own visible field, and
+ * counting it twice overstates how narrowed the view is.
+ */
+const NON_FILTERS = new Set(['sort', 'page', 'pageSize', 'q', 'tags'])
 
 /**
  * Filter state for the Notebook, read from and written to the URL.
@@ -104,16 +122,35 @@ export function useQueryParams() {
  * previous result set (T-13.9).
  */
 export function useNotebookParams() {
-  const { getParam, getNumber, setParams, clearParams } = useQueryParams()
+  const { getParam, getAll, getNumber, setParams, clearParams } = useQueryParams()
 
   const filters = useMemo(
     () => ({
       q: getParam('q') ?? undefined,
+      host: getParam('host') ?? undefined,
+      participant: getParam('participant') ?? undefined,
+      from: getParam('from') ?? undefined,
+      to: getParam('to') ?? undefined,
+      minDuration: getParam('min_duration') ? getNumber('min_duration', 0) : undefined,
+      maxDuration: getParam('max_duration') ? getNumber('max_duration', 0) : undefined,
+      // Repeated `?tags=a&tags=b`, not a comma-joined string: a tag containing
+      // a comma would otherwise split into two filters that match nothing.
+      tags: getAll('tags'),
+      channel: getParam('channel') ?? undefined,
+      hasActionItems: parseBool(getParam('has_action_items')),
+      source: getParam('source') ?? undefined,
       sort: getParam('sort') ?? '-started_at',
       page: getNumber('page', 1),
       pageSize: getNumber('page_size', 20),
     }),
-    [getParam, getNumber],
+    [getParam, getNumber, getAll],
+  )
+
+  const activeFilterCount = useMemo(
+    () =>
+      Object.entries(filters).filter(([key, value]) => !NON_FILTERS.has(key) && value !== undefined)
+        .length + (filters.tags.length > 0 ? 1 : 0),
+    [filters],
   )
 
   const setFilter = useCallback(
@@ -128,5 +165,17 @@ export function useNotebookParams() {
     [setParams],
   )
 
-  return { filters, setFilter, setPage, clearFilters: clearParams }
+  return { filters, activeFilterCount, setFilter, setPage, clearFilters: clearParams }
+}
+
+/**
+ * `"true"`/`"false"` → boolean, anything else → undefined.
+ *
+ * NOT `raw === 'true'`, which would turn a malformed `?has_action_items=yes`
+ * into an active "false" filter the user never asked for.
+ */
+function parseBool(raw: string | null): boolean | undefined {
+  if (raw === 'true') return true
+  if (raw === 'false') return false
+  return undefined
 }
