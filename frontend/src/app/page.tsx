@@ -11,10 +11,10 @@
 const CHECKS = [
   { label: 'Next.js 16 · App Router · TypeScript strict', task: null },
   { label: 'Tailwind v3 wired to design tokens', task: null },
-  { label: 'Token layer (light + dark)', task: null },
+  { label: 'Token layer calibrated (light + dark)', task: null },
   { label: 'FastAPI backend · /api/health', task: null },
-  { label: 'Design token calibration', task: 'T-02' },
   { label: 'Database schema', task: 'T-03' },
+  { label: 'API contract', task: 'T-04' },
   { label: 'Seed data', task: 'T-05' },
 ] as const
 
@@ -51,9 +51,12 @@ export default function Home() {
       </div>
 
       <p className="text-sm text-muted">
-        API docs at{' '}
+        <a className="text-accent hover:text-accent-hover" href="/dev/tokens">
+          Token specimen sheet
+        </a>{' '}
+        ·{' '}
         <a className="text-accent hover:text-accent-hover" href="http://localhost:8000/docs">
-          localhost:8000/docs
+          API docs
         </a>
       </p>
     </main>
