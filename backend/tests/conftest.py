@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from alembic import command
 from app.core.config import Settings
+from app.db.session import get_db
 from app.main import create_app
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -31,13 +32,26 @@ def settings() -> Settings:
 
 
 @pytest.fixture
-def app(settings: Settings) -> FastAPI:
-    return create_app(settings)
+def app(settings: Settings, db: Session) -> FastAPI:
+    """An app wired to the per-test database.
+
+    Overriding `get_db` rather than pointing settings at the test file means the
+    request handler and the test share ONE session. Without that, a row the test
+    just created is invisible to the request — it is still in the test's
+    uncommitted transaction — and every assertion fails for reasons that look
+    like application bugs.
+    """
+    application = create_app(settings)
+    application.dependency_overrides[get_db] = lambda: db
+    return application
 
 
 @pytest.fixture
 def client(app: FastAPI) -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
+    # `raise_server_exceptions=False` lets the catch-all handler produce a real
+    # 500 response instead of re-raising into the test, which is the only way to
+    # assert on the error envelope for an unhandled exception (T04-F).
+    with TestClient(app, raise_server_exceptions=False) as test_client:
         yield test_client
 
 

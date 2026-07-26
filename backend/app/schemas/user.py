@@ -1,0 +1,25 @@
+"""User-facing representations."""
+
+from __future__ import annotations
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class UserRef(BaseModel):
+    """The minimum needed to render an avatar and a name.
+
+    Deliberately not the full user record: this is embedded in every meeting
+    row, so anything added here is paid for 20 times per page.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    avatar_url: str | None = None
+
+
+class UserOut(UserRef):
+    """The signed-in user's own record, from `/me`."""
+
+    email: str = Field(description="Only ever returned for the current user.")

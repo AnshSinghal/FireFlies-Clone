@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 .PHONY: help dev down logs migrate migrate-down migration seed seed-reset test test-backend \
-        test-frontend e2e lint lint-frontend lint-backend typecheck format install clean
+        test-frontend e2e lint lint-frontend lint-backend typecheck format types install clean
 
 # ─────────────────────────────────────────────────────────────────────────────
 help: ## Show this help
@@ -34,6 +34,15 @@ seed: migrate ## Populate the demo database (idempotent)
 
 seed-reset: migrate ## Drop and repopulate the demo database
 	cd backend && uv run python -m app.seed.seed --reset
+
+# ── Codegen ──────────────────────────────────────────────────────────────────
+# Generated from the app object, not a running server, so this works from a cold
+# clone. A backend field rename becomes a frontend TYPE ERROR rather than a
+# runtime undefined — which is the whole point of committing the output.
+types: ## Regenerate the TypeScript API client from OpenAPI
+	cd backend && uv run python scripts/export_openapi.py > ../docs/openapi.json
+	cd frontend && npx --yes openapi-typescript ../docs/openapi.json -o src/types/api.d.ts
+	cd frontend && npx --yes prettier --write src/types/api.d.ts
 
 # ── Tests ────────────────────────────────────────────────────────────────────
 test: test-backend test-frontend ## Run both unit test suites

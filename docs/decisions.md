@@ -327,6 +327,50 @@ through the ORM, which is the only way this class of defect is visible.
 
 ---
 
+## ADR-017 · The layering rule has no exceptions, including health checks
+
+**Date:** 2026-07-26 · **Task:** T-04 · **Status:** Accepted
+
+**Context.** `/api/health` has to run a real `SELECT 1` — a check that cannot fail tells the host
+nothing, and the case that matters is a container whose volume never mounted, which answers HTTP
+perfectly while every real request 500s. The obvious implementation puts `from sqlalchemy import
+text` in the router, and it is easy to argue that infrastructure endpoints are a special case.
+
+`scripts/check_layering.py` rejected it, which is exactly what it was built for.
+
+**Decision.** No exception. The query moved to `HealthService.database_status()`, and the router
+calls it like any other.
+
+**Consequences.** One more file for four lines of logic. In exchange the rule stays absolute, which
+is the only state in which a mechanical check is worth having — the moment it has one carve-out it
+acquires a second, and then it is documentation rather than enforcement. It also means the health
+probe is unit-testable without a request, which is how the 503 path is asserted.
+
+---
+
+## ADR-018 · The generated TypeScript client is committed and drift-tested
+
+**Date:** 2026-07-26 · **Task:** T-04.12 · **Status:** Accepted
+
+**Context.** `openapi-typescript` turns the API schema into `frontend/src/types/api.d.ts`, so a
+backend field rename becomes a compile error in the frontend instead of a runtime `undefined`. That
+promise holds only while the generated file is current, and nothing forces anyone to re-run the
+generator after editing an endpoint.
+
+**Decision.** Commit both `docs/openapi.json` and the generated client, and add
+`tests/test_openapi_drift.py`, which compares the committed schema against the live app and fails
+with the exact remedy (`run make types`) plus a diff of added/removed paths.
+
+The schema is exported from the app object rather than by curling a running server, so `make types`
+works from a cold clone with nothing started and no port to guess.
+
+**Consequences.** Editing an endpoint now requires re-running `make types` before the build passes.
+That friction is the point — it is what makes the type safety real rather than aspirational. The
+alternative, regenerating in CI and committing automatically, hides schema changes inside unrelated
+commits.
+
+---
+
 ## ADR-005 · Frontend consumes the API over HTTP from the browser, not via RSC
 
 *(Placeholder — to be written during T-06 when the data layer lands.)*
