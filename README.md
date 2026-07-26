@@ -55,7 +55,40 @@ Routers contain no ORM access. This is enforced by `scripts/check_layering.py`, 
 
 ## Database Schema
 
-_(ERD + per-entity tables added in T-03.13 / T-45.6.)_
+SQLite with FTS5. Full ERD, per-column rationale and the design decisions behind it are in
+**[docs/schema.md](docs/schema.md)**.
+
+| Table | Purpose | Notable |
+|---|---|---|
+| `users` | Accounts | Auth is out of scope; the table exists so authorship is a real FK |
+| `meetings` | Aggregate root | Soft-deleted via `deleted_at`; `duration_seconds` denormalised |
+| `participants` | Attendance, per meeting | `user_id` nullable — most attendees have no account |
+| `speakers` | Raw transcript labels | Decouples `Speaker 1` from a person, so renaming is one UPDATE |
+| `transcript_segments` | One speaker turn | `start_ms`/`end_ms` INTEGER milliseconds; ~1,200 rows for a long meeting |
+| `summaries` | Scalar summary fields | One per meeting; carries provider provenance and an `is_stale` flag |
+| `summary_sections` | Outline chapters, note groups | `start_ms` is what makes the outline clickable |
+| `action_items` | Tasks | First-class rows, not a JSON blob — independently mutable |
+| `keywords` | Salient terms | Weighted, so the UI's top-six ordering is meaningful |
+| `channels`, `tags`, `meeting_tags` | Organisation | One channel per meeting, many tags |
+| `comments`, `highlights`, `bookmarks`, `soundbites` | Collaboration (Phase 6) | Created up front so the schema is stable |
+| `transcript_fts` | FTS5 virtual table | Trigger-maintained; gives ranked search instead of `LIKE '%x%'` |
+
+**Design decisions worth knowing:**
+
+- **Soft delete.** Deleting a meeting sets `deleted_at`. It vanishes from the UI but stays
+  restorable, which is what makes the undo affordance honest rather than a re-created lesser copy.
+- **Two denormalised columns**, both justified by the same access pattern: `meetings.duration_seconds`
+  and `participants.talk_seconds` would otherwise mean an aggregate over hundreds of segments for
+  every row of every Notebook page.
+- **`speakers` sits between segments and people** so renaming a speaker is one statement rather than
+  one per segment, and a speaker can stay unresolved indefinitely.
+- **Milliseconds are integers**, never formatted strings — the transcript↔player sync depends on
+  exact comparisons.
+- **The FTS index survives a soft delete**, so all search goes through `app/db/search.py`, which
+  joins back to `meetings` and filters. Asserted from both sides in `tests/test_schema.py`.
+
+Migrations are in `backend/alembic/versions/` and are committed — the app never calls
+`create_all()`. Apply them with `make migrate`.
 
 ---
 

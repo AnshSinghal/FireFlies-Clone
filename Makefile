@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
-.PHONY: help dev down logs seed seed-reset test test-backend e2e lint lint-frontend lint-backend \
-        typecheck format install clean
+.PHONY: help dev down logs migrate migrate-down migration seed seed-reset test test-backend \
+        test-frontend e2e lint lint-frontend lint-backend typecheck format install clean
 
 # ─────────────────────────────────────────────────────────────────────────────
 help: ## Show this help
@@ -18,10 +18,21 @@ logs: ## Tail logs from both services
 	docker compose logs -f
 
 # ── Data ─────────────────────────────────────────────────────────────────────
-seed: ## Populate the demo database (idempotent)
+migrate: ## Apply database migrations
+	cd backend && uv run alembic upgrade head
+
+migrate-down: ## Roll back the most recent migration
+	cd backend && uv run alembic downgrade -1
+
+migration: ## Autogenerate a migration — make migration m="add x"
+	cd backend && uv run alembic revision --autogenerate -m "$(m)"
+
+# Depends on migrate so a fresh clone cannot seed into a database that has no
+# tables, which fails with an unhelpful "no such table" rather than a hint.
+seed: migrate ## Populate the demo database (idempotent)
 	cd backend && uv run python -m app.seed.seed
 
-seed-reset: ## Drop and repopulate the demo database
+seed-reset: migrate ## Drop and repopulate the demo database
 	cd backend && uv run python -m app.seed.seed --reset
 
 # ── Tests ────────────────────────────────────────────────────────────────────
