@@ -13,6 +13,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "webvtt-py>=0.5",
     "httpx2>=2.9.1",
+    "slowapi>=0.1.10",
 ]
 
 [dependency-groups]
@@ -83,6 +84,11 @@ ignore = [
 # db/base.py declares the shared Mapped[] mixins and has the same constraint.
 "app/db/base.py" = ["TC001", "TC002", "TC003", "TC004"]
 
+# Routers have the same problem for the same reason: FastAPI resolves
+# Annotated[Session, Depends(get_db)] at runtime to build the dependency graph,
+# so moving those aliases behind TYPE_CHECKING breaks injection entirely.
+"app/api/v1/routers/*" = ["TC001", "TC002", "TC003"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
 
@@ -114,4 +120,15 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-filterwarnings = ["error"]
+filterwarnings = [
+    # Deprecations are errors, deliberately: it is the only way one gets fixed
+    # on the day it appears rather than during a panicked upgrade later.
+    "error",
+    # slowapi 0.1.10 calls asyncio.iscoroutinefunction, which Python 3.14
+    # deprecates in favour of inspect.iscoroutinefunction. It fires at import
+    # time, so it takes down collection entirely. Matched by message rather than
+    # by module — the warning is raised from asyncio, not from slowapi — and
+    # kept narrow so it cannot mask the same mistake in our own code.
+    # Remove when slowapi ships a fix; it becomes a hard break in Python 3.16.
+    "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning",
+]
