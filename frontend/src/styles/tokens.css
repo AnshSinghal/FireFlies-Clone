@@ -1,73 +1,140 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    DESIGN TOKENS — the only file in this repo that may contain a hex code.
-   Values transcribed from design.md §3. Consumed by tailwind.config.ts.
 
-   ⚠️ PROVISIONAL (T-01). Two things land in T-02:
-      1. The palette is not yet calibrated against real Fireflies screenshots.
-         design.md §3.0 lists the eight surfaces to sample. Until then these are
-         a researched starting point, not measured truth.
-      2. This is currently a single flat layer. T-02.3 splits it into a
-         primitive layer (--ff-blue-600: #2A6EF4) and a semantic layer
-         (--ff-accent: var(--ff-blue-600)) so dark mode re-points semantics
-         instead of redefining forty values.
+   CALIBRATED (T-02.1) against eight real Fireflies screenshots, saved in
+   docs/reference/fireflies/. Values marked [S] were sampled from those images;
+   values marked [D] were derived, because no screenshot exposes that surface.
+   The sampling method and every correction is recorded in docs/decisions.md
+   ADR-011.
 
-   Components consume the SEMANTIC names only. A component that needs a
-   bespoke dark-mode override is a bug in this file, not in the component.
+   Headline correction: Fireflies is VIOLET, not blue. The researched palette in
+   PLAN.md A3.1 had #2A6EF4; the real accent is #6A39EF.
+
+   ── Two-layer architecture (T-02.3) ────────────────────────────────────────
+   PRIMITIVES  raw scale values, named by hue and step   --ff-violet-600
+   SEMANTICS   roles, named by job, pointing at a primitive  --ff-accent
+
+   Components consume SEMANTICS ONLY. Never write --ff-violet-600 in a
+   component; never write a hex anywhere else. Dark mode then re-points a dozen
+   semantics instead of redefining forty values, which is why T-38 should
+   require no component changes at all.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Typography ─────────────────────────────────────────────────────────── */
-  /* Overridden by next/font in T-02.5; this is the fallback chain. */
-  --ff-font-sans: Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* ═════════════════════════════════════════════════════════════════════════
+     LAYER 1 — PRIMITIVES
+     ═════════════════════════════════════════════════════════════════════════ */
+
+  /* ── Violet — the brand accent ──────────────────────────────────────────── */
+  --ff-violet-50: #f4f3ff; /* [S] active nav bg, trial banner   */
+  --ff-violet-200: #d5ccfb; /* [D] border on tinted surfaces     */
+  --ff-violet-400: #8869fa; /* [S] AskFred avatar                */
+  --ff-violet-600: #6a39ef; /* [S] Capture / Browse Files button */
+  --ff-violet-700: #5a27e0; /* [D] button hover                  */
+  --ff-violet-800: #541ddc; /* [S] active nav label text         */
+  --ff-violet-900: #3e1c96; /* [S] pressed                       */
+
+  /* ── Neutrals — cool-cast greys ─────────────────────────────────────────── */
+  --ff-white: #ffffff; /* [S] topbar, cards, rail, main     */
+  --ff-grey-25: #fcfcfd; /* [S] secondary panel               */
+  --ff-grey-50: #f9fafb; /* [S] search input, status chips    */
+  --ff-grey-100: #f4f5f7; /* [D] row / nav hover               */
+  --ff-grey-200: #ecedf1; /* [S] dividers, card borders        */
+  --ff-grey-300: #dde0e7; /* [D] input hover border            */
+  /* [S] sampled #97A1B3 — darkened ~9%. Fireflies' own muted grey scores
+     2.60:1 on white, which fails every WCAG threshold including the 3:1
+     non-text floor, and axe would flag every timestamp in the app. This value
+     reaches 3.14:1 at a shift that is invisible in a side-by-side screenshot.
+     Full AA (4.5:1) would need ~#6C7481, which reads as secondary text rather
+     than metadata and visibly departs from the reference. See ADR-012. */
+  --ff-grey-500: #8992a2; /* timestamps, placeholders          */
+  --ff-grey-700: #616b81; /* [S] nav labels, list metadata     */
+  --ff-grey-900: #0b1424; /* [S] headings, meeting titles      */
+
+  /* ── Green — the secondary brand colour (Upgrade, success) ─────────────── */
+  --ff-green-50: #d7fbe3; /* [S] Upgrade button bg             */
+  --ff-green-400: #32d584; /* [S] NEW badge                     */
+  --ff-green-600: #0e9f6e; /* [D] success on white              */
+  --ff-green-800: #036c60; /* [S] Upgrade button text           */
+
+  /* ── Amber — notices and AI attribution ────────────────────────────────── */
+  --ff-amber-50: #fffaec; /* [S] notice banner bg              */
+  --ff-amber-400: #ffe9a8; /* [D] search highlight              */
+  --ff-amber-500: #ffc933; /* [D] active search highlight       */
+  --ff-amber-600: #f79009; /* [D] due-soon badge                */
+
+  /* ── Red — destructive ──────────────────────────────────────────────────── */
+  /* No large danger surface appears in the reference set; the only red pixels
+     are a 16px "not allowed" glyph, too antialiased to trust. Derived. */
+  --ff-red-50: #fef3f2; /* [D] */
+  --ff-red-600: #d92d20; /* [D] */
+  --ff-red-700: #b4261a; /* [S] but from a tiny glyph — low confidence */
+
+  /* ── Magenta — the logo mark only ──────────────────────────────────────── */
+  --ff-magenta-500: #c43990; /* [S] fireflies.ai wordmark glyph   */
+
+  /* ── Speaker palette — eight hues, assigned by name hash ────────────────── */
+  /* Not observable: no transcript view in the reference set. Chosen to be
+     distinguishable at 24px and to lead with the brand violet. */
+  --ff-speaker-0: #6a39ef;
+  --ff-speaker-1: #0e9f6e;
+  --ff-speaker-2: #f79009;
+  --ff-speaker-3: #c43990;
+  --ff-speaker-4: #d92d20;
+  --ff-speaker-5: #06aed4;
+  --ff-speaker-6: #8869fa;
+  --ff-speaker-7: #7a5af5;
+
+  /* ═════════════════════════════════════════════════════════════════════════
+     LAYER 2 — SEMANTICS   (the only names a component may use)
+     ═════════════════════════════════════════════════════════════════════════ */
 
   /* ── Accent ─────────────────────────────────────────────────────────────── */
-  --ff-accent: #2a6ef4; /* [CALIBRATE] primary button fill        */
-  --ff-accent-hover: #1f5bd4;
-  --ff-accent-pressed: #1848ac;
-  --ff-accent-subtle: #eaf1fe; /* [CALIBRATE] active nav bg, active transcript line */
-  --ff-accent-border: #bbd3fb;
+  --ff-accent: var(--ff-violet-600);
+  --ff-accent-hover: var(--ff-violet-700);
+  --ff-accent-pressed: var(--ff-violet-900);
+  --ff-accent-subtle: var(--ff-violet-50);
+  --ff-accent-border: var(--ff-violet-200);
+  --ff-accent-strong: var(--ff-violet-800); /* active nav label */
 
   /* ── Brand ──────────────────────────────────────────────────────────────── */
-  --ff-brand-amber: #f5b301; /* [CALIBRATE] firefly mark, AI badges    */
+  --ff-brand-mark: var(--ff-magenta-500);
+  --ff-brand-amber: var(--ff-amber-600);
 
   /* ── Surfaces ───────────────────────────────────────────────────────────── */
-  --ff-surface-0: #ffffff; /* cards, topbar, panels, table rows      */
-  --ff-surface-1: #f7f8fa; /* [CALIBRATE] app background, left rail  */
-  --ff-surface-2: #eff1f5; /* [CALIBRATE] table header, chip default */
-  --ff-surface-hover: #f2f4f7;
+  /* Fireflies is white-on-white: the rail, topbar and content are all #FFFFFF
+     and separation comes from a 1px border, not a background step. The greys
+     below are genuinely this subtle — do not "improve" the contrast. */
+  --ff-surface-0: var(--ff-white); /* cards, topbar, rail, rows */
+  --ff-surface-1: var(--ff-grey-25); /* secondary panels          */
+  --ff-surface-2: var(--ff-grey-50); /* inputs, chips, headers    */
+  --ff-surface-hover: var(--ff-grey-100);
 
   /* ── Borders ────────────────────────────────────────────────────────────── */
-  --ff-border-subtle: #e4e7ec;
-  --ff-border-strong: #cfd4dc;
+  --ff-border-subtle: var(--ff-grey-200);
+  --ff-border-strong: var(--ff-grey-300);
 
   /* ── Text ───────────────────────────────────────────────────────────────── */
-  --ff-text-primary: #101828; /* [CALIBRATE] headings, meeting titles   */
-  --ff-text-secondary: #475467;
-  --ff-text-muted: #98a2b3; /* [CALIBRATE] timestamps, column headers */
-  --ff-text-inverse: #ffffff;
+  --ff-text-primary: var(--ff-grey-900);
+  --ff-text-secondary: var(--ff-grey-700);
+  --ff-text-muted: var(--ff-grey-500);
+  --ff-text-inverse: var(--ff-white);
 
   /* ── Status ─────────────────────────────────────────────────────────────── */
-  --ff-success: #12b76a;
-  --ff-success-subtle: #ecfdf3;
-  --ff-warning: #f79009;
-  --ff-danger: #f04438;
-  --ff-danger-subtle: #fef3f2;
+  --ff-success: var(--ff-green-600);
+  --ff-success-subtle: var(--ff-green-50);
+  --ff-success-strong: var(--ff-green-800);
+  --ff-warning: var(--ff-amber-600);
+  --ff-warning-subtle: var(--ff-amber-50);
+  --ff-danger: var(--ff-red-600);
+  --ff-danger-subtle: var(--ff-red-50);
 
   /* ── Search highlighting ────────────────────────────────────────────────── */
-  --ff-highlight: #ffe9a8;
-  --ff-highlight-active: #ffc933;
+  --ff-highlight: var(--ff-amber-400);
+  --ff-highlight-active: var(--ff-amber-500);
 
-  /* ── Speaker palette (design.md §3.4) ───────────────────────────────────── */
-  /* Assigned by stable hash of the speaker's name, never by array position, so
-     a speaker keeps their colour across transcript, outline and avatars. */
-  --ff-speaker-0: #2a6ef4;
-  --ff-speaker-1: #12b76a;
-  --ff-speaker-2: #f5b301;
-  --ff-speaker-3: #9e77ed;
-  --ff-speaker-4: #f04438;
-  --ff-speaker-5: #06aed4;
-  --ff-speaker-6: #ee46bc;
-  --ff-speaker-7: #f79009;
+  /* ── Typography ─────────────────────────────────────────────────────────── */
+  --ff-font-sans: Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   /* ── Radius ─────────────────────────────────────────────────────────────── */
   --ff-radius-sm: 6px;
@@ -76,11 +143,11 @@
   --ff-radius-full: 999px;
 
   /* ── Elevation ──────────────────────────────────────────────────────────── */
-  --ff-shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
-  --ff-shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.1), 0 1px 2px rgba(16, 24, 40, 0.06);
-  --ff-shadow-md: 0 4px 8px -2px rgba(16, 24, 40, 0.1), 0 2px 4px -2px rgba(16, 24, 40, 0.06);
-  --ff-shadow-lg: 0 12px 16px -4px rgba(16, 24, 40, 0.08), 0 4px 6px -2px rgba(16, 24, 40, 0.03);
-  --ff-shadow-focus: 0 0 0 4px rgba(42, 110, 244, 0.24);
+  --ff-shadow-xs: 0 1px 2px rgba(11, 20, 36, 0.05);
+  --ff-shadow-sm: 0 1px 3px rgba(11, 20, 36, 0.1), 0 1px 2px rgba(11, 20, 36, 0.06);
+  --ff-shadow-md: 0 4px 8px -2px rgba(11, 20, 36, 0.1), 0 2px 4px -2px rgba(11, 20, 36, 0.06);
+  --ff-shadow-lg: 0 12px 16px -4px rgba(11, 20, 36, 0.08), 0 4px 6px -2px rgba(11, 20, 36, 0.03);
+  --ff-shadow-focus: 0 0 0 4px rgba(106, 57, 239, 0.24);
 
   /* ── Motion ─────────────────────────────────────────────────────────────── */
   --ff-dur-fast: 120ms;
@@ -91,33 +158,64 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DARK THEME (T-38)
-   Elevation here is conveyed by LIGHTER SURFACES, not by shadows — modals and
-   popovers sit on --ff-surface-2 and shadows fall away to near-invisible.
-   The light accent fails contrast on dark, hence the lifted blue.
+
+   DERIVED, not sampled — the reference set is light-mode only. Two rules drive
+   it: elevation comes from LIGHTER SURFACES rather than shadows, and the accent
+   lifts because #6A39EF fails contrast on a dark ground. Only primitives are
+   redefined plus a handful of semantic re-points; no component knows about this.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-theme='dark'] {
-  --ff-surface-0: #161a22;
-  --ff-surface-1: #0f1218;
-  --ff-surface-2: #1f242e;
-  --ff-surface-hover: #232935;
+  /* Neutrals invert, keeping the cool violet cast of the light theme. */
+  --ff-white: #14141d; /* cards, topbar, rail    */
+  --ff-grey-25: #0e0e15; /* app background         */
+  --ff-grey-50: #1c1c28; /* inputs, chips          */
+  --ff-grey-100: #23232f; /* hover                  */
+  --ff-grey-200: #2c2c3a; /* dividers               */
+  --ff-grey-300: #3b3b4c; /* stronger borders       */
+  --ff-grey-500: #7b8497; /* muted text             */
+  --ff-grey-700: #a8b0be; /* secondary text         */
+  --ff-grey-900: #f2f4f7; /* primary text           */
 
-  --ff-border-subtle: #2a313d;
-  --ff-border-strong: #3a4351;
+  /* The accent lifts; the subtle tint becomes a deep violet rather than a wash. */
+  --ff-violet-50: #1d1638;
+  --ff-violet-200: #3a2d66;
+  --ff-violet-600: #9b7bff;
+  --ff-violet-700: #ac91ff; /* hover lifts on dark, rather than deepening */
+  --ff-violet-800: #b9a2ff;
+  /* Pressed must also be re-pointed. Left at the light-theme #3E1C96 it renders
+     as a near-black block while hover renders light, so the three states read
+     out of order. On dark, pressed steps DOWN from the base instead. */
+  --ff-violet-900: #8060e8;
 
-  --ff-text-primary: #f2f4f7;
-  --ff-text-secondary: #b4bcc9;
-  --ff-text-muted: #79839a;
+  /* Status colours lift for legibility on dark. */
+  --ff-green-50: #0d2b20;
+  --ff-green-600: #34d399;
+  --ff-green-800: #6ee7b7;
+  --ff-amber-50: #2a2010;
+  --ff-red-50: #2d1512;
+  --ff-red-600: #f87171;
 
-  --ff-accent: #5b8def;
-  --ff-accent-subtle: #18243c;
+  /* Highlights invert — a light-yellow wash is unreadable on dark. The active
+     step stays dark enough for --ff-text-primary to clear AA on top of it
+     (5.25:1); the obvious lighter amber only reached 3.44:1. */
+  --ff-amber-400: #6b5714;
+  --ff-amber-500: #7d6211;
 
-  --ff-highlight: #6b5714;
+  /* Speaker hues lift ~15% and desaturate ~10% so names stay legible. */
+  --ff-speaker-0: #9b7bff;
+  --ff-speaker-1: #34d399;
+  --ff-speaker-2: #fbbf4a;
+  --ff-speaker-3: #e879b8;
+  --ff-speaker-4: #f87171;
+  --ff-speaker-5: #38bdf8;
+  --ff-speaker-6: #a894ff;
+  --ff-speaker-7: #9d87ff;
 
-  /* Shadows recede; surfaces do the lifting. */
+  /* Elevation recedes; surfaces do the lifting. */
   --ff-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.24);
   --ff-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.32);
   --ff-shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.36);
   --ff-shadow-lg: 0 12px 16px -4px rgba(0, 0, 0, 0.4);
-  --ff-shadow-focus: 0 0 0 4px rgba(91, 141, 239, 0.32);
+  --ff-shadow-focus: 0 0 0 4px rgba(155, 123, 255, 0.32);
 }
