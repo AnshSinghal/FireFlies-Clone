@@ -196,6 +196,9 @@ test.describe('responsive', () => {
 
   test('the rail narrows between tablet and desktop', async ({ page }) => {
     await page.goto('/notebook')
+    // The rail renders a Suspense skeleton first; measuring before it settles
+    // reads the wrong geometry.
+    await expect(page.getByTestId('sidebar-item-meetings')).toBeVisible()
 
     await page.setViewportSize({ width: 1440, height: 900 })
     const wide = await page.getByTestId('sidebar').boundingBox()

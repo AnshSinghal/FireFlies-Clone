@@ -57,6 +57,52 @@
         "title": "BulkDeleteResponse",
         "type": "object"
       },
+      "ChannelOut": {
+        "description": "A sidebar channel, with its meeting count.\n\nThe count is what makes the rail feel alive rather than decorative, and it\nis aggregated server-side \u2014 the alternative is the client fetching every\nmeeting just to group them.",
+        "properties": {
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_private": {
+            "title": "Is Private",
+            "type": "boolean"
+          },
+          "meeting_count": {
+            "description": "Meetings in this channel, excluding deleted.",
+            "title": "Meeting Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "is_private",
+          "meeting_count"
+        ],
+        "title": "ChannelOut",
+        "type": "object"
+      },
       "ErrorDetail": {
         "properties": {
           "code": {
@@ -653,6 +699,33 @@
         "title": "ProcessingStatus",
         "type": "string"
       },
+      "SidebarChannels": {
+        "description": "Everything the rail's CHANNELS section needs, in one request.\n\nThe two built-in views are counts rather than channel rows \u2014 \"My Meetings\"\nand \"All Meetings\" are filters over the same data, not stored channels \u2014\nso returning them alongside avoids the client making three calls to render\none list.",
+        "properties": {
+          "all_meetings": {
+            "title": "All Meetings",
+            "type": "integer"
+          },
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/ChannelOut"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "my_meetings": {
+            "title": "My Meetings",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "my_meetings",
+          "all_meetings",
+          "channels"
+        ],
+        "title": "SidebarChannels",
+        "type": "object"
+      },
       "SummaryOut": {
         "properties": {
           "generated_at": {
@@ -919,6 +992,38 @@
         "summary": "Service health",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/channels": {
+      "get": {
+        "description": "Channels plus the two built-in views. Counts exclude deleted meetings, and a channel with no meetings still appears, showing zero.",
+        "operationId": "list_channels_api_v1_channels_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SidebarChannels"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "List channels with counts",
+        "tags": [
+          "channels"
         ]
       }
     },

@@ -24,6 +24,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/channels': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List channels with counts
+     * @description Channels plus the two built-in views. Counts exclude deleted meetings, and a channel with no meetings still appears, showing zero.
+     */
+    get: operations['list_channels_api_v1_channels_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/me': {
     parameters: {
       query?: never
@@ -190,6 +210,31 @@ export interface components {
        * @description Ids that could not be deleted, e.g. already gone.
        */
       failed?: number[]
+    }
+    /**
+     * ChannelOut
+     * @description A sidebar channel, with its meeting count.
+     *
+     *     The count is what makes the rail feel alive rather than decorative, and it
+     *     is aggregated server-side — the alternative is the client fetching every
+     *     meeting just to group them.
+     */
+    ChannelOut: {
+      /** Icon */
+      icon?: string | null
+      /** Id */
+      id: number
+      /** Is Private */
+      is_private: boolean
+      /**
+       * Meeting Count
+       * @description Meetings in this channel, excluding deleted.
+       */
+      meeting_count: number
+      /** Name */
+      name: string
+      /** Slug */
+      slug: string
     }
     /** ErrorDetail */
     ErrorDetail: {
@@ -468,6 +513,23 @@ export interface components {
      * @enum {string}
      */
     ProcessingStatus: 'pending' | 'processing' | 'ready' | 'failed'
+    /**
+     * SidebarChannels
+     * @description Everything the rail's CHANNELS section needs, in one request.
+     *
+     *     The two built-in views are counts rather than channel rows — "My Meetings"
+     *     and "All Meetings" are filters over the same data, not stored channels —
+     *     so returning them alongside avoids the client making three calls to render
+     *     one list.
+     */
+    SidebarChannels: {
+      /** All Meetings */
+      all_meetings: number
+      /** Channels */
+      channels: components['schemas']['ChannelOut'][]
+      /** My Meetings */
+      my_meetings: number
+    }
     /** SummaryOut */
     SummaryOut: {
       /** Generated At */
@@ -593,6 +655,35 @@ export interface operations {
       }
       /** @description A dependency is unavailable. */
       503: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  list_channels_api_v1_channels_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SidebarChannels']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
         headers: {
           [name: string]: unknown
         }
