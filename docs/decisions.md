@@ -757,6 +757,114 @@ gained `MenuRadioItem` — which is the outcome the rule is for.
 
 ---
 
+## ADR-032 · Eager-by-default relationships were loading the whole transcript
+
+**Date:** 2026-07-26 · **Task:** T-11.7 · **Status:** Accepted
+
+**Context.** T11-L counts statements on a 20-item page. It found 13, and four of
+them were `SELECT ... FROM transcript_segments`, `speakers`, `action_items` and
+`summary_sections`.
+
+Every relationship on `Meeting` had been declared `lazy="selectin"` — a reasonable-looking default
+that means "never N+1". For the Notebook list it meant every page loaded **~1,200 transcript
+segments per meeting, twenty meetings at a time**, plus every action item and every summary section.
+
+None of it appeared in the response: `MeetingListItem` does not have those fields, so the payload
+was correct and light while the query cost was enormous. This is exactly the deduction T-04.4 warns
+about, arriving through the back door — and the only way to see it was to count statements.
+
+**Decision.** `segments`, `speakers`, `action_items` and `Summary.sections` are lazy. Callers that
+need them opt in with `selectinload`. The small, bounded collections a row actually renders
+(`participants`, `keywords`, `tags`, `summary`) stay eager.
+
+**Consequences.** Nine statements for a full page instead of thirteen, and none of them touching a
+transcript. The test asserts both the bound and, explicitly, that
+`FROM transcript_segments` does not appear — a count alone would pass again if something heavy came
+back under a different name.
+
+**DEVIATION from T11-L, which asks for ≤ 4.** The floor for this model is 8: the page query, the
+count, four `selectinload`s, and two grouped aggregates. Reaching 4 would mean denormalising counts
+onto `meetings` or dropping fields from the row — trading a real correctness surface for a number.
+What the case protects is that the count does not GROW with the page, and that is asserted directly
+by its own test.
+
+---
+
+## ADR-033 · An unknown sort key is a 400, not a silent fallback
+
+**Date:** 2026-07-26 · **Task:** T-11.5 · **Status:** Accepted
+
+**Context.** `list_meetings` previously did `SORTABLE.get(sort, SORTABLE[DEFAULT])` — an unknown key
+quietly sorted by the default. Safe against injection, which was the point at the time, and wrong in
+a different way.
+
+**Decision.** An unknown key raises `InvalidSortError` → **400 `INVALID_SORT`**, with the allowed set
+in `details`.
+
+A fallback hides a client bug in the worst possible way: the caller believes it sorted by one thing
+and is looking at another, with nothing to distinguish that from data that happens to be ordered
+oddly. A 400 makes it a five-second fix.
+
+This also introduced `BadRequestError` as a category distinct from 422. FastAPI raises 422 when a
+value fails to PARSE; 400 is for a value that parsed fine and is still not allowed. Collapsing them
+leaves the client unable to tell "you sent a string where I wanted an int" from "that is not a
+column".
+
+**Consequences.** One existing test asserted the old fallback and was updated — deliberately, with
+the reasoning recorded in the test itself rather than silently flipped.
+
+---
+
+## ADR-034 · List responses are validated with a weak ETag over the body
+
+**Date:** 2026-07-26 · **Task:** T-11.11 · **Status:** Accepted
+
+**Context.** The Notebook re-requests the same list constantly — every navigation back, every filter
+toggled and untoggled. Those requests should be cheap, and they must never be stale: a meetings list
+that still shows a meeting the user deleted is worse than a slow one.
+
+**Decision.** `Cache-Control: no-cache` plus a weak ETag digested from the serialised response.
+
+`no-cache` does not mean "do not cache" — it means "cache it, but revalidate before reuse". Paired
+with an ETag, a repeat request costs a 304 and no body, while any change anywhere in the page
+changes the digest. `max-age` would have been the bug.
+
+The digest is taken over the BODY rather than a `MAX(updated_at)` high-water mark, because the page
+contains aggregates — action-item counts, participant totals — that no single row's timestamp
+covers. A body digest cannot go stale by construction.
+
+`W/` is honest about strength: the digest is over Pydantic's JSON, so two equivalent encodings would
+compare unequal. Weak comparison is all `If-None-Match` on a GET needs.
+
+**Consequences.** Every list response serialises twice on a cache miss (once to digest, once to
+send). At this scale that is invisible, and it buys a correctness property that is hard to get any
+other way. The 304 is raised as an exception rather than returned, so the handler's return type
+keeps describing what the endpoint actually produces.
+
+---
+
+## ADR-035 · Routers get their enums from schemas, not models
+
+**Date:** 2026-07-26 · **Task:** T-11.1 · **Status:** Accepted
+
+**Context.** The list endpoint takes `?source=` typed as `MeetingSource`, which lives in
+`app.models.enums`. The layering guard rejected the import.
+
+The guard was arguably over-broad here — an enum is a value type, not ORM access. But ADR-017
+settled that the rule has no exceptions, on the grounds that every exception is a precedent and the
+guard's value is that it cannot be argued with.
+
+**Decision.** `app.schemas.meeting` re-exports the enums, and routers import from there.
+
+This is better layering, not just guard appeasement: the API layer's vocabulary should come from the
+API contract. If `MeetingSource` ever needs to differ between storage and wire — a renamed member, a
+value the API accepts but never stores — the seam already exists.
+
+**Consequences.** One re-export block, and the guard stays absolute. Third time the rule has forced a
+better structure rather than a worse one (ADR-017, ADR-031).
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

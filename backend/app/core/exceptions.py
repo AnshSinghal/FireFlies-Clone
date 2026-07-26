@@ -67,6 +67,23 @@ class MeetingDeletedError(GoneError):
     message = "This meeting was deleted. It can be restored."
 
 
+class BadRequestError(AppException):
+    """A syntactically valid request the server will not act on.
+
+    Distinct from 422: FastAPI raises that when a value fails to PARSE, while
+    this is for a value that parsed fine and is still not allowed — an unknown
+    sort key, say. Collapsing the two would leave the client unable to tell
+    "you sent a string where I wanted an int" from "that is not a column".
+    """
+
+    status_code = 400
+    code = "BAD_REQUEST"
+
+
+class InvalidSortError(BadRequestError):
+    code = "INVALID_SORT"
+
+
 class ValidationError(AppException):
     status_code = 422
     code = "VALIDATION_ERROR"

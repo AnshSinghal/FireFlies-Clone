@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import Select, UnaryExpression, func, select
 from sqlalchemy.orm import selectinload
 
-from app.core.exceptions import MeetingDeletedError, MeetingNotFoundError
+from app.core.exceptions import InvalidSortError, MeetingDeletedError, MeetingNotFoundError
 from app.models import ActionItem, Meeting, Participant, TranscriptSegment, User
 from app.models.enums import ActionItemStatus, MediaType
 from app.schemas.meeting import (
@@ -26,7 +26,19 @@ from app.schemas.meeting import (
     ParticipantRef,
     TagRef,
 )
+from app.schemas.meeting import (
+    Facets as FacetsSchema,
+)
+from app.schemas.meeting import (
+    MatchContext as MatchContextSchema,
+)
 from app.schemas.user import UserRef
+from app.services.meeting_filters import (
+    MeetingFilters,
+    apply_filters,
+    build_facets,
+    transcript_match_contexts,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -82,34 +94,49 @@ class MeetingService:
             raise MeetingDeletedError(details={"meeting_id": meeting_id})
         return meeting
 
-    def count(self, *, query: str | None = None) -> int:
-        stmt = select(func.count()).select_from(Meeting).where(Meeting.deleted_at.is_(None))
-        if query:
-            stmt = stmt.where(Meeting.title.icontains(query))
-        return int(self.db.execute(stmt).scalar_one())
+    def count(self, filters: MeetingFilters) -> int:
+        """Total matching rows, ignoring pagination.
+
+        Counts through the SAME filter functions as the page query. Writing a
+        second, hand-tuned count predicate is how `total` drifts from `items`
+        and the last page ends up empty.
+        """
+        # `subquery()` rather than counting the ORM entity directly: several
+        # filters add EXISTS clauses, and counting over the built statement is
+        # the only way to be certain the two agree.
+        stmt = apply_filters(self._base_query(), filters).subquery()
+        return int(self.db.execute(select(func.count()).select_from(stmt)).scalar_one())
 
     def list_meetings(
         self,
         *,
         limit: int,
         offset: int,
-        query: str | None = None,
+        filters: MeetingFilters | None = None,
         sort: str = DEFAULT_SORT,
     ) -> list[Meeting]:
         """A page of meetings, newest first by default.
 
-        `sort` is looked up in a WHITELIST rather than interpolated. Building
-        `ORDER BY {sort}` from user input is a SQL injection with extra steps,
-        and it is the one place an ORM does not protect you by default.
+        `sort` is looked up in a WHITELIST and an unknown key is a 400, not a
+        silent fallback (T-11.5). Building `ORDER BY {sort}` from user input is
+        SQL injection with extra steps, and it is the one place an ORM does not
+        protect you by default.
         """
-        stmt = self._base_query()
-        if query:
-            stmt = stmt.where(Meeting.title.icontains(query))
+        if sort not in SORTABLE:
+            raise InvalidSortError(
+                f"Unknown sort key: {sort!r}",
+                details={"allowed": sorted(SORTABLE)},
+            )
 
-        stmt = stmt.order_by(SORTABLE.get(sort, SORTABLE[DEFAULT_SORT]))
+        stmt = apply_filters(self._base_query(), filters or MeetingFilters())
+        stmt = stmt.order_by(SORTABLE[sort])
+        # A stable tiebreak. Two meetings can share a title or a start time, and
+        # without one the same row can appear on two pages while another
+        # disappears — SQLite is free to return equal rows in any order.
+        stmt = stmt.order_by(Meeting.id.desc())
         stmt = stmt.limit(limit).offset(offset)
         # Eager-load exactly what the light row needs. Without this the list is
-        # N+1 across host, participants and tags — see T03-F.
+        # N+1 across host, participants and tags — see T03-F and T11-L.
         stmt = stmt.options(
             selectinload(Meeting.host),
             selectinload(Meeting.participants),
@@ -118,6 +145,18 @@ class MeetingService:
             selectinload(Meeting.summary),
         )
         return list(self.db.execute(stmt).scalars().all())
+
+    def facets(self) -> FacetsSchema:
+        """Filter options derived from the live data (T-11.8)."""
+        raw = build_facets(self.db)
+        return FacetsSchema(
+            hosts=raw.hosts,
+            participants=raw.participants,
+            tags=raw.tags,
+            channels=raw.channels,
+            min_duration=raw.min_duration,
+            max_duration=raw.max_duration,
+        )
 
     def action_item_counts(self, meeting_ids: list[int]) -> dict[int, tuple[int, int]]:
         """Open/completed counts for many meetings in ONE query.
@@ -157,23 +196,41 @@ class MeetingService:
     # and keeping it here means the mapping is unit-testable without a request.
 
     def list_page(
-        self, *, limit: int, offset: int, query: str | None = None, sort: str = DEFAULT_SORT
+        self,
+        *,
+        limit: int,
+        offset: int,
+        filters: MeetingFilters | None = None,
+        sort: str = DEFAULT_SORT,
     ) -> tuple[list[MeetingListItem], int]:
-        meetings = self.list_meetings(limit=limit, offset=offset, query=query, sort=sort)
-        total = self.count(query=query)
+        filters = filters or MeetingFilters()
+        meetings = self.list_meetings(limit=limit, offset=offset, filters=filters, sort=sort)
+        total = self.count(filters)
 
         ids = [m.id for m in meetings]
         action_counts = self.action_item_counts(ids)
         participant_totals = self.participant_counts(ids)
 
-        items = [
-            self._to_list_item(
+        # Only when the user searched, and only for the ids on THIS page — one
+        # extra statement, not one per row.
+        contexts = transcript_match_contexts(self.db, ids, filters.q) if filters.q else {}
+
+        items = []
+        for meeting in meetings:
+            item = self._to_list_item(
                 meeting,
                 action_counts.get(meeting.id, (0, 0)),
                 participant_totals.get(meeting.id, 0),
             )
-            for meeting in meetings
-        ]
+            context = contexts.get(meeting.id)
+            # Suppressed when the title already contains the term: the row shows
+            # the reason, so a "why this matched" line would be noise.
+            if context and filters.q and filters.q.lower() not in meeting.title.lower():
+                item.match_context = MatchContextSchema(
+                    snippet=context.snippet, speaker=context.speaker, start_ms=context.start_ms
+                )
+            items.append(item)
+
         return items, total
 
     @staticmethod

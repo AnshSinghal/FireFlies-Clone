@@ -25,6 +25,18 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.models.enums import MediaType, MeetingSource, ProcessingStatus, Visibility
 from app.schemas.user import UserRef
 
+# Re-exported so ROUTERS can reference the enum without importing from
+# `app.models` — which the layering guard rejects, correctly. An enum is a value
+# type, not ORM access, but the rule has no exceptions (ADR-017) and the right
+# answer is for the API layer to get its vocabulary from the schema module
+# rather than to carve a hole in the check.
+__all__ = [
+    "MediaType",
+    "MeetingSource",
+    "ProcessingStatus",
+    "Visibility",
+]
+
 TITLE_MAX = 200
 
 
@@ -43,6 +55,35 @@ class ActionItemCounts(BaseModel):
 
     open: int = 0
     completed: int = 0
+
+
+class MatchContext(BaseModel):
+    """Why a meeting matched, when the reason is not visible in the row (T-11.3).
+
+    Present ONLY when the hit came from the transcript. A title match needs no
+    explanation — the user can read it — but a transcript match looks like a
+    false positive unless the row shows the line that caused it.
+    """
+
+    snippet: str
+    speaker: str
+    #: Milliseconds, so the row can deep-link straight to the moment.
+    start_ms: int
+
+
+class Facets(BaseModel):
+    """Available filter values, derived from real data (T-11.8).
+
+    Sent so the filter panel can never offer an option that matches nothing,
+    which is how a filter panel loses the user's trust on the first click.
+    """
+
+    hosts: list[str]
+    participants: list[str]
+    tags: list[str]
+    channels: list[str]
+    min_duration: int
+    max_duration: int
 
 
 class TagRef(BaseModel):
@@ -141,6 +182,16 @@ class MeetingListItem(BaseModel):
     overview_preview: str | None = None
     has_media: bool = False
     media_type: MediaType = MediaType.NONE
+    #: Set only when `?q=` matched the TRANSCRIPT rather than anything visible
+    #: in the row (T-11.3). Absent otherwise, which is the common case.
+    match_context: MatchContext | None = None
+
+    # DEVIATION from T-11.2, which lists `thumbnail_url`. There are no
+    # thumbnail images in this build and none are generated, so the field would
+    # be null on every row forever. T-12.6 draws the leading cell itself — a
+    # play overlay when `has_media`, a FileAudio block when not — which is all
+    # the information it actually needs. A permanently-null field is worse than
+    # no field: it implies a feature that does not exist.
 
 
 class MeetingDetail(BaseModel):

@@ -11,8 +11,26 @@
  * beneath it, while `qk.meetings.detail(3)` touches only one.
  */
 
+/**
+ * Everything `GET /meetings` can narrow by (T-11.1).
+ *
+ * Mirrors the backend's `MeetingFilters` dataclass. Both are the single
+ * enumeration of the filter set on their side of the wire; a field added to one
+ * and not the other is a filter the UI can set and the API ignores.
+ */
 export interface MeetingFilters {
   q?: string
+  host?: string
+  participant?: string
+  /** Inclusive dates, `YYYY-MM-DD`, interpreted in UTC by the API. */
+  from?: string
+  to?: string
+  minDuration?: number
+  maxDuration?: number
+  tags?: string[]
+  channel?: string
+  hasActionItems?: boolean
+  source?: string
   sort?: string
   page?: number
   pageSize?: number
@@ -58,7 +76,15 @@ export const qk = {
  */
 function stableKey(filters: MeetingFilters): string {
   const entries = Object.entries(filters)
-    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .filter(([, value]) => {
+      // `false` and `0` are REAL filter values — `hasActionItems: false` means
+      // "nothing outstanding" and `minDuration: 0` is a real bound. A
+      // truthiness check would drop both and silently merge two distinct
+      // queries into one cache entry. Same rule as the backend's
+      // `MeetingFilters.active()`.
+      if (value === undefined || value === null || value === '') return false
+      return !(Array.isArray(value) && value.length === 0)
+    })
     .sort(([a], [b]) => a.localeCompare(b))
 
   return entries.length === 0 ? 'default' : JSON.stringify(Object.fromEntries(entries))

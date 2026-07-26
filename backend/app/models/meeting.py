@@ -129,16 +129,25 @@ class Meeting(Base, TimestampMixin, SoftDeleteMixin):
         lazy="selectin",
         order_by="Participant.id",
     )
+    # ── LAZY, deliberately ──────────────────────────────────────────────────
+    #
+    # These three were `lazy="selectin"` like the rest, and it made every
+    # meetings-list query load the ENTIRE transcript: ~1,200 segments per
+    # meeting, twenty meetings per page. The response schema does not include
+    # them, so the cost was completely invisible in the output — the only way to
+    # see it was to count statements (T11-L).
+    #
+    # That is the deduction T-04.4 warns about, arriving through the back door.
+    # Callers that genuinely need them (`to_detail`, the transcript endpoints,
+    # the seeder) opt in with `selectinload`.
     speakers: Mapped[list[Speaker]] = relationship(
         back_populates="meeting",
         cascade="all, delete-orphan",
-        lazy="selectin",
         order_by="Speaker.id",
     )
     segments: Mapped[list[TranscriptSegment]] = relationship(
         back_populates="meeting",
         cascade="all, delete-orphan",
-        lazy="selectin",
         order_by="TranscriptSegment.sequence",
     )
     summary: Mapped[Summary | None] = relationship(
@@ -153,10 +162,11 @@ class Meeting(Base, TimestampMixin, SoftDeleteMixin):
         lazy="selectin",
         order_by="Keyword.weight.desc()",
     )
+    # Also lazy: the list row needs COUNTS, which come from one grouped
+    # aggregate, not from loading every task on every row.
     action_items: Mapped[list[ActionItem]] = relationship(
         back_populates="meeting",
         cascade="all, delete-orphan",
-        lazy="selectin",
         order_by="ActionItem.sequence",
     )
     tags: Mapped[list[Tag]] = relationship(

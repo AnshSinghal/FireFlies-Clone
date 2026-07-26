@@ -10,12 +10,13 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.exceptions import AppException
+from app.core.http import NotModified, not_modified_response
 from app.schemas.common import ErrorDetail, ErrorResponse
 
 if TYPE_CHECKING:
@@ -105,7 +106,16 @@ async def unhandled_exception_handler(request: Request, _exc: Exception) -> JSON
     )
 
 
+async def not_modified_handler(_request: Request, exc: Exception) -> Response:
+    """304 for a conditional GET whose ETag still matches (T-11.11)."""
+    assert isinstance(exc, NotModified)
+    return not_modified_response(exc)
+
+
 def register_exception_handlers(app: FastAPI) -> None:
+    # Registered BEFORE the catch-all `Exception` handler below, and as its own
+    # type, so a 304 is never swallowed into a 500.
+    app.add_exception_handler(NotModified, not_modified_handler)
     app.add_exception_handler(AppException, app_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)

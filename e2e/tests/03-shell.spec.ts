@@ -75,15 +75,27 @@ test.describe('app shell', () => {
 // ── T06-F / T06-G · URL as state ────────────────────────────────────────────
 
 test.describe('URL as state', () => {
+  /*
+   * `?q=` searches the TRANSCRIPT as well as the title from T-11.3 onward, so a
+   * term like "roadmap" legitimately matches more meetings than have it in
+   * their name. These assert the count is narrowed and STABLE across a reload
+   * rather than pinning an exact number, which would break again the next time
+   * the seed data or the ranking changes — neither of which is what "URL as
+   * state" is about.
+   */
   test('a filtered view is shareable by copying the URL', async ({ page, context }) => {
+    await page.goto('/notebook')
+    const unfiltered = await page.getByTestId('notebook-count').textContent()
+
     await page.goto('/notebook?q=roadmap')
-    await expect(page.getByTestId('notebook-count')).toContainText('1 meeting')
+    const filtered = await page.getByTestId('notebook-count').textContent()
+    expect(filtered).not.toBe(unfiltered)
 
     // Opening the same URL in a fresh tab must reconstruct the same view — the
     // filter cannot live only in React state.
     const second = await context.newPage()
     await second.goto('/notebook?q=roadmap')
-    await expect(second.getByTestId('notebook-count')).toContainText('1 meeting')
+    await expect(second.getByTestId('notebook-count')).toHaveText(filtered!)
     await second.close()
   })
 
@@ -92,11 +104,22 @@ test.describe('URL as state', () => {
     await expect(page.getByTestId('notebook-count')).toContainText('8 meetings')
 
     await page.goto('/notebook?q=roadmap')
-    await expect(page.getByTestId('notebook-count')).toContainText('1 meeting')
+    await expect(page.getByTestId('notebook-count')).not.toContainText('8 meetings')
 
     await page.goBack()
     await expect(page).toHaveURL(/\/notebook$/)
     await expect(page.getByTestId('notebook-count')).toContainText('8 meetings')
+  })
+
+  test('a transcript-only match explains itself', async ({ page }) => {
+    // The point of T-11.3's `match_context`: without it, a meeting whose title
+    // does not contain the term looks like a false positive.
+    await page.goto('/notebook?q=roadmap')
+    await expect(page.getByTestId('meeting-list')).toBeVisible()
+
+    const rows = await page.getByTestId('meeting-row-title').allTextContents()
+    const untitled = rows.filter((t) => !t.toLowerCase().includes('roadmap'))
+    expect(untitled.length).toBeGreaterThan(0)
   })
 
   test('an unmatched search shows the search-specific empty state', async ({ page }) => {

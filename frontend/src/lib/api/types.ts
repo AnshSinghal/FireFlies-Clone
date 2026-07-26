@@ -34,6 +34,9 @@ export type ErrorDetail = Schemas['ErrorDetail']
 export type BulkDeleteRequest = Schemas['BulkDeleteRequest']
 export type BulkDeleteResponse = Schemas['BulkDeleteResponse']
 
+export type MatchContext = Schemas['MatchContext']
+export type Facets = Schemas['Facets']
+
 export type SearchResults = Schemas['SearchResults']
 export type MeetingHit = Schemas['MeetingHit']
 export type TranscriptHit = Schemas['TranscriptHit']

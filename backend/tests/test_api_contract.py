@@ -395,10 +395,18 @@ def test_bulk_delete_reports_partial_failure(client: TestClient, db: Session) ->
 
 
 def test_sort_is_whitelisted_not_interpolated(client: TestClient, db: Session) -> None:
-    """An unknown sort falls back to the default rather than reaching SQL."""
+    """An unknown sort is a 400, and never reaches SQL (T-11.5, T11-I)."""
     make_full_meeting(db)
 
     response = client.get("/api/v1/meetings", params={"sort": "title; DROP TABLE meetings"})
 
-    assert response.status_code == status.HTTP_200_OK
-    assert client.get("/api/v1/meetings").json()["total"] == 1
+    # Changed in T-11 from a silent fallback to an explicit rejection. A
+    # fallback hides a client bug: the caller believes it sorted by one thing
+    # and is looking at another, with nothing to tell them apart.
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["error"]["code"] == "INVALID_SORT"
+    # The allowed set comes back, so the caller can fix it without the docs.
+    assert "-started_at" in response.json()["error"]["details"]["allowed"]
+
+    # And the table is still there.
+    assert client.get("/api/v1/meetings").status_code == status.HTTP_200_OK

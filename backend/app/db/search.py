@@ -21,10 +21,25 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from sqlalchemy import text
+from sqlalchemy import Integer, String, column, table, text
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+
+#: The FTS5 virtual table, declared so it can be composed into ORM queries
+#: instead of being reached through raw SQL at every call site.
+#:
+#: It is not a model: FTS5 tables have no primary key and Alembic creates this
+#: one by hand, so declaring it as a mapped class would put a lie in the
+#: metadata that autogenerate would then try to "fix".
+transcript_fts = table(
+    "transcript_fts",
+    column("segment_id", Integer),
+    column("text", String),
+    #: The table name is also a queryable column in FTS5 — `tbl MATCH ?` is how
+    #: a full-table match is expressed.
+    column("transcript_fts", String),
+)
 
 #: Runs of word characters and apostrophes. Everything else — `*`, `"`, `:`,
 #: `(`, `-`, `^`, `NEAR` punctuation — is FTS5 *syntax*, and a user typing it
