@@ -49,6 +49,23 @@ jobs:
       - run: npm run build
         working-directory: frontend
 
+  test-frontend:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      # Token contrast, the no-hex-outside-tokens.css guard, and the speaker
+      # colour hash all live here — see ADR-011/012.
+      - run: npm test
+        working-directory: frontend
+
   lint-backend:
     name: Lint backend
     runs-on: ubuntu-latest
