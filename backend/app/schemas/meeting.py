@@ -147,9 +147,23 @@ class BulkDeleteRequest(BaseModel):
 
 class BulkDeleteResponse(BaseModel):
     deleted: int
-    failed: list[int] = Field(
-        default_factory=list, description="Ids that could not be deleted, e.g. already gone."
-    )
+    # No default: a `default_factory` makes the field non-required in OpenAPI,
+    # so the generated client types it `number[] | undefined` and every caller
+    # has to handle an absence the API never produces (same defect as
+    # `action_item_counts` in T-05).
+    failed: list[int] = Field(description="Ids that could not be deleted, e.g. already gone.")
+
+
+class BulkRestoreResponse(BaseModel):
+    """The undo half of a bulk delete (T-14.5).
+
+    Separate from `BulkDeleteResponse` rather than reusing it with a renamed
+    field: they mean different things, and a shared shape would make
+    `{"deleted": 3}` the response to a restore.
+    """
+
+    restored: int
+    failed: list[int] = Field(description="Ids that could not be restored, e.g. never deleted.")
 
 
 # ── Output ──────────────────────────────────────────────────────────────────

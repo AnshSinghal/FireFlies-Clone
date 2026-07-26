@@ -112,6 +112,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/bulk-restore': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Restore several meetings
+     * @description The undo half of a bulk delete. Reports per-id failures the same way, so an Undo that only half-works says so rather than appearing to fail.
+     */
+    post: operations['bulk_restore_api_v1_meetings_bulk_restore_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/meetings/facets': {
     parameters: {
       query?: never
@@ -253,7 +273,24 @@ export interface components {
        * Failed
        * @description Ids that could not be deleted, e.g. already gone.
        */
-      failed?: number[]
+      failed: number[]
+    }
+    /**
+     * BulkRestoreResponse
+     * @description The undo half of a bulk delete (T-14.5).
+     *
+     *     Separate from `BulkDeleteResponse` rather than reusing it with a renamed
+     *     field: they mean different things, and a shared shape would make
+     *     `{"deleted": 3}` the response to a restore.
+     */
+    BulkRestoreResponse: {
+      /**
+       * Failed
+       * @description Ids that could not be restored, e.g. never deleted.
+       */
+      failed: number[]
+      /** Restored */
+      restored: number
     }
     /**
      * ChannelOut
@@ -1009,6 +1046,48 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['BulkDeleteResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  bulk_restore_api_v1_meetings_bulk_restore_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BulkDeleteRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BulkRestoreResponse']
         }
       }
       /** @description Validation Error */

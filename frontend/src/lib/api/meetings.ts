@@ -10,7 +10,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { api } from './client'
+import { api, type RequestParams } from './client'
 import { qk, type MeetingFilters } from './query-keys'
 import type {
   Facets,
@@ -21,31 +21,39 @@ import type {
   Page,
 } from './types'
 
+/**
+ * camelCase in the app, snake_case on the wire.
+ *
+ * Exported because the pagination prefetch needs the same mapping — two copies
+ * would drift, and the symptom would be a prefetch that warms the wrong cache
+ * key and never gets used.
+ */
+export function toApiParams(filters: MeetingFilters): RequestParams {
+  return {
+    q: filters.q,
+    host: filters.host,
+    participant: filters.participant,
+    from: filters.from,
+    to: filters.to,
+    min_duration: filters.minDuration,
+    max_duration: filters.maxDuration,
+    tags: filters.tags,
+    channel: filters.channel,
+    has_action_items: filters.hasActionItems,
+    source: filters.source,
+    sort: filters.sort,
+    page: filters.page,
+    page_size: filters.pageSize,
+  }
+}
+
 export function useMeetings(filters: MeetingFilters = {}) {
   return useQuery({
     queryKey: qk.meetings.list(filters),
     queryFn: ({ signal }) =>
       api.get<Page<MeetingListItem>>('/api/v1/meetings', {
         signal,
-        // camelCase in the app, snake_case on the wire. Translated in ONE
-        // place, so a rename on either side breaks here rather than in every
-        // component that happens to build a query string.
-        params: {
-          q: filters.q,
-          host: filters.host,
-          participant: filters.participant,
-          from: filters.from,
-          to: filters.to,
-          min_duration: filters.minDuration,
-          max_duration: filters.maxDuration,
-          tags: filters.tags,
-          channel: filters.channel,
-          has_action_items: filters.hasActionItems,
-          source: filters.source,
-          sort: filters.sort,
-          page: filters.page,
-          page_size: filters.pageSize,
-        },
+        params: toApiParams(filters),
       }),
     // Keeps the previous page visible while the next one loads, so paging does
     // not flash an empty table. Without it every page change is a full unmount.

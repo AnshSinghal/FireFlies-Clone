@@ -103,6 +103,11 @@
     animation: ff-modal-in var(--ff-dur-base) var(--ff-ease);
   }
 
+  /* The bulk bar slides up as it appears (T-14.4). */
+  .ff-bulk-bar {
+    animation: ff-slide-up var(--ff-dur-base) var(--ff-ease);
+  }
+
   /*
    * Skeleton shimmer (T-10.13). A moving gradient rather than `animate-pulse`:
    * a pulse dims the whole block, which at eight rows reads as the page
@@ -117,6 +122,17 @@
     );
     background-size: 200% 100%;
     animation: ff-shimmer 1.4s var(--ff-ease) infinite;
+  }
+}
+
+@keyframes ff-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -184,7 +200,8 @@
    * narrowed to exclude opacity.
    */
   .ff-toast-enter,
-  .ff-modal-enter {
+  .ff-modal-enter,
+  .ff-bulk-bar {
     animation-name: ff-toast-fade;
   }
 

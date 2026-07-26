@@ -38,6 +38,8 @@ interface MeetingRowProps {
   meeting: MeetingListItem
   selected: boolean
   onSelectedChange: (selected: boolean) => void
+  /** Shift-click extends the selection from the last-clicked row (T-14.3). */
+  onShiftSelect: () => void
   /** True while ANY row is selected — keeps every checkbox visible mid-selection. */
   anySelected: boolean
   /** Highlights the matching term in the title. */
@@ -52,6 +54,7 @@ export function MeetingRow({
   meeting,
   selected,
   onSelectedChange,
+  onShiftSelect,
   anySelected,
   query,
   onDelete,
@@ -123,9 +126,25 @@ export function MeetingRow({
               'absolute inset-0 flex items-center justify-center transition-opacity duration-fast',
               showCheckbox ? 'opacity-100' : 'pointer-events-none opacity-0',
             )}
-            // Inside a Link: without this the click navigates instead of
-            // selecting (T12-F).
+            /*
+             * CAPTURE phase, so a shift-click is handled before the checkbox
+             * sees it.
+             *
+             * Radix's checkbox reports only the resulting state, never the
+             * modifiers that produced it. Handling shift on the way back up
+             * meant the plain toggle had already run and moved the range's
+             * anchor to the row just clicked — so a shift-click selected two
+             * rows instead of the range between them.
+             */
+            onClickCapture={(event) => {
+              if (!event.shiftKey) return
+              event.preventDefault()
+              event.stopPropagation()
+              onShiftSelect()
+            }}
             onClick={(event) => {
+              // Inside a Link: without this the click navigates instead of
+              // selecting (T12-F).
               event.preventDefault()
               event.stopPropagation()
             }}

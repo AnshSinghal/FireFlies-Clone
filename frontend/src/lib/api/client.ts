@@ -80,9 +80,12 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
   /** Serialised as JSON; set `Content-Type` automatically. */
   body?: unknown
   /** Appended as a query string, skipping null and undefined. */
-  params?: Record<string, string | number | boolean | undefined | null | string[]>
+  params?: RequestParams
   timeoutMs?: number
 }
+
+/** Everything a query string can carry. Arrays become repeated params. */
+export type RequestParams = Record<string, string | number | boolean | undefined | null | string[]>
 
 function buildUrl(path: string, params: RequestOptions['params']): string {
   const url = new URL(path.startsWith('/') ? path : `/${path}`, API_BASE_URL)

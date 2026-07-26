@@ -152,3 +152,72 @@ test.describe('notebook · deleting @mutates', () => {
     await expect(page.getByTestId('meeting-row')).toHaveCount(before)
   })
 })
+
+/** Selecting requires hovering first — the checkbox only appears on hover. */
+async function selectRow(page: Page, index: number): Promise<void> {
+  const row = page.getByTestId('meeting-row').nth(index)
+  await row.hover()
+  await row.getByTestId('meeting-row-checkbox').click()
+}
+
+test.describe('bulk delete', { tag: '@mutates' }, () => {
+  test('T14-F · deleting a selection confirms, removes and reports', async ({ page }) => {
+    await notebook(page)
+    const before = await page.getByTestId('meeting-row').count()
+
+    await selectRow(page, 0)
+    await selectRow(page, 1)
+    await expect(page.getByTestId('bulk-count')).toHaveText('2 selected')
+
+    await page.getByTestId('bulk-delete').click()
+
+    // The dialog names the COUNT, so the scope is visible rather than trusted.
+    const dialog = page.getByTestId('bulk-confirm')
+    await expect(dialog).toBeVisible()
+    await expect(dialog).toContainText('Delete 2 meetings?')
+
+    await page.getByTestId('confirm-dialog-confirm').click()
+
+    await expect(page.getByTestId('toast').first()).toContainText('2 meetings deleted')
+    await expect(page.getByTestId('meeting-row')).toHaveCount(before - 2)
+    await expect(page.getByTestId('notebook-count')).toContainText(`${before - 2} meetings`)
+
+    // Restore, so the next writer starts from the seeded state.
+    await page.getByTestId('toast-action').click()
+    await expect(page.getByTestId('meeting-row')).toHaveCount(before)
+  })
+
+  test('T14-G · Undo restores every deleted meeting', async ({ page }) => {
+    await notebook(page)
+    const before = await page.getByTestId('meeting-row-title').allTextContents()
+
+    await selectRow(page, 0)
+    await selectRow(page, 1)
+    await page.getByTestId('bulk-delete').click()
+    await page.getByTestId('confirm-dialog-confirm').click()
+    await expect(page.getByTestId('meeting-row')).toHaveCount(before.length - 2)
+
+    await page.getByTestId('toast-action').click()
+
+    await expect(page.getByTestId('toast').first()).toContainText('Meeting restored')
+    // Same meetings, same order — a restore that reshuffled the list would be
+    // its own kind of wrong.
+    await expect.poll(() => page.getByTestId('meeting-row-title').allTextContents()).toEqual(before)
+  })
+
+  test('the selection is cleared once the delete lands', async ({ page }) => {
+    await notebook(page)
+    const before = await page.getByTestId('meeting-row').count()
+
+    await selectRow(page, 0)
+    await page.getByTestId('bulk-delete').click()
+    await page.getByTestId('confirm-dialog-confirm').click()
+
+    // Leaving ids selected after they are gone would let a second Delete act
+    // on rows that no longer exist.
+    await expect(page.getByTestId('bulk-bar')).toBeHidden()
+
+    await page.getByTestId('toast-action').click()
+    await expect(page.getByTestId('meeting-row')).toHaveCount(before)
+  })
+})

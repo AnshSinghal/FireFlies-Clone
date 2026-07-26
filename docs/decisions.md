@@ -1068,6 +1068,54 @@ navigation; the lesson recorded here is that a spurious *write* looks exactly li
 
 ---
 
+## ADR-043 · Selection survives paging but not filtering
+
+**Date:** 2026-07-27 · **Task:** T-14.1 · **Status:** Accepted
+
+**Context.** T-14.1 says to clear the selection on filter *or* page change. Those two are not the
+same event.
+
+**Decision.** Selection survives paging and is cleared — with a toast — when the filters change.
+
+Paging is navigation within one result set: picking three meetings on page 1 and two on page 2
+plainly means five, and T-14.9's "Select all 47 matching" only makes sense if crossing a page
+boundary does not discard what came before.
+
+A filter change is different. It can remove the selected rows from the result set entirely, and the
+next action available is **Delete**. Silently destroying something the user can no longer see is the
+worst outcome on offer here, so the selection goes and the toast says so.
+
+**Consequences.** The select-all checkbox is scoped to the current PAGE while the bulk bar counts
+ALL selected — deliberately, since they answer different questions ("is this page picked?" versus
+"how many will this delete?"). An empty page reports `none` rather than `all`: `every()` on an empty
+array is true, which would render a checked box over nothing.
+
+---
+
+## ADR-044 · Shift-click is handled in the capture phase
+
+**Date:** 2026-07-27 · **Task:** T-14.3 · **Status:** Accepted
+
+**Context.** Shift-clicking to select a range selected two rows instead of the range between them.
+
+Radix's checkbox reports only the resulting state, never the modifiers that produced it, so the
+shift handler sat on a wrapper. On the way back up, the checkbox's own toggle had already run — and
+that toggle moves the range's ANCHOR to the row just clicked, so the range was always from a row to
+itself.
+
+**Decision.** `onClickCapture` on the wrapper: a shift-click is intercepted before the checkbox sees
+it, and the plain toggle never runs.
+
+The range also always SELECTS rather than toggling. A range that flipped each row's state would
+leave holes wherever the user had already picked one, which is not what dragging a selection means
+anywhere else.
+
+**Consequences.** Two behaviours now depend on event-phase ordering, which is easy to break without
+noticing — the unit tests cover the anchor semantics directly (`useSelection`), so a regression
+shows up there rather than only in a browser.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
