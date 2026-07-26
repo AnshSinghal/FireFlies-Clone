@@ -13,6 +13,8 @@ import { HelpCircle, Menu } from 'lucide-react'
 import Link from 'next/link'
 import type { RefObject } from 'react'
 
+import { IconButton } from '@/components/ui/icon-button'
+import { Tooltip } from '@/components/ui/tooltip'
 import { GlobalSearch } from '@/features/search/global-search'
 
 import { AvatarMenu } from './avatar-menu'
@@ -51,19 +53,16 @@ export function Topbar({ onToggleSidebar, onCollapse, toggleRef }: TopbarProps) 
           different widths: below `md` it opens the drawer, above it collapses the
           rail. Two separate buttons would mean one of them is always dead.
         */}
-        <button
+        <IconButton
           ref={toggleRef}
-          type="button"
+          label="Toggle sidebar"
+          icon={<Menu size={20} strokeWidth={1.75} />}
           onClick={() => {
             if (window.matchMedia('(min-width: 768px)').matches) onCollapse()
             else onToggleSidebar()
           }}
-          aria-label="Toggle sidebar"
           data-testid="sidebar-toggle"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary"
-        >
-          <Menu size={20} strokeWidth={1.75} />
-        </button>
+        />
 
         <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="Fireflies home">
           <Logo />
@@ -78,14 +77,16 @@ export function Topbar({ onToggleSidebar, onCollapse, toggleRef }: TopbarProps) 
       <div className="flex shrink-0 items-center gap-2">
         <NewMenu />
         <NotificationsMenu />
-        <Link
-          href="/help"
-          aria-label="Help"
-          data-testid="topbar-help"
-          className="hidden h-8 w-8 items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary sm:flex"
-        >
-          <HelpCircle size={18} strokeWidth={1.75} />
-        </Link>
+        <Tooltip content="Help">
+          <Link
+            href="/help"
+            aria-label="Help"
+            data-testid="topbar-help"
+            className="hidden h-8 w-8 items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary sm:flex"
+          >
+            <HelpCircle size={18} strokeWidth={1.75} />
+          </Link>
+        </Tooltip>
         <AvatarMenu />
       </div>
     </header>

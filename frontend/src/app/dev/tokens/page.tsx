@@ -14,6 +14,8 @@
 import { notFound } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { SPEAKER_COLOR_COUNT } from '@/lib/utils/speaker-color'
 
 // ── Token inventory ─────────────────────────────────────────────────────────
@@ -165,14 +167,13 @@ export default function TokensPage() {
             Calibrated against docs/reference/fireflies · values marked [D] are derived
           </p>
         </div>
-        <button
-          type="button"
+        <Button
+          variant="secondary"
           onClick={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
           data-testid="tokens-theme-toggle"
-          className="h-btn-md rounded-md border border-strong bg-surface-0 px-4 text-body-strong text-primary transition-colors duration-fast hover:bg-surface-hover"
         >
           {theme === 'light' ? 'Dark' : 'Light'} theme
-        </button>
+        </Button>
       </header>
 
       {/* ── Colour ────────────────────────────────────────────────────────── */}
@@ -274,22 +275,11 @@ export default function TokensPage() {
           Tab through these. Every one must show the same 4px accent ring.
         </p>
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            className="h-btn-md rounded-md bg-accent px-4 text-body-strong text-inverse"
-          >
-            Primary
-          </button>
-          <button
-            type="button"
-            className="h-btn-md rounded-md border border-strong bg-surface-0 px-4 text-body-strong text-primary"
-          >
-            Secondary
-          </button>
-          <input
-            className="h-input rounded-md border border-subtle bg-surface-0 px-3 text-body text-primary"
-            placeholder="Input"
-          />
+          <Button variant="primary">Primary</Button>
+          <Button variant="secondary">Secondary</Button>
+          <div className="w-40">
+            <Input placeholder="Input" aria-label="Focus ring sample input" />
+          </div>
           <a href="#top" className="self-center text-body-strong text-accent">
             A link
           </a>

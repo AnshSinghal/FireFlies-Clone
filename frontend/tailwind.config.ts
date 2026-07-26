@@ -85,6 +85,10 @@ const config: Config = {
         DEFAULT: 'var(--ff-highlight)',
         active: 'var(--ff-highlight-active)',
       },
+
+      /* Modal backdrop. Already carries its own alpha, so it is used as
+         `bg-scrim` with no opacity modifier. */
+      scrim: 'var(--ff-scrim)',
     },
 
     /*

@@ -14,13 +14,16 @@
 
 import { useState } from 'react'
 
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/controls'
 import { useToast } from '@/components/ui/toast'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import type { ToastVariant } from '@/lib/toast/store'
 
 const VARIANTS: ToastVariant[] = ['success', 'error', 'info', 'warning', 'loading']
 
-function Button({
+/** Thin wrapper so each trigger only names itself and its handler. */
+function Fire({
   children,
   onClick,
   testId,
@@ -30,14 +33,9 @@ function Button({
   testId: string
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      data-testid={testId}
-      className="rounded-md border border-subtle bg-surface-0 px-3 py-2 text-body text-primary transition-colors duration-fast hover:bg-surface-hover"
-    >
+    <Button variant="secondary" onClick={onClick} data-testid={testId}>
       {children}
-    </button>
+    </Button>
   )
 }
 
@@ -58,13 +56,13 @@ export default function ToastHarnessPage() {
         <h2 className="text-h3 text-primary">Variants</h2>
         <div className="flex flex-wrap gap-2">
           {VARIANTS.map((variant) => (
-            <Button
+            <Fire
               key={variant}
               testId={`fire-${variant}`}
               onClick={() => toast[variant](`This is a ${variant} toast`)}
             >
               {variant}
-            </Button>
+            </Fire>
           ))}
         </div>
       </section>
@@ -72,7 +70,7 @@ export default function ToastHarnessPage() {
       <section className="space-y-3">
         <h2 className="text-h3 text-primary">Behaviour</h2>
         <div className="flex flex-wrap gap-2">
-          <Button
+          <Fire
             testId="fire-five"
             onClick={() => {
               // Five DISTINCT messages — identical ones would dedupe into a
@@ -81,9 +79,9 @@ export default function ToastHarnessPage() {
             }}
           >
             Fire 5 distinct
-          </Button>
+          </Fire>
 
-          <Button
+          <Fire
             testId="fire-duplicate"
             onClick={() => {
               toast.success(TOAST_MESSAGES.changesSaved)
@@ -91,9 +89,9 @@ export default function ToastHarnessPage() {
             }}
           >
             Fire 2 identical
-          </Button>
+          </Fire>
 
-          <Button
+          <Fire
             testId="fire-with-action"
             onClick={() =>
               toast.success({
@@ -106,9 +104,9 @@ export default function ToastHarnessPage() {
             }
           >
             With an action
-          </Button>
+          </Fire>
 
-          <Button
+          <Fire
             testId="fire-delayed"
             onClick={() => {
               // Delayed so focus can be moved elsewhere first — the point of
@@ -117,9 +115,9 @@ export default function ToastHarnessPage() {
             }}
           >
             Fire in 1.5s
-          </Button>
+          </Fire>
 
-          <Button
+          <Fire
             testId="fire-promise"
             onClick={() => {
               const work = new Promise<string>((resolve, reject) =>
@@ -137,17 +135,14 @@ export default function ToastHarnessPage() {
             }}
           >
             Promise toast
-          </Button>
+          </Fire>
 
-          <label className="flex items-center gap-2 text-body text-secondary">
-            <input
-              type="checkbox"
-              checked={failNext}
-              onChange={(event) => setFailNext(event.target.checked)}
-              data-testid="promise-should-fail"
-            />
-            make the promise fail
-          </label>
+          <Checkbox
+            checked={failNext}
+            onCheckedChange={setFailNext}
+            label="make the promise fail"
+            testId="promise-should-fail"
+          />
         </div>
       </section>
     </div>

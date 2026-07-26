@@ -1,0 +1,161 @@
+'use client'
+
+/**
+ * Chip (T-10.6) and Badge (T-10.7).
+ *
+ * They look similar and are not the same thing: a Chip is an affordance
+ * (filter, tag, keyword) and a Badge is a readout (count, status). Chips are
+ * pressable; badges are never interactive. Keeping them in one file makes the
+ * shared height and radius obvious and the difference in role explicit.
+ */
+
+import { X } from 'lucide-react'
+import type { ReactNode } from 'react'
+
+import { cn } from '@/lib/utils/cn'
+
+const CHIP_BASE =
+  'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs transition-colors duration-fast'
+
+interface ChipBaseProps {
+  children: ReactNode
+  icon?: ReactNode
+  className?: string
+  testId?: string
+}
+
+/** A keyword or tag. Not interactive — no hover, no cursor change. */
+export function Chip({ children, icon, className, testId }: ChipBaseProps) {
+  return (
+    <span data-testid={testId} className={cn(CHIP_BASE, 'bg-surface-2 text-secondary', className)}>
+      {icon}
+      {children}
+    </span>
+  )
+}
+
+interface ToggleChipProps extends ChipBaseProps {
+  selected: boolean
+  onToggle: () => void
+}
+
+/** A filter. `aria-pressed` rather than a checkbox role — it toggles a view, not a value. */
+export function ToggleChip({
+  children,
+  icon,
+  selected,
+  onToggle,
+  className,
+  testId,
+}: ToggleChipProps) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onToggle}
+      data-testid={testId}
+      data-selected={selected}
+      className={cn(
+        CHIP_BASE,
+        selected
+          ? 'border border-accent-subtle bg-accent-subtle text-accent'
+          : // A transparent border in the OFF state, so selecting one does not
+            // shift the row by the border's width.
+            'border border-transparent bg-surface-2 text-secondary hover:bg-surface-hover hover:text-primary',
+        className,
+      )}
+    >
+      {icon}
+      {children}
+    </button>
+  )
+}
+
+/*
+ * Takes `label`, not `children`. The text has to appear verbatim inside
+ * "Remove <label>" on the button, so it must be a string the component can
+ * read — arbitrary ReactNode children could not be interpolated there, and the
+ * remove button would end up unnamed.
+ */
+interface RemovableChipProps extends Omit<ChipBaseProps, 'children'> {
+  label: string
+  onRemove: () => void
+}
+
+export function RemovableChip({ label, icon, onRemove, className, testId }: RemovableChipProps) {
+  return (
+    <span
+      data-testid={testId}
+      className={cn(CHIP_BASE, 'bg-surface-2 pr-1 text-secondary', className)}
+    >
+      {icon}
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        // Names what it removes. "Remove" alone is useless in a list of eight
+        // identical buttons.
+        aria-label={`Remove ${label}`}
+        className="ml-0.5 rounded-full p-0.5 text-muted transition-colors duration-fast hover:bg-surface-0 hover:text-primary"
+      >
+        <X size={12} strokeWidth={2.5} />
+      </button>
+    </span>
+  )
+}
+
+export type BadgeVariant = 'neutral' | 'accent' | 'success' | 'warning' | 'danger'
+
+const BADGE_VARIANT: Record<BadgeVariant, string> = {
+  neutral: 'bg-surface-2 text-secondary',
+  accent: 'bg-accent-subtle text-accent-strong',
+  success: 'bg-success-subtle text-success-strong',
+  warning: 'bg-warning-subtle text-warning',
+  danger: 'bg-danger-subtle text-danger',
+}
+
+const DOT_VARIANT: Record<BadgeVariant, string> = {
+  neutral: 'bg-muted',
+  accent: 'bg-accent',
+  success: 'bg-success',
+  warning: 'bg-warning',
+  danger: 'bg-danger',
+}
+
+interface BadgeProps {
+  children?: ReactNode
+  variant?: BadgeVariant
+  /** `count` is pill-shaped and tabular; `text` is a rounded rect. */
+  shape?: 'text' | 'count'
+  /** Prefixes a status dot. Colour alone never carries the meaning — the text does. */
+  dot?: boolean
+  className?: string
+  testId?: string
+}
+
+export function Badge({
+  children,
+  variant = 'neutral',
+  shape = 'text',
+  dot = false,
+  className,
+  testId,
+}: BadgeProps) {
+  return (
+    <span
+      data-testid={testId}
+      data-variant={variant}
+      className={cn(
+        'inline-flex h-5 shrink-0 items-center gap-1.5 px-2 text-xs',
+        shape === 'count' ? 'tnum min-w-5 justify-center rounded-full' : 'rounded-sm',
+        BADGE_VARIANT[variant],
+        className,
+      )}
+    >
+      {dot && (
+        <span aria-hidden="true" className={cn('h-1.5 w-1.5 rounded-full', DOT_VARIANT[variant])} />
+      )}
+      {children}
+    </span>
+  )
+}

@@ -10,6 +10,8 @@
  */
 
 import { X } from 'lucide-react'
+
+import { IconButton } from '@/components/ui/icon-button'
 import { useEffect, useRef } from 'react'
 
 import { SidebarNav } from './sidebar'
@@ -81,11 +83,20 @@ export function SidebarDrawer({ open, onClose, returnFocusTo }: SidebarDrawerPro
 
   return (
     <div className="fixed inset-0 z-drawer md:hidden" data-testid="sidebar-drawer">
-      {/* Backdrop. A button rather than a div so it is reachable and
-          announced, instead of being an invisible click target. */}
-      <button
-        type="button"
-        aria-label="Close menu"
+      {/*
+        Backdrop: `aria-hidden`, not a button.
+        
+        It was a button, on the reasoning that an invisible click target should
+        be reachable. That was wrong — it inserted a tab stop announcing "Close
+        menu" immediately before the real Close button, so keyboard users met
+        the same action twice and screen readers read it twice.
+
+        Tap-outside-to-close is a POINTER affordance. Keyboard and assistive-tech
+        users close with Escape (handled in useSidebar) or with the visible
+        button, both of which already exist.
+      */}
+      <div
+        aria-hidden="true"
         data-testid="sidebar-drawer-backdrop"
         onClick={onClose}
         className="bg-primary/40 absolute inset-0"
@@ -99,15 +110,13 @@ export function SidebarDrawer({ open, onClose, returnFocusTo }: SidebarDrawerPro
         className="relative flex h-full w-rail flex-col border-r border-subtle bg-surface-0 shadow-lg"
       >
         <div className="flex h-topbar items-center justify-end px-2">
-          <button
-            type="button"
+          <IconButton
+            label="Close menu"
+            icon={<X size={20} strokeWidth={1.75} />}
             onClick={onClose}
-            aria-label="Close menu"
             data-testid="sidebar-drawer-close"
-            className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary"
-          >
-            <X size={20} strokeWidth={1.75} />
-          </button>
+            hideTooltip
+          />
         </div>
 
         <div className="min-h-0 flex-1">

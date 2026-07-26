@@ -655,6 +655,108 @@ described above. That is worth watching for in review.
 
 ---
 
+## ADR-028 · Radix for the parts that are invisible when wrong
+
+**Date:** 2026-07-26 · **Task:** T-10 · **Status:** Accepted
+
+**Context.** T-10 builds 20 primitives. The visual layer is ours — every one is styled entirely
+from tokens — but several need behaviour that takes a day to write and a year to get right: a focus
+trap that survives dynamic content, `inert` on the rest of the page, scroll-lock that compensates
+for the scrollbar's width, roving focus with typeahead, and collision detection that flips a panel
+near a viewport edge.
+
+**Decision.** Radix for `Dialog`, `DropdownMenu`, `Select`, `Popover`, `Tabs`, `Checkbox`, `Switch`,
+`RadioGroup` and `Tooltip`. Everything else — `Button`, `Chip`, `Badge`, `Avatar`, `Pagination`,
+`ProgressBar`, `Skeleton`, `EmptyState`, `SearchInput`, `Highlighter`, `ResizablePanels`,
+`DatePicker` — is hand-written, because their hard parts are ours, not the platform's.
+
+Notably `DatePicker` pulls in no date library: start-of-day, add-days and end-of-month are three
+lines of `Date` arithmetic, and the presets (`Last 7 days`) are the actual feature.
+
+**Consequences.** Nine dependencies, all headless, none carrying styles. The audit surface did not
+change — the 14 high findings are still build-time toolchain transitives, none from Radix.
+
+Radix is unstyled, so its accessibility guarantees are not automatic: three of its controls render
+as `<button>` and axe flagged all of them (ADR-029).
+
+---
+
+## ADR-029 · Radix controls need explicit names, not sibling labels
+
+**Date:** 2026-07-26 · **Task:** T-10.16 · **Status:** Accepted
+
+**Context.** Checkbox, Switch, Radio and Select were each written with a visible `<label htmlFor>`
+pointing at the control's id — the correct pattern for a native input. The axe scan on
+`/dev/components` reported **eleven critical `button-name` violations**.
+
+Radix renders these controls as `<button role="checkbox">`, `<button role="switch">`,
+`<button role="radio">` and `<button role="combobox">`. `<label for>` names a native input reliably;
+for a button, browsers and screen readers do not expose that association, so every one of them was
+announced as an unnamed button.
+
+**Decision.** Every one gets `aria-labelledby` pointing at the label's own id. The visible `<label>`
+stays — it still makes the text clickable — but the accessible name comes from the explicit
+reference.
+
+**Consequences.** Caught only because T10-L runs axe over a page that renders every primitive in
+every state. A checkbox tested through the one feature that uses it would have looked fine. This is
+the argument for the gallery existing at all, and it is why T-39/T-40 extend axe to eight surfaces
+rather than treating this as done.
+
+---
+
+## ADR-030 · A controlled Modal must restore focus itself
+
+**Date:** 2026-07-26 · **Task:** T-10.10 · **Status:** Accepted
+
+**Context.** T10-C asserts that closing a modal returns focus to whatever opened it. It did not —
+focus landed on `<body>`, dumping a keyboard user at the top of the document.
+
+Radix restores focus by itself when the dialog is opened through `Dialog.Trigger`. Our `Modal` is
+CONTROLLED: callers render their own button and flip `open`. There is no trigger for Radix to
+remember.
+
+**Decision.** `onOpenAutoFocus` fires *before* Radix moves focus into the dialog, so
+`document.activeElement` at that instant is still the thing that opened it. Capture there, restore
+in `onCloseAutoFocus`. Guarded on `isConnected`, because the trigger may have unmounted while the
+dialog was open — a row's kebab after the row was deleted — and focusing a detached node silently
+does nothing.
+
+**Consequences.** The controlled API is kept, which every caller in T-14, T-26 and T-28 needs, and
+the focus contract holds without callers passing a ref. `ConfirmDialog` layers `initialFocusRef` on
+top so focus lands on **Cancel**: Enter still travelling from the keystroke that opened a
+destructive dialog must not delete anything.
+
+---
+
+## ADR-031 · Raw `<button>`, `<input>` and `<select>` are lint errors outside components/ui
+
+**Date:** 2026-07-26 · **Task:** T-10.18 · **Status:** Accepted
+
+**Context.** "Build once, reuse everywhere" is a convention until something enforces it. Turning
+the rule on surfaced **20 violations** across code written in T-06 to T-09 — every one of them a
+control that had reimplemented a height, a hover state and a focus ring by hand.
+
+**Decision.** `no-restricted-syntax` on `JSXOpeningElement` for `button`, `input` and `select`,
+scoped to `src/features/**`, `src/app/**` and `src/components/layout/**`. `components/ui/` is
+exempt, since that is where the primitives are defined.
+
+All 20 were fixed rather than suppressed, and two of them were real bugs rather than duplication:
+
+**The global search field was a second implementation of `SearchInput`.** It now uses the primitive,
+with combobox ARIA passed in — one field component, three call sites.
+
+**The drawer backdrop was a `<button>`,** on the reasoning that an invisible click target should be
+reachable. That was wrong: it inserted a tab stop announcing "Close menu" immediately before the
+real Close button, so keyboard and screen-reader users met the same action twice. Tap-outside is a
+POINTER affordance; it is now `aria-hidden`, and Escape and the visible button serve everyone else.
+
+**Consequences.** Adding a control now means using or extending a primitive. Where a primitive did
+not fit, it was extended rather than bypassed — `SearchInput` gained combobox props, `menu.tsx`
+gained `MenuRadioItem` — which is the outcome the rule is for.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

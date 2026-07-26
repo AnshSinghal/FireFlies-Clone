@@ -97,7 +97,50 @@
   .ff-toast-enter {
     animation: ff-toast-in var(--ff-dur-base) var(--ff-ease);
   }
+
+  /* Modal entrance (T-10.10): fade and scale up from .96. */
+  .ff-modal-enter {
+    animation: ff-modal-in var(--ff-dur-base) var(--ff-ease);
+  }
+
+  /*
+   * Skeleton shimmer (T-10.13). A moving gradient rather than `animate-pulse`:
+   * a pulse dims the whole block, which at eight rows reads as the page
+   * flickering. A sweep reads as one thing loading.
+   */
+  .ff-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      var(--ff-surface-2) 0%,
+      var(--ff-surface-hover) 50%,
+      var(--ff-surface-2) 100%
+    );
+    background-size: 200% 100%;
+    animation: ff-shimmer 1.4s var(--ff-ease) infinite;
+  }
 }
+
+@keyframes ff-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes ff-modal-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Reduced motion: fade, no scale. Reuses the toast's fade keyframe. */
 
 @keyframes ff-toast-in {
   from {
@@ -140,7 +183,18 @@
    * removed, feedback is not — so the toast still fades in if that rule is ever
    * narrowed to exclude opacity.
    */
-  .ff-toast-enter {
+  .ff-toast-enter,
+  .ff-modal-enter {
     animation-name: ff-toast-fade;
+  }
+
+  /*
+   * Skeletons go STATIC, not fast. The blanket rule above would run the sweep
+   * in 0.01ms and leave the gradient parked mid-animation, which looks like a
+   * rendering fault. A flat block is the honest reduced-motion form.
+   */
+  .ff-shimmer {
+    animation: none !important;
+    background-image: none;
   }
 }

@@ -77,7 +77,7 @@ export function parseTimeParam(value: string | null): number | null {
  * differently on the evaluator's machine than in the visual-regression
  * baselines. Real localisation would replace these wholesale.
  */
-const LOCALE = 'en-US'
+export const LOCALE = 'en-US'
 
 const TIME_FORMAT = new Intl.DateTimeFormat(LOCALE, {
   hour: 'numeric',

@@ -7,10 +7,12 @@
  * navigation. The dropdown renders; `rows.ts` decides what exists.
  */
 
-import { Search, X } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 
+import { IconButton } from '@/components/ui/icon-button'
+import { SearchInput } from '@/components/ui/search-input'
 import { MIN_SEARCH_LENGTH, useSearch } from '@/lib/api/search'
 import { useCommandPalette } from '@/lib/hooks/use-command-palette'
 import { useDebounce } from '@/lib/hooks/use-debounce'
@@ -183,21 +185,19 @@ export function GlobalSearch() {
     }
   }
 
-  const showHint = !open && value === ''
-
   return (
     <>
       {/* <1024px the field collapses to an icon that expands to an overlay (T-08.11). */}
-      <button
-        type="button"
-        data-testid="topbar-search-toggle"
-        aria-label="Search meetings"
+      <IconButton
+        label="Search meetings"
+        icon={<Search size={20} strokeWidth={1.75} />}
         aria-expanded={expanded}
         onClick={focusSearch}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary lg:hidden"
-      >
-        <Search size={20} strokeWidth={1.75} />
-      </button>
+        data-testid="topbar-search-toggle"
+        // The tooltip would cover the field it opens.
+        hideTooltip
+        className="lg:hidden"
+      />
 
       {/*
         Two complete class strings rather than a base plus overrides. `relative`
@@ -223,64 +223,31 @@ export function GlobalSearch() {
         <div
           className={expanded ? 'relative w-full lg:max-w-search' : 'relative w-full max-w-search'}
         >
-          <Search
-            size={16}
-            strokeWidth={1.75}
-            aria-hidden="true"
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-          />
-
-          <input
+          {/*
+            The shared field (T-10.5), with combobox wiring. It was hand-rolled
+            here in T-08 because the primitive did not exist yet; T-10.18's ban
+            on raw <input> outside components/ui is what surfaced the
+            duplication.
+          */}
+          <SearchInput
             ref={inputRef}
-            type="search"
-            role="combobox"
-            data-testid="topbar-search"
-            aria-label="Search meetings, transcripts, and more"
-            aria-expanded={open}
-            aria-controls={listboxId}
-            aria-autocomplete="list"
-            aria-activedescendant={open && activeId ? activeId : undefined}
-            autoComplete="off"
-            placeholder="Search meetings, transcripts, and more…"
             value={value}
-            onChange={(event) => {
-              setValue(event.target.value)
+            onChange={(next) => {
+              setValue(next)
               setOpen(true)
             }}
             onFocus={() => setOpen(true)}
             onKeyDown={onKeyDown}
-            /*
-             * `bg-surface-2` with no border at rest, `surface-0` + accent border
-             * when focused. The border is declared transparent rather than
-             * absent so focusing does not change the element's box size and
-             * shift the icons by a pixel.
-             */
-            className="h-btn-md w-full rounded-md border border-transparent bg-surface-2 pl-9 pr-16 text-body text-primary outline-none transition-colors duration-fast placeholder:text-muted focus:border-accent focus:bg-surface-0 focus:shadow-focus [&::-webkit-search-cancel-button]:hidden"
+            placeholder="Search meetings, transcripts, and more…"
+            ariaLabel="Search meetings, transcripts, and more"
+            hint="⌘K"
+            testId="topbar-search"
+            combobox={{
+              expanded: open,
+              controls: listboxId,
+              activeDescendant: open && activeId ? activeId : undefined,
+            }}
           />
-
-          {showHint ? (
-            <kbd
-              data-testid="topbar-search-hint"
-              aria-hidden="true"
-              className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-sm border border-subtle bg-surface-0 px-1.5 py-0.5 text-xs text-muted lg:block"
-            >
-              ⌘K
-            </kbd>
-          ) : (
-            <button
-              type="button"
-              data-testid="topbar-search-clear"
-              aria-label="Clear search"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => {
-                setValue('')
-                inputRef.current?.focus()
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary"
-            >
-              <X size={14} strokeWidth={2} />
-            </button>
-          )}
 
           {open && (
             <SearchDropdown

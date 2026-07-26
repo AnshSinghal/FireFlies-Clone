@@ -82,11 +82,47 @@ const tailwindEnforcement = {
   },
 }
 
+/**
+ * Raw interactive elements are banned outside `components/ui/` (T-10.18).
+ *
+ * The primitives carry the focus ring, the disabled treatment, the loading
+ * state and the height scale. A hand-rolled `<button className="...">` in a
+ * feature is how an app ends up with three button heights on one screen — and
+ * it is invisible in review, because each one looks fine on its own.
+ *
+ * `components/ui/` is exempt: that is where the primitives are DEFINED, so it
+ * necessarily contains the raw elements everything else consumes.
+ */
+const rawElementBan = {
+  files: ['src/features/**/*.tsx', 'src/app/**/*.tsx', 'src/components/layout/**/*.tsx'],
+  rules: {
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: 'JSXOpeningElement[name.name="button"]',
+        message:
+          'Use <Button> or <IconButton> from components/ui instead of a raw <button>. They carry the focus ring, sizes and disabled/loading states.',
+      },
+      {
+        selector: 'JSXOpeningElement[name.name="input"]',
+        message:
+          'Use <Input>, <SearchInput> or <Checkbox> from components/ui instead of a raw <input>.',
+      },
+      {
+        selector: 'JSXOpeningElement[name.name="select"]',
+        message:
+          'Use <Select> from components/ui. A native <select> renders with OS chrome and looks unfinished beside the custom inputs.',
+      },
+    ],
+  },
+}
+
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
 
   tailwindEnforcement,
+  rawElementBan,
   ...crossFeatureImportRules,
 
   // Routes are routes. Business logic lives in features/ and lib/ (T-01.3).
