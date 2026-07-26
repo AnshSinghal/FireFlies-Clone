@@ -10,21 +10,26 @@ T-11 and T-17 extend this with the full filter set and the transcript endpoints.
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Response, status
+from fastapi import APIRouter, Query, Request, Response, status
 
 from app.api.responses import NOT_FOUND_OR_GONE, VALIDATION
 from app.core.deps import CurrentUser, DbSession, Pagination
+from app.core.http import NotModified, weak_etag
 from app.schemas.common import Page
 from app.schemas.meeting import (
     BulkDeleteRequest,
     BulkDeleteResponse,
+    Facets,
     MeetingCreate,
     MeetingDetail,
     MeetingListItem,
+    MeetingSource,
     MeetingUpdate,
 )
+from app.services.meeting_filters import MeetingFilters
 from app.services.meetings import SORTABLE, MeetingService
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
@@ -33,23 +38,96 @@ router = APIRouter(prefix="/meetings", tags=["meetings"])
 @router.get(
     "",
     response_model=Page[MeetingListItem],
+    responses=VALIDATION,
     summary="List meetings",
     description=(
         "Paginated, newest first. Returns the LIGHT row shape — no transcript "
-        "and no full summary. Use `GET /meetings/{id}` for detail."
+        "and no full summary; use `GET /meetings/{id}` for detail.\n\n"
+        "`from` and `to` are inclusive dates in UTC: `to=2026-07-26` includes "
+        "everything that happened ON the 26th.\n\n"
+        "`q` matches the title, the overview, participant names and the "
+        "transcript. When the hit came from the transcript — and only then — "
+        "the row carries `match_context` explaining why."
     ),
 )
 def list_meetings(
     db: DbSession,
     page: Pagination,
-    q: Annotated[str | None, Query(description="Case-insensitive title match.")] = None,
+    response: Response,
+    request: Request,
+    q: Annotated[
+        str | None, Query(description="Free text across title, overview, people and transcript.")
+    ] = None,
+    host: Annotated[str | None, Query(description="Host name, partial match.")] = None,
+    participant: Annotated[
+        str | None, Query(description="Participant name, partial match.")
+    ] = None,
+    from_: Annotated[
+        date | None,
+        Query(alias="from", description="Inclusive start date (UTC)."),
+    ] = None,
+    to: Annotated[date | None, Query(description="Inclusive END date (UTC).")] = None,
+    min_duration: Annotated[int | None, Query(ge=0, description="Seconds.")] = None,
+    max_duration: Annotated[int | None, Query(ge=0, description="Seconds.")] = None,
+    tags: Annotated[list[str] | None, Query(description="Tag names. ALL must match.")] = None,
+    channel: Annotated[str | None, Query(description="Channel slug.")] = None,
+    has_action_items: Annotated[
+        bool | None, Query(description="True = has OPEN action items.")
+    ] = None,
+    source: Annotated[MeetingSource | None, Query(description="How it was captured.")] = None,
     sort: Annotated[str, Query(description=f"One of: {', '.join(sorted(SORTABLE))}")] = (
         "-started_at"
     ),
 ) -> Page[MeetingListItem]:
+    filters = MeetingFilters(
+        q=q,
+        host=host,
+        participant=participant,
+        from_date=from_,
+        to_date=to,
+        min_duration=min_duration,
+        max_duration=max_duration,
+        tags=tuple(tags or ()),
+        channel=channel,
+        has_action_items=has_action_items,
+        source=source,
+    )
+
     service = MeetingService(db)
-    items, total = service.list_page(limit=page.limit, offset=page.offset, query=q, sort=sort)
-    return Page.build(items, page=page.page, page_size=page.limit, total=total)
+    items, total = service.list_page(
+        limit=page.limit, offset=page.offset, filters=filters, sort=sort
+    )
+    body = Page.build(items, page=page.page, page_size=page.limit, total=total)
+
+    # ETag + no-cache (T-11.11).
+    #
+    # `no-cache` does NOT mean "do not cache" — it means "cache it, but
+    # revalidate before reusing it". Paired with an ETag that is a digest of the
+    # response, a repeat request costs one 304 and no body, while an edit
+    # anywhere in the page changes the digest and the client gets fresh data.
+    # `max-age` would have been the bug: a stale meetings list after a delete.
+    etag = weak_etag(body)
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["ETag"] = etag
+    if request.headers.get("if-none-match") == etag:
+        # 304 must carry no body; FastAPI would otherwise serialise `body` into
+        # a response the client is being told not to read.
+        raise NotModified(etag)
+    return body
+
+
+@router.get(
+    "/facets",
+    response_model=Facets,
+    summary="Available filter values",
+    description=(
+        "Distinct hosts, participants, tags and channels across non-deleted "
+        "meetings, plus the duration bounds. Derived from real data so the "
+        "filter panel can never offer an option that matches nothing."
+    ),
+)
+def meeting_facets(db: DbSession) -> Facets:
+    return MeetingService(db).facets()
 
 
 @router.post(

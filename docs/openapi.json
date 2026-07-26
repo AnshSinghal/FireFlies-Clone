@@ -142,6 +142,57 @@
         "title": "ErrorResponse",
         "type": "object"
       },
+      "Facets": {
+        "description": "Available filter values, derived from real data (T-11.8).\n\nSent so the filter panel can never offer an option that matches nothing,\nwhich is how a filter panel loses the user's trust on the first click.",
+        "properties": {
+          "channels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "hosts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hosts",
+            "type": "array"
+          },
+          "max_duration": {
+            "title": "Max Duration",
+            "type": "integer"
+          },
+          "min_duration": {
+            "title": "Min Duration",
+            "type": "integer"
+          },
+          "participants": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Participants",
+            "type": "array"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "hosts",
+          "participants",
+          "tags",
+          "channels",
+          "min_duration",
+          "max_duration"
+        ],
+        "title": "Facets",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -193,6 +244,30 @@
           "ai_provider"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "MatchContext": {
+        "description": "Why a meeting matched, when the reason is not visible in the row (T-11.3).\n\nPresent ONLY when the hit came from the transcript. A title match needs no\nexplanation \u2014 the user can read it \u2014 but a transcript match looks like a\nfalse positive unless the row shows the line that caused it.",
+        "properties": {
+          "snippet": {
+            "title": "Snippet",
+            "type": "string"
+          },
+          "speaker": {
+            "title": "Speaker",
+            "type": "string"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "snippet",
+          "speaker",
+          "start_ms"
+        ],
+        "title": "MatchContext",
         "type": "object"
       },
       "MatchRange": {
@@ -475,6 +550,16 @@
             },
             "title": "Keywords",
             "type": "array"
+          },
+          "match_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "media_type": {
             "$ref": "#/components/schemas/MediaType",
@@ -1210,11 +1295,11 @@
     },
     "/api/v1/meetings": {
       "get": {
-        "description": "Paginated, newest first. Returns the LIGHT row shape \u2014 no transcript and no full summary. Use `GET /meetings/{id}` for detail.",
+        "description": "Paginated, newest first. Returns the LIGHT row shape \u2014 no transcript and no full summary; use `GET /meetings/{id}` for detail.\n\n`from` and `to` are inclusive dates in UTC: `to=2026-07-26` includes everything that happened ON the 26th.\n\n`q` matches the title, the overview, participant names and the transcript. When the hit came from the transcript \u2014 and only then \u2014 the row carries `match_context` explaining why.",
         "operationId": "list_meetings_api_v1_meetings_get",
         "parameters": [
           {
-            "description": "Case-insensitive title match.",
+            "description": "Free text across title, overview, people and transcript.",
             "in": "query",
             "name": "q",
             "required": false,
@@ -1227,8 +1312,195 @@
                   "type": "null"
                 }
               ],
-              "description": "Case-insensitive title match.",
+              "description": "Free text across title, overview, people and transcript.",
               "title": "Q"
+            }
+          },
+          {
+            "description": "Host name, partial match.",
+            "in": "query",
+            "name": "host",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Host name, partial match.",
+              "title": "Host"
+            }
+          },
+          {
+            "description": "Participant name, partial match.",
+            "in": "query",
+            "name": "participant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Participant name, partial match.",
+              "title": "Participant"
+            }
+          },
+          {
+            "description": "Inclusive start date (UTC).",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive start date (UTC).",
+              "title": "From"
+            }
+          },
+          {
+            "description": "Inclusive END date (UTC).",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive END date (UTC).",
+              "title": "To"
+            }
+          },
+          {
+            "description": "Seconds.",
+            "in": "query",
+            "name": "min_duration",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Seconds.",
+              "title": "Min Duration"
+            }
+          },
+          {
+            "description": "Seconds.",
+            "in": "query",
+            "name": "max_duration",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Seconds.",
+              "title": "Max Duration"
+            }
+          },
+          {
+            "description": "Tag names. ALL must match.",
+            "in": "query",
+            "name": "tags",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Tag names. ALL must match.",
+              "title": "Tags"
+            }
+          },
+          {
+            "description": "Channel slug.",
+            "in": "query",
+            "name": "channel",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Channel slug.",
+              "title": "Channel"
+            }
+          },
+          {
+            "description": "True = has OPEN action items.",
+            "in": "query",
+            "name": "has_action_items",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "True = has OPEN action items.",
+              "title": "Has Action Items"
+            }
+          },
+          {
+            "description": "How it was captured.",
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/MeetingSource"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "How it was captured.",
+              "title": "Source"
             }
           },
           {
@@ -1285,11 +1557,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid payload; `details` is keyed by field path."
           },
           "500": {
             "content": {
@@ -1405,6 +1677,38 @@
           }
         },
         "summary": "Delete several meetings",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
+    "/api/v1/meetings/facets": {
+      "get": {
+        "description": "Distinct hosts, participants, tags and channels across non-deleted meetings, plus the duration bounds. Derived from real data so the filter panel can never offer an option that matches nothing.",
+        "operationId": "meeting_facets_api_v1_meetings_facets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Facets"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Available filter values",
         "tags": [
           "meetings"
         ]

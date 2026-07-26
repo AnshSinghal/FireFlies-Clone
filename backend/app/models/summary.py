@@ -69,7 +69,9 @@ class Summary(Base, TimestampMixin):
     sections: Mapped[list[SummarySection]] = relationship(
         back_populates="summary",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        # Lazy for the same reason as the transcript: a list row shows the
+        # overview's first 160 characters and never the sections, so loading
+        # them per row is pure waste.
         order_by="SummarySection.sequence",
     )
 

@@ -73,7 +73,11 @@ export interface paths {
     }
     /**
      * List meetings
-     * @description Paginated, newest first. Returns the LIGHT row shape — no transcript and no full summary. Use `GET /meetings/{id}` for detail.
+     * @description Paginated, newest first. Returns the LIGHT row shape — no transcript and no full summary; use `GET /meetings/{id}` for detail.
+     *
+     *     `from` and `to` are inclusive dates in UTC: `to=2026-07-26` includes everything that happened ON the 26th.
+     *
+     *     `q` matches the title, the overview, participant names and the transcript. When the hit came from the transcript — and only then — the row carries `match_context` explaining why.
      */
     get: operations['list_meetings_api_v1_meetings_get']
     put?: never
@@ -102,6 +106,26 @@ export interface paths {
      * @description Reports per-id failures rather than aborting the batch, so the client can say '2 of 3 deleted' instead of leaving the user guessing.
      */
     post: operations['bulk_delete_api_v1_meetings_bulk_delete_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/facets': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Available filter values
+     * @description Distinct hosts, participants, tags and channels across non-deleted meetings, plus the duration bounds. Derived from real data so the filter panel can never offer an option that matches nothing.
+     */
+    get: operations['meeting_facets_api_v1_meetings_facets_get']
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -287,6 +311,27 @@ export interface components {
     ErrorResponse: {
       error: components['schemas']['ErrorDetail']
     }
+    /**
+     * Facets
+     * @description Available filter values, derived from real data (T-11.8).
+     *
+     *     Sent so the filter panel can never offer an option that matches nothing,
+     *     which is how a filter panel loses the user's trust on the first click.
+     */
+    Facets: {
+      /** Channels */
+      channels: string[]
+      /** Hosts */
+      hosts: string[]
+      /** Max Duration */
+      max_duration: number
+      /** Min Duration */
+      min_duration: number
+      /** Participants */
+      participants: string[]
+      /** Tags */
+      tags: string[]
+    }
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -316,6 +361,22 @@ export interface components {
        * @description Deployed application version.
        */
       version: string
+    }
+    /**
+     * MatchContext
+     * @description Why a meeting matched, when the reason is not visible in the row (T-11.3).
+     *
+     *     Present ONLY when the hit came from the transcript. A title match needs no
+     *     explanation — the user can read it — but a transcript match looks like a
+     *     false positive unless the row shows the line that caused it.
+     */
+    MatchContext: {
+      /** Snippet */
+      snippet: string
+      /** Speaker */
+      speaker: string
+      /** Start Ms */
+      start_ms: number
     }
     /**
      * MatchRange
@@ -450,6 +511,7 @@ export interface components {
       id: number
       /** Keywords */
       keywords?: string[]
+      match_context?: components['schemas']['MatchContext'] | null
       /** @default none */
       media_type: components['schemas']['MediaType']
       /** Overview Preview */
@@ -821,8 +883,28 @@ export interface operations {
   list_meetings_api_v1_meetings_get: {
     parameters: {
       query?: {
-        /** @description Case-insensitive title match. */
+        /** @description Free text across title, overview, people and transcript. */
         q?: string | null
+        /** @description Host name, partial match. */
+        host?: string | null
+        /** @description Participant name, partial match. */
+        participant?: string | null
+        /** @description Inclusive start date (UTC). */
+        from?: string | null
+        /** @description Inclusive END date (UTC). */
+        to?: string | null
+        /** @description Seconds. */
+        min_duration?: number | null
+        /** @description Seconds. */
+        max_duration?: number | null
+        /** @description Tag names. ALL must match. */
+        tags?: string[] | null
+        /** @description Channel slug. */
+        channel?: string | null
+        /** @description True = has OPEN action items. */
+        has_action_items?: boolean | null
+        /** @description How it was captured. */
+        source?: components['schemas']['MeetingSource'] | null
         /** @description One of: -created_at, -duration_seconds, -started_at, -title, created_at, duration_seconds, started_at, title */
         sort?: string
         /** @description 1-indexed page number. */
@@ -845,13 +927,13 @@ export interface operations {
           'application/json': components['schemas']['Page_MeetingListItem_']
         }
       }
-      /** @description Validation Error */
+      /** @description Invalid payload; `details` is keyed by field path. */
       422: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['HTTPValidationError']
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */
@@ -936,6 +1018,35 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  meeting_facets_api_v1_meetings_facets_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Facets']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */

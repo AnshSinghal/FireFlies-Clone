@@ -12,7 +12,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from './client'
 import { qk, type MeetingFilters } from './query-keys'
-import type { MeetingCreate, MeetingDetail, MeetingListItem, MeetingUpdate, Page } from './types'
+import type {
+  Facets,
+  MeetingCreate,
+  MeetingDetail,
+  MeetingListItem,
+  MeetingUpdate,
+  Page,
+} from './types'
 
 export function useMeetings(filters: MeetingFilters = {}) {
   return useQuery({
@@ -20,8 +27,21 @@ export function useMeetings(filters: MeetingFilters = {}) {
     queryFn: ({ signal }) =>
       api.get<Page<MeetingListItem>>('/api/v1/meetings', {
         signal,
+        // camelCase in the app, snake_case on the wire. Translated in ONE
+        // place, so a rename on either side breaks here rather than in every
+        // component that happens to build a query string.
         params: {
           q: filters.q,
+          host: filters.host,
+          participant: filters.participant,
+          from: filters.from,
+          to: filters.to,
+          min_duration: filters.minDuration,
+          max_duration: filters.maxDuration,
+          tags: filters.tags,
+          channel: filters.channel,
+          has_action_items: filters.hasActionItems,
+          source: filters.source,
           sort: filters.sort,
           page: filters.page,
           page_size: filters.pageSize,
@@ -30,6 +50,22 @@ export function useMeetings(filters: MeetingFilters = {}) {
     // Keeps the previous page visible while the next one loads, so paging does
     // not flash an empty table. Without it every page change is a full unmount.
     placeholderData: (previous) => previous,
+  })
+}
+
+/**
+ * Filter options, derived from real data (T-11.8).
+ *
+ * Long `staleTime`: the set of hosts and tags changes when meetings are created
+ * or deleted, not while the user is adjusting a filter panel. Refetching it on
+ * every panel open would be a request per interaction for data that is
+ * effectively static within a session.
+ */
+export function useMeetingFacets() {
+  return useQuery({
+    queryKey: qk.meetings.facets(),
+    queryFn: ({ signal }) => api.get<Facets>('/api/v1/meetings/facets', { signal }),
+    staleTime: 5 * 60_000,
   })
 }
 

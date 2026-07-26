@@ -41,6 +41,11 @@ def make_meeting(
     host: User | None = None,
     title: str = "Q3 Product Roadmap Sync",
     started_at: datetime | None = None,
+    # Explicit rather than left to `**kwargs`, which collided with the
+    # hardcoded default and made "a meeting of a given length" unexpressible.
+    # Duration is derived from segments when there are any (`make_segments`
+    # sets it), so 0 is the right default for a meeting without a transcript.
+    duration_seconds: int = 0,
     **kwargs: object,
 ) -> Meeting:
     host = host or make_user(db)
@@ -48,7 +53,7 @@ def make_meeting(
         title=title,
         started_at=started_at or datetime(2026, 7, 24, 10, 0, tzinfo=UTC),
         host_id=host.id,
-        duration_seconds=0,
+        duration_seconds=duration_seconds,
         **kwargs,
     )
     db.add(meeting)
