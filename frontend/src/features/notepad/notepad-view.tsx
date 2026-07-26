@@ -22,11 +22,16 @@ import { ApiError } from '@/lib/api/client'
 import { useDeleteMeeting, useMeeting } from '@/lib/api/meetings'
 import { useRegenerateSummary } from '@/lib/api/summaries'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
+import { mediaSrc } from '@/lib/player/media-src'
+import { PlayerProvider, usePlayer } from '@/lib/player/player-context'
+import { usePlayerShortcuts } from '@/lib/player/use-player-shortcuts'
+import { useTimeLink } from '@/lib/player/use-time-link'
 import { notebookReturnUrl } from '@/lib/notebook-return'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 
 import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
 import { NotepadHeader } from './notepad-header'
+import { ShortcutsModal } from './player/shortcuts-modal'
 import { SummaryPanel } from './summary-panel'
 import { TranscriptPanel } from './transcript-panel'
 
@@ -61,12 +66,14 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
     }
   }, [meeting])
 
+  const src = meeting ? mediaSrc(meeting) : null
+
   const panels = useMemo(
     () => ({
       summary: <SummaryPanel meetingId={meetingId} />,
-      transcript: <TranscriptPanel meetingId={meetingId} />,
+      transcript: <TranscriptPanel meetingId={meetingId} mediaSrc={src} />,
     }),
-    [meetingId],
+    [meetingId, src],
   )
 
   if (isError) {
@@ -111,7 +118,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
           <SkeletonText lines={12} />
         </div>
       ) : (
-        <>
+        <PlayerProvider durationMs={meeting.duration_seconds * 1000} src={src}>
           <NotepadHeader
             meeting={meeting}
             onRegenerate={() =>
@@ -168,6 +175,13 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
             )}
           </div>
 
+          {/*
+            Inside the provider, because it binds the transport. A hook needs
+            the player, and the player only exists once the meeting has loaded
+            and its duration is known.
+          */}
+          <PlayerKeyboard />
+
           <ConfirmDialog
             open={confirmingDelete}
             onOpenChange={setConfirmingDelete}
@@ -180,8 +194,34 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
               window.location.href = notebookReturnUrl()
             }}
           />
-        </>
+        </PlayerProvider>
       )}
     </div>
   )
+}
+
+/**
+ * The page-level keyboard bindings and the `?t=` link (T-19.11, T-19.12).
+ *
+ * A component rather than a call inside `NotepadView` because both hooks need
+ * `usePlayer`, and `NotepadView` is what RENDERS the provider — a component
+ * cannot consume a context it provides itself.
+ */
+function PlayerKeyboard() {
+  const player = usePlayer()
+  const [showShortcuts, setShowShortcuts] = useState(false)
+
+  usePlayerShortcuts({
+    player,
+    onShowHelp: () => setShowShortcuts(true),
+  })
+
+  useTimeLink({
+    currentMs: player.currentMs,
+    isPlaying: player.isPlaying,
+    ready: player.durationMs > 0,
+    onSeek: player.seek,
+  })
+
+  return <ShortcutsModal open={showShortcuts} onOpenChange={setShowShortcuts} />
 }

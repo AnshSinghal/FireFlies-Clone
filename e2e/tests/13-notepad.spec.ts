@@ -31,7 +31,9 @@ test.describe('notepad shell', () => {
   })
 
   test('T18-H · only the panel interiors scroll', async ({ page }) => {
-    const panel = page.getByTestId('transcript-panel')
+    // The SEGMENT LIST, not the panel: T-19 made the player a fixed header
+    // inside the panel, so the scrolling box is the one below it.
+    const panel = page.getByTestId('transcript-scroll')
     const headerTop = (await page.getByTestId('notepad-header').boundingBox())!.y
 
     await panel.evaluate((el) => el.scrollTo(0, 2000))

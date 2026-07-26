@@ -153,17 +153,14 @@ test.describe('states', () => {
     await page.goto('/notebook')
 
     /*
-     * `.first()` because there can briefly be TWO.
-     *
-     * `notebook/page.tsx` wraps the view in a Suspense boundary (required —
-     * the view reads search params, which bails out of prerendering) whose
-     * fallback is this same skeleton, and the view then renders its own while
-     * the query is pending. React keeps the fallback mounted until the
-     * boundary resolves, so during hydration both exist. Either one proves the
-     * structural claim below; without `.first()` this went strict-mode flaky
-     * under parallel load and passed on a quiet machine.
+     * Exactly one element carries this id: the view's own pending skeleton.
+     * The prerender fallbacks render the same component under
+     * `-fallback`/`-route` ids, because a locator that matched all three would
+     * bind to whichever came first in the DOM and could then measure it after
+     * React had hidden it — which is how this test failed, intermittently,
+     * reporting an offset of zero.
      */
-    const skeleton = page.getByTestId('meeting-list-skeleton').first()
+    const skeleton = page.getByTestId('meeting-list-skeleton')
     await expect(skeleton).toBeVisible({ timeout: 15_000 })
 
     // A heading placeholder sits above the first card, as it does in the list.

@@ -59,6 +59,13 @@ const config: Config = {
         1: 'var(--ff-surface-1)',
         2: 'var(--ff-surface-2)',
         hover: 'var(--ff-surface-hover)',
+        /*
+         * The buffered range on a seekbar (T-19.10) — the one fill that has to
+         * sit BETWEEN the track and the played portion. Named under `surface`
+         * because that is what it is, even though the value it borrows is the
+         * strong border grey.
+         */
+        buffered: 'var(--ff-border-strong)',
       },
 
       // Text roles. Named at the top level so the utility reads `text-primary`
@@ -188,6 +195,15 @@ const config: Config = {
     transitionTimingFunction: {
       DEFAULT: 'var(--ff-ease)',
       ff: 'var(--ff-ease)',
+      /*
+       * The one place an ease curve is WRONG: a progress fill.
+       *
+       * The player commits its clock ten times a second and the fill
+       * transitions between commits. With an ease the bar accelerates and
+       * decelerates ten times a second, which reads as stuttering rather than
+       * as smoothing — the artefact the transition exists to hide.
+       */
+      linear: 'linear',
     },
 
     extend: {

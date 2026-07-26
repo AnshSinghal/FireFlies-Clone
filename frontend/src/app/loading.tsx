@@ -15,7 +15,7 @@ export default function Loading() {
         <Skeleton className="h-9 w-48" />
         <Skeleton className="h-4 w-32" />
       </div>
-      <MeetingListSkeleton />
+      <MeetingListSkeleton testId="meeting-list-skeleton-route" />
     </div>
   )
 }

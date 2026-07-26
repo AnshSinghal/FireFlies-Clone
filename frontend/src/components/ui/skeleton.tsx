@@ -92,7 +92,24 @@ export function MeetingRowSkeleton() {
  */
 const SKELETON_GROUPS = [2, 3, 3]
 
-export function MeetingListSkeleton({ rows = 8 }: { rows?: number }) {
+/**
+ * @param testId  overridden by the PRERENDER fallbacks.
+ *
+ * Three components render this: the route's `loading.tsx`, the Notebook page's
+ * Suspense fallback, and the view's own pending state. The first two can be on
+ * screen at the same instant as the third — React keeps a boundary's fallback
+ * mounted until the boundary resolves — and if all three carried the same
+ * testid, a test locator would bind to whichever happened to be first in the
+ * DOM and then measure it after it had been hidden. Only the view's own
+ * skeleton, the one that actually stands in for the list, keeps the plain id.
+ */
+export function MeetingListSkeleton({
+  rows = 8,
+  testId = 'meeting-list-skeleton',
+}: {
+  rows?: number
+  testId?: string
+}) {
   const groups: number[] = []
   let remaining = rows
   for (const size of SKELETON_GROUPS) {
@@ -104,7 +121,7 @@ export function MeetingListSkeleton({ rows = 8 }: { rows?: number }) {
 
   return (
     <div
-      data-testid="meeting-list-skeleton"
+      data-testid={testId}
       aria-busy="true"
       aria-label="Loading meetings"
       // Matches the real list's group spacing, so the whole block is the same
