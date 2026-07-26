@@ -14,6 +14,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response, status
 
+from app.api.responses import NOT_FOUND_OR_GONE, VALIDATION
 from app.core.deps import CurrentUser, DbSession, Pagination
 from app.schemas.common import Page
 from app.schemas.meeting import (
@@ -57,6 +58,7 @@ def list_meetings(
     status_code=status.HTTP_201_CREATED,
     summary="Create a meeting",
     description="Creates an empty meeting. Transcript ingestion happens separately.",
+    responses=VALIDATION,
 )
 def create_meeting(db: DbSession, user: CurrentUser, payload: MeetingCreate) -> MeetingDetail:
     service = MeetingService(db)
@@ -71,10 +73,7 @@ def create_meeting(db: DbSession, user: CurrentUser, payload: MeetingCreate) -> 
         "404 if the meeting never existed; **410** if it was deleted, since a "
         "deleted meeting is restorable and the client can offer that."
     ),
-    responses={
-        404: {"description": "No meeting with this id."},
-        410: {"description": "Deleted, but restorable."},
-    },
+    responses=NOT_FOUND_OR_GONE,
 )
 def get_meeting(db: DbSession, meeting_id: int) -> MeetingDetail:
     service = MeetingService(db)
@@ -86,6 +85,7 @@ def get_meeting(db: DbSession, meeting_id: int) -> MeetingDetail:
     response_model=MeetingDetail,
     summary="Update a meeting",
     description="Partial update — omitted fields are left untouched.",
+    responses={**NOT_FOUND_OR_GONE, **VALIDATION},
 )
 def update_meeting(db: DbSession, meeting_id: int, payload: MeetingUpdate) -> MeetingDetail:
     service = MeetingService(db)
@@ -97,6 +97,7 @@ def update_meeting(db: DbSession, meeting_id: int, payload: MeetingUpdate) -> Me
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a meeting",
     description="Soft delete. The meeting disappears from lists but is restorable.",
+    responses=NOT_FOUND_OR_GONE,
 )
 def delete_meeting(db: DbSession, meeting_id: int) -> Response:
     MeetingService(db).soft_delete(meeting_id)
@@ -108,6 +109,7 @@ def delete_meeting(db: DbSession, meeting_id: int) -> Response:
     response_model=MeetingDetail,
     summary="Restore a deleted meeting",
     description="Undoes a soft delete. Backs the 6-second Undo affordance in the UI.",
+    responses=NOT_FOUND_OR_GONE,
 )
 def restore_meeting(db: DbSession, meeting_id: int) -> MeetingDetail:
     service = MeetingService(db)

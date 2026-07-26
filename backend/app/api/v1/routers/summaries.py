@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from app.api.responses import NOT_FOUND_OR_GONE, RATE_LIMITED
 from app.core.deps import DbSession
 from app.core.rate_limit import AI_RATE_LIMIT, limiter
 from app.schemas.summary import SummaryOut
@@ -24,7 +25,7 @@ router = APIRouter(prefix="/meetings", tags=["summaries"])
         "Rate limited to 10 requests per minute — this is the endpoint that "
         "calls a model, and an accidental double-click should not double the bill."
     ),
-    responses={429: {"description": "Rate limit exceeded."}},
+    responses={**NOT_FOUND_OR_GONE, **RATE_LIMITED},
 )
 @limiter.limit(AI_RATE_LIMIT)
 def regenerate_summary(

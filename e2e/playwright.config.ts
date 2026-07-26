@@ -1,15 +1,16 @@
+import path from 'node:path'
+
 import { defineConfig, devices } from '@playwright/test'
 
 /**
- * Minimal configuration (T-01.10) — enough for CI to run a real end-to-end
- * check against both servers. T-39 expands this with the visual project,
- * the frozen clock, page objects and custom fixtures.
- *
  * The suite runs on DEDICATED PORTS (3100/8100), not the app's usual 3000/8000.
  * `reuseExistingServer` cannot tell our dev server from someone else's — point
  * it at an occupied port and Playwright silently tests whatever is already
- * listening. Isolating the ports means the suite is unaffected by whatever else
- * the developer happens to be running, and `make dev` can stay up while tests run.
+ * listening (ADR-010). Isolating the ports also means `make dev` can stay up
+ * while the suite runs.
+ *
+ * `globalSetup` builds a freshly migrated and seeded database first, so every
+ * run starts identical (T-39.5).
  */
 
 const FRONTEND_PORT = process.env.E2E_FRONTEND_PORT ?? '3100'
@@ -18,8 +19,13 @@ const BACKEND_PORT = process.env.E2E_BACKEND_PORT ?? '8100'
 const FRONTEND_URL = process.env.E2E_BASE_URL ?? `http://localhost:${FRONTEND_PORT}`
 const BACKEND_URL = process.env.E2E_API_URL ?? `http://localhost:${BACKEND_PORT}`
 
+/** Pinned so "Today" means the same day the seeder anchored on. */
+export const ANCHOR_DATE = '2026-07-26T09:00:00Z'
+
 export default defineConfig({
   testDir: './tests',
+  globalSetup: path.resolve(__dirname, 'global-setup.ts'),
+
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -54,7 +60,8 @@ export default defineConfig({
       stdout: 'pipe',
       stderr: 'pipe',
       env: {
-        // T-39.5 points this at a disposable test database.
+        DATABASE_URL: 'sqlite:///./e2e.db',
+        SEED_ANCHOR_DATE: ANCHOR_DATE,
         CORS_ORIGINS: FRONTEND_URL,
       },
     },

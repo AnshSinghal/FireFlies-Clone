@@ -132,7 +132,10 @@ class MeetingListItem(BaseModel):
         default_factory=list, description="Capped; `participant_count` has the true total."
     )
     participant_count: int = 0
-    action_item_counts: ActionItemCounts = Field(default_factory=ActionItemCounts)
+    # No default: the service always populates this. A default would make the
+    # generated TypeScript optional, forcing every consumer to null-check a
+    # field that is never absent.
+    action_item_counts: ActionItemCounts
     keywords: list[str] = Field(default_factory=list)
     tags: list[TagRef] = Field(default_factory=list)
     overview_preview: str | None = None
