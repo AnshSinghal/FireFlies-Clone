@@ -183,3 +183,49 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
     </Field>
   )
 })
+
+interface DateInputProps {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  testId?: string
+  className?: string
+}
+
+/**
+ * A native `<input type="date">`, deliberately.
+ *
+ * T-10.4's custom `Select` exists because a native `<select>` renders with OS
+ * chrome and looks unfinished beside custom fields. A date input is a different
+ * case: its picker is a platform affordance people already know, it is
+ * keyboard- and screen-reader-accessible for free, and re-implementing it means
+ * a calendar widget's worth of bugs. The `DatePicker` primitive covers the
+ * preset-driven case where the presets ARE the feature.
+ *
+ * It lives here rather than at the call site because T-10.18 bans raw `<input>`
+ * outside `components/ui` — and the rule is right: this is the one place the
+ * height, border and focus treatment should be decided.
+ */
+export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function DateInput(
+  { label, value, onChange, testId, className },
+  ref,
+) {
+  const id = useId()
+
+  return (
+    <div className={cn('flex min-w-0 flex-col gap-1', className)}>
+      <label htmlFor={id} className="text-sm text-secondary">
+        {label}
+      </label>
+      <input
+        ref={ref}
+        id={id}
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        data-testid={testId}
+        className={cn(CONTROL_BASE, CONTROL_IDLE, 'h-btn-md px-2 outline-none')}
+      />
+    </div>
+  )
+})

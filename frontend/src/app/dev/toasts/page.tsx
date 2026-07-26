@@ -12,11 +12,13 @@
  * Not linked from the app's navigation.
  */
 
+import { notFound } from 'next/navigation'
 import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/controls'
 import { useToast } from '@/components/ui/toast'
+import { DEV_SURFACES_ENABLED } from '@/lib/dev-surfaces'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import type { ToastVariant } from '@/lib/toast/store'
 
@@ -40,6 +42,9 @@ function Fire({
 }
 
 export default function ToastHarnessPage() {
+  // Dev/test tooling; never part of the shipped app.
+  if (!DEV_SURFACES_ENABLED) notFound()
+
   const toast = useToast()
   const [failNext, setFailNext] = useState(false)
 
