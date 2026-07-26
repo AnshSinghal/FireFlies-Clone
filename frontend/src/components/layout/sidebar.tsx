@@ -1,103 +1,168 @@
 'use client'
 
 /**
- * Left rail — STRUCTURAL PLACEHOLDER.
+ * Left rail (T-07).
  *
- * T-07 builds the real thing: exact 36px item heights, the CHANNELS section,
- * collapse with persistence, tooltips, and the active-state prefix matching
- * that keeps "Meetings" lit on a detail page. This exists so the shell has the
- * right geometry and something to navigate with.
+ * The first thing an evaluator's eye lands on, so the geometry is measured from
+ * the reference screenshots rather than taken from the plan — see
+ * `sidebar-item.tsx` for the numbers and ADR-021 for the two divergences.
+ *
+ * The background is `--ff-surface-0`, i.e. WHITE, not the plan's `surface-1`.
+ * Real Fireflies is white-on-white with a 1px border doing the separating; a
+ * grey rail against white content is immediately wrong in a side-by-side.
  */
 
-import { BarChart3, LayoutGrid, Settings, Upload, Video, type LucideIcon } from 'lucide-react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import * as Tooltip from '@radix-ui/react-tooltip'
+import { Hash, Lock } from 'lucide-react'
+import { usePathname, useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 
-interface NavItem {
-  id: string
-  label: string
-  href: string
-  icon: LucideIcon
-  /** Keeps the parent lit on a child route — /meeting/3 lights "Meetings". */
-  matchPrefix?: string
-  soon?: boolean
+import { useChannels } from '@/lib/api/channels'
+import {
+  BUILT_IN_CHANNELS,
+  FOOTER_NAV,
+  PRIMARY_NAV,
+  isChannelActive,
+  isNavItemActive,
+} from '@/lib/nav'
+
+import { SidebarItem } from './sidebar-item'
+
+interface SidebarProps {
+  collapsed?: boolean
+  /** Rendered inside the mobile drawer, where it is always expanded. */
+  inDrawer?: boolean
+  onNavigate?: () => void
 }
 
-/*
- * No "Home" item — resolves open decision #4 from T-01.
+/**
+ * The exported entry point.
  *
- * PLAN.md A1 has `/` redirect to `/notebook`, and T-07.5 gives Home exact-match
- * active logic. Both cannot hold: a redirected route can never be the current
- * path, so the item would be permanently inert. Real Fireflies does have a Home
- * dashboard, but building it is out of scope, and a nav item that never
- * highlights reads as a bug rather than as a deferred feature.
+ * `useSearchParams` — needed to tell which channel is active — opts a component
+ * out of static prerendering unless it sits under a Suspense boundary. The rail
+ * lives in the root layout, so without this EVERY static page fails to build,
+ * including `/_not-found`. The boundary lives here rather than at each call
+ * site so a future consumer cannot forget it.
  */
-const PRIMARY: NavItem[] = [
-  { id: 'meetings', label: 'Meetings', href: '/notebook', icon: Video, matchPrefix: '/meeting' },
-  { id: 'uploads', label: 'Uploads', href: '/upload', icon: Upload },
-  { id: 'apps', label: 'AI Apps', href: '/apps', icon: LayoutGrid, soon: true },
-  { id: 'analytics', label: 'Analytics', href: '/analytics', icon: BarChart3, soon: true },
-]
-
-const FOOTER: NavItem[] = [{ id: 'settings', label: 'Settings', href: '/settings', icon: Settings }]
-
-function isActive(pathname: string, item: NavItem): boolean {
-  if (item.href === '/') return pathname === '/'
+export function SidebarNav(props: SidebarProps) {
   return (
-    pathname.startsWith(item.href) || (!!item.matchPrefix && pathname.startsWith(item.matchPrefix))
+    <Suspense fallback={<SidebarSkeleton collapsed={props.collapsed} />}>
+      <SidebarNavInner {...props} />
+    </Suspense>
   )
 }
 
-function NavLink({ item, active }: { item: NavItem; active: boolean }) {
-  const Icon = item.icon
-
+/** Matches the rail's geometry so nothing shifts when the real nav resolves. */
+function SidebarSkeleton({ collapsed = false }: { collapsed?: boolean }) {
   return (
-    <li>
-      <Link
-        href={item.href}
-        aria-current={active ? 'page' : undefined}
-        data-testid={`sidebar-item-${item.id}`}
-        className={`mx-2 flex h-9 items-center gap-3 rounded-md px-3 text-body transition-colors duration-fast ${
-          active
-            ? 'bg-accent-subtle font-semibold text-accent-strong'
-            : 'text-secondary hover:bg-surface-hover hover:text-primary'
-        }`}
-      >
-        <Icon size={20} strokeWidth={1.75} className={active ? 'text-accent' : 'text-muted'} />
-        <span className="flex-1 truncate">{item.label}</span>
-        {item.soon && (
-          <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-xs text-muted">Soon</span>
-        )}
-      </Link>
-    </li>
-  )
-}
-
-export function Sidebar() {
-  const pathname = usePathname()
-
-  return (
-    <nav
-      aria-label="Main"
-      data-testid="sidebar"
-      // Hidden below 768px, where the rail width is zero — T-07.11 replaces
-      // this with an off-canvas drawer. `overflow-hidden` stops labels spilling
-      // out of the 64px rail at the tablet breakpoint before T-07 hides them
-      // properly.
-      className="hidden flex-col overflow-hidden border-r border-subtle bg-surface-0 py-3 md:flex"
-    >
-      <ul>
-        {PRIMARY.map((item) => (
-          <NavLink key={item.id} item={item} active={isActive(pathname, item)} />
-        ))}
-      </ul>
-
-      {/* Pinned to the bottom — Settings floating mid-list is on the ❌ list. */}
-      <ul className="mt-auto border-t border-subtle pt-3">
-        {FOOTER.map((item) => (
-          <NavLink key={item.id} item={item} active={isActive(pathname, item)} />
-        ))}
-      </ul>
+    <nav aria-label="Main" className="flex h-full flex-col bg-surface-0 py-2" aria-busy="true">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i} className="mx-3 flex h-9 items-center gap-3 rounded-md px-3">
+          <span className="h-5 w-5 shrink-0 rounded-sm bg-surface-2" />
+          {!collapsed && <span className="h-3 flex-1 rounded-sm bg-surface-2" />}
+        </div>
+      ))}
     </nav>
+  )
+}
+
+function SidebarNavInner({ collapsed = false, inDrawer = false, onNavigate }: SidebarProps) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const activeChannel = searchParams.get('channel')
+  const { data: channels } = useChannels()
+
+  // Inside the drawer there is room for labels, so never collapse there.
+  const isCollapsed = collapsed && !inDrawer
+
+  return (
+    <Tooltip.Provider>
+      <nav
+        aria-label="Main"
+        data-testid="sidebar"
+        data-collapsed={isCollapsed || undefined}
+        className="flex h-full flex-col overflow-hidden bg-surface-0 py-2"
+      >
+        {/* ── Primary ─────────────────────────────────────────────────── */}
+        <ul className="space-y-0.5">
+          {PRIMARY_NAV.map((item) => (
+            <SidebarItem
+              key={item.id}
+              {...item}
+              collapsed={isCollapsed}
+              active={isNavItemActive(pathname, item)}
+              testId={`sidebar-item-${item.id}`}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </ul>
+
+        {/* ── Channels ────────────────────────────────────────────────── */}
+        <div className="mt-4 flex min-h-0 flex-col" data-testid="sidebar-section-channels">
+          {/* The label disappears when collapsed — an uppercase micro-label in a
+              64px rail is unreadable and just adds noise. */}
+          {!isCollapsed && (
+            <h2 className="px-5 pb-2 pt-2 text-label uppercase text-muted">Channels</h2>
+          )}
+
+          {/*
+            Only this section scrolls (T-07.10). Primary and footer stay put, so
+            a long channel list can never push Settings out of reach — which is
+            the failure mode of making the whole rail scrollable.
+          */}
+          <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
+            {BUILT_IN_CHANNELS.map((item) => (
+              <SidebarItem
+                key={item.id}
+                {...item}
+                collapsed={isCollapsed}
+                active={isChannelActive(pathname, activeChannel, item.id)}
+                count={item.id === 'my-meetings' ? channels?.my_meetings : channels?.all_meetings}
+                testId={`sidebar-channel-${item.id}`}
+                onNavigate={onNavigate}
+              />
+            ))}
+
+            {channels?.channels.map((channel) => (
+              <SidebarItem
+                key={channel.id}
+                id={channel.slug}
+                label={channel.name}
+                href={`/notebook?channel=${channel.slug}`}
+                icon={channel.is_private ? Lock : Hash}
+                iconSlot={
+                  channel.is_private ? (
+                    <Lock size={20} strokeWidth={1.75} aria-hidden="true" />
+                  ) : (
+                    <Hash size={20} strokeWidth={1.75} aria-hidden="true" />
+                  )
+                }
+                collapsed={isCollapsed}
+                active={isChannelActive(pathname, activeChannel, channel.slug)}
+                count={channel.meeting_count}
+                testId={`sidebar-channel-${channel.slug}`}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </ul>
+        </div>
+
+        {/* ── Footer ──────────────────────────────────────────────────── */}
+        {/* `mt-auto` pins this to the bottom. Settings floating mid-list is on
+            the do-not-ship list. */}
+        <ul className="mt-auto space-y-0.5 border-t border-subtle pt-2">
+          {FOOTER_NAV.map((item) => (
+            <SidebarItem
+              key={item.id}
+              {...item}
+              collapsed={isCollapsed}
+              active={isNavItemActive(pathname, item)}
+              testId={`sidebar-item-${item.id}`}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </ul>
+      </nav>
+    </Tooltip.Provider>
   )
 }

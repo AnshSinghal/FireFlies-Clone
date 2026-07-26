@@ -1,69 +1,70 @@
+'use client'
+
 /**
- * The application shell (T-06.2, T-06.10).
+ * The application shell (T-06.2, T-06.10, T-07.6).
  *
  * CSS GRID, not absolute positioning. The rail's width is a custom property, so
- * collapsing it is one value change and the animation comes free — and, more
- * importantly, `<main>` stays a normal grid cell that establishes its own
- * scroll container. With absolute positioning every panel needs its own
- * offsets, and the Notepad's requirement that only panel interiors scroll
- * (T-18.10) becomes a fight.
+ * collapsing it is one value change and the animation comes free — and `<main>`
+ * stays a normal grid cell that establishes its own scroll container.
  *
- * Responsive behaviour is driven entirely by that one variable:
+ * Responsive behaviour is driven entirely by that variable:
  *
- *   < 768px   rail collapses to zero and becomes a drawer (T-07.11)
- *   768–1279  rail auto-collapses to 64px, icons only
- *   ≥ 1280    full 240px
+ *   < 768px   no rail; the toggle opens a drawer instead (T-07.11)
+ *   768–1279  64px, icons only
+ *   ≥ 1280    240px, or 64px when the user has collapsed it
  *
  * Fireflies is desktop-first. The mobile job is "not broken", not "excellent".
- *
- * The rail and topbar here are structural placeholders. T-07 and T-08 replace
- * their contents; the geometry is what this task settles.
  */
 
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 
-import { Sidebar } from './sidebar'
+import { useSidebar } from '@/lib/hooks/use-sidebar'
+
+import { SidebarNav } from './sidebar'
+import { SidebarDrawer } from './sidebar-drawer'
 import { Topbar } from './topbar'
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const { collapsed, toggleCollapsed, drawerOpen, openDrawer, closeDrawer } = useSidebar()
+  const toggleRef = useRef<HTMLButtonElement>(null)
+
   return (
     <div
       /*
-       * The single column is `minmax(0, 1fr)`, not implicit `auto`.
+       * The single column is `minmax(0, 1fr)`, not implicit `auto`: an implicit
+       * track sizes to max-content, so the topbar's natural width became the
+       * column width and the whole PAGE scrolled sideways (ADR-020).
        *
-       * An implicit grid column sizes to max-content, so the topbar's natural
-       * width became the column width and every row inherited it — 440px inside
-       * a 393px viewport, with the horizontal scrollbar appearing on the page
-       * rather than on the offending element. The inner grid had the same
-       * problem and the same fix; both are needed.
+       * `--rail-w` carries the collapse state, so the width transition is one
+       * animated custom property rather than conditional classes.
        */
-      className="grid h-screen grid-cols-[minmax(0,1fr)] grid-rows-[56px_1fr] bg-surface-0 [--rail-w:0px] md:[--rail-w:64px] xl:[--rail-w:240px]"
+      className="grid h-screen grid-cols-[minmax(0,1fr)] grid-rows-[56px_1fr] bg-surface-0"
+      style={
+        {
+          '--rail-expanded': collapsed ? '64px' : '240px',
+        } as React.CSSProperties
+      }
       data-testid="app-shell"
     >
-      <Topbar />
+      <Topbar
+        onToggleSidebar={drawerOpen ? closeDrawer : openDrawer}
+        toggleRef={toggleRef}
+        onCollapse={toggleCollapsed}
+      />
 
       {/*
-        `min-h-0` is load-bearing. A grid item defaults to `min-height: auto`,
-        which refuses to shrink below its content — so an overflowing <main>
-        stretches the row and the PAGE scrolls instead of the panel. This is the
-        single line that makes "only panel interiors scroll" work.
+        `minmax(0, 1fr)` again on the content column, and ONE column below `md`:
+        the sidebar is `display: none` there, which removes it from grid
+        PLACEMENT, so `<main>` auto-placed into the 0px rail track and rendered
+        a blank page (ADR-020).
       */}
-      {/*
-        Two things here, both non-obvious.
-
-        `minmax(0, 1fr)` rather than `1fr`: a track sized `1fr` still floors at
-        its content's min-width, so one wide child pushes the whole grid past
-        the viewport and the PAGE scrolls horizontally. Same trap as the
-        `min-h-0` above, on the other axis.
-
-        ONE column below `md`, not a zero-width rail track. The sidebar is
-        `display: none` at mobile, which removes it from grid PLACEMENT — so
-        `<main>` auto-placed into the first track and rendered inside a 0px
-        column. The symptom was a completely blank page below the topbar with
-        no error, and nothing in the CSS looked wrong.
-      */}
-      <div className="grid min-h-0 grid-cols-[minmax(0,1fr)] md:grid-cols-[var(--rail-w)_minmax(0,1fr)]">
-        <Sidebar />
+      <div className="grid min-h-0 grid-cols-[minmax(0,1fr)] [--rail-w:64px] md:grid-cols-[var(--rail-w)_minmax(0,1fr)] xl:[--rail-w:var(--rail-expanded)]">
+        <aside
+          className="hidden overflow-hidden border-r border-subtle transition-[width] duration-base ease-ff md:block"
+          data-testid="sidebar-rail"
+        >
+          <SidebarNav collapsed={collapsed} />
+        </aside>
 
         <main
           id="main"
@@ -74,6 +75,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="mx-auto w-full max-w-content px-4 py-6 md:px-6">{children}</div>
         </main>
       </div>
+
+      <SidebarDrawer open={drawerOpen} onClose={closeDrawer} returnFocusTo={toggleRef} />
     </div>
   )
 }
