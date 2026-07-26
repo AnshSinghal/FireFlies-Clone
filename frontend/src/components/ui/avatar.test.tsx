@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { getInitials } from './avatar'
+import { getInitials, overflowLabel } from './avatar'
 
 describe('getInitials', () => {
   it('takes the first and LAST word, not the first two', () => {
@@ -53,5 +53,34 @@ describe('Avatar', () => {
 
     expect(a).toBe(b)
     expect(a).toContain('background-color')
+  })
+})
+
+describe('overflowLabel', () => {
+  it('lists the hidden names', () => {
+    // "+21" on its own is a dead end for anyone who cannot hover, which is
+    // every touch user and most screen-reader users.
+    expect(overflowLabel(['Ana Diaz', 'Bo Chen'])).toBe('Ana Diaz, Bo Chen')
+  })
+
+  it('caps the list and counts the remainder', () => {
+    const names = Array.from({ length: 21 }, (_, i) => `Person ${i + 1}`)
+    const label = overflowLabel(names)
+
+    expect(label).toContain('Person 1')
+    expect(label).toContain('Person 10')
+    expect(label).not.toContain('Person 11,')
+    expect(label).toContain('and 11 more')
+  })
+
+  it('agrees with the tooltip about where to cut', () => {
+    // The two render the same list; a mismatch would tell hover users and
+    // screen-reader users different things.
+    const names = Array.from({ length: 12 }, (_, i) => `P${i}`)
+    expect(overflowLabel(names).split(', ').length).toBe(11) // 10 names + "and N more"
+  })
+
+  it('handles a single hidden person without a count clause', () => {
+    expect(overflowLabel(['Solo Person'])).toBe('Solo Person')
   })
 })

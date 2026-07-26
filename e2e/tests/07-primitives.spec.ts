@@ -137,15 +137,41 @@ test.describe('primitives', () => {
 
   test('T10-G · AvatarGroup shows three plus a counted overflow', async ({ page }) => {
     const crowd = page.getByTestId('avatar-group').last()
+    const overflow = crowd.getByTestId('avatar-overflow')
 
-    await expect(crowd.getByTestId('avatar-overflow')).toHaveText('+21')
+    await expect(overflow).toHaveText('+21')
 
-    // The tooltip names who is hidden, rather than leaving "+21" as a dead end.
-    await crowd.getByTestId('avatar-overflow').hover()
+    /*
+     * The NAMES are asserted on the element, not in the tooltip.
+     *
+     * The first version hovered and read the tooltip. It passed on macOS and
+     * failed all three CI attempts on Linux — Radix's hover heuristics are not
+     * reproducible enough to hang a guarantee on. That turned out to be the
+     * right signal rather than a flake: if a headless browser cannot get the
+     * names out of "+21", neither can a touch user or a screen reader.
+     *
+     * So the names moved onto the element and the tooltip became the sighted-
+     * pointer convenience it should always have been (asserted separately
+     * below, where its absence is not a correctness failure).
+     */
+    const label = await overflow.getAttribute('aria-label')
+    expect(label).toContain('Person 4 Surname')
+    expect(label).toContain('and 11 more')
+  })
+
+  test('hovering the overflow chip also shows the names visually', async ({ page }) => {
+    const overflow = page.getByTestId('avatar-group').last().getByTestId('avatar-overflow')
+    await overflow.scrollIntoViewIfNeeded()
+
+    // Move somewhere neutral first: Radix tracks pointer transit, and a hover
+    // that teleports onto the trigger is not the gesture it listens for.
+    const box = (await overflow.boundingBox())!
+    await page.mouse.move(box.x - 120, box.y + box.height / 2)
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 10 })
+
     const tooltip = page.getByTestId('tooltip')
     await expect(tooltip).toBeVisible()
     await expect(tooltip).toContainText('Person 4 Surname')
-    await expect(tooltip).toContainText('and 11 more')
   })
 
   test('T10-H · dragging the panel handle past the minimum clamps at 30%', async ({ page }) => {
