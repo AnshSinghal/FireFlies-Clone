@@ -61,3 +61,17 @@ class ErrorResponse(BaseModel):
     """
 
     error: ErrorDetail
+
+
+class MatchRange(BaseModel):
+    """Character offsets of a matched term within some text.
+
+    Shared by global search and the transcript endpoints. It lived in both
+    modules as separate identical classes, which made openapi-typescript emit
+    `app__schemas__search__MatchRange` and `app__schemas__transcript__MatchRange`
+    — two mangled names for one concept, and a compile error in any client that
+    imported "MatchRange".
+    """
+
+    start: int
+    end: int

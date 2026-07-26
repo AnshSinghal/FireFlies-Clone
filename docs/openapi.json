@@ -386,7 +386,7 @@
         "type": "object"
       },
       "MatchRange": {
-        "description": "Character offsets of a matched term within a snippet.",
+        "description": "Character offsets of a matched term within some text.\n\nShared by global search and the transcript endpoints. It lived in both\nmodules as separate identical classes, which made openapi-typescript emit\n`app__schemas__search__MatchRange` and `app__schemas__transcript__MatchRange`\n\u2014 two mangled names for one concept, and a compile error in any client that\nimported \"MatchRange\".",
         "properties": {
           "end": {
             "title": "End",
@@ -1063,6 +1063,94 @@
         "title": "SearchResults",
         "type": "object"
       },
+      "SegmentOut": {
+        "description": "One transcript line.",
+        "properties": {
+          "end_ms": {
+            "title": "End Ms",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_edited": {
+            "default": false,
+            "title": "Is Edited",
+            "type": "boolean"
+          },
+          "matches": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MatchRange"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matches"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "speaker_id": {
+            "title": "Speaker Id",
+            "type": "integer"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "sequence",
+          "start_ms",
+          "end_ms",
+          "speaker_id",
+          "text"
+        ],
+        "title": "SegmentOut",
+        "type": "object"
+      },
+      "SegmentUpdate": {
+        "description": "Edit a line's text, reassign its speaker, or both (T-17.5).",
+        "properties": {
+          "speaker_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speaker Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "SegmentUpdate",
+        "type": "object"
+      },
       "SidebarChannels": {
         "description": "Everything the rail's CHANNELS section needs, in one request.\n\nThe two built-in views are counts rather than channel rows \u2014 \"My Meetings\"\nand \"All Meetings\" are filters over the same data, not stored channels \u2014\nso returning them alongside avoids the client making three calls to render\none list.",
         "properties": {
@@ -1088,6 +1176,72 @@
           "channels"
         ],
         "title": "SidebarChannels",
+        "type": "object"
+      },
+      "SpeakerRef": {
+        "description": "A speaker, sent once per page rather than once per segment.",
+        "properties": {
+          "color_index": {
+            "title": "Color Index",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "participant_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant Id"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "color_index"
+        ],
+        "title": "SpeakerRef",
+        "type": "object"
+      },
+      "SpeakerUpdate": {
+        "description": "Rename a speaker across the whole meeting (T-17.6).",
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "participant_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant Id"
+          }
+        },
+        "title": "SpeakerUpdate",
         "type": "object"
       },
       "SummaryOut": {
@@ -1238,6 +1392,47 @@
           "matches"
         ],
         "title": "TranscriptHit",
+        "type": "object"
+      },
+      "TranscriptPage": {
+        "description": "A page of segments plus everything needed to render them.\n\n`speakers` is a per-page dictionary rather than a field on each segment:\na page of 200 segments typically has three or four distinct speakers, so\ninlining them repeats the same label and colour ~50 times each.",
+        "properties": {
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/SegmentOut"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
+          "speakers": {
+            "items": {
+              "$ref": "#/components/schemas/SpeakerRef"
+            },
+            "title": "Speakers",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "segments",
+          "speakers",
+          "total"
+        ],
+        "title": "TranscriptPage",
         "type": "object"
       },
       "UserOut": {
@@ -2036,6 +2231,172 @@
         ]
       }
     },
+    "/api/v1/meetings/segments/{segment_id}": {
+      "patch": {
+        "description": "Sets `is_edited`, captures the original text once so the edit is reversible, and marks the summary stale \u2014 a summary derived from text that has since changed is confidently wrong.",
+        "operationId": "update_segment_api_v1_meetings_segments__segment_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "segment_id",
+            "required": true,
+            "schema": {
+              "title": "Segment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Edit a transcript segment",
+        "tags": [
+          "transcript"
+        ]
+      }
+    },
+    "/api/v1/meetings/speakers/{speaker_id}": {
+      "patch": {
+        "description": "One UPDATE, however long the transcript is: the label lives on `speakers` and segments reference it.",
+        "operationId": "update_speaker_api_v1_meetings_speakers__speaker_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "speaker_id",
+            "required": true,
+            "schema": {
+              "title": "Speaker Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpeakerUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpeakerRef"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Rename a speaker",
+        "tags": [
+          "transcript"
+        ]
+      }
+    },
     "/api/v1/meetings/{meeting_id}": {
       "delete": {
         "description": "Soft delete. The meeting disappears from lists but is restorable.",
@@ -2331,6 +2692,93 @@
         ]
       }
     },
+    "/api/v1/meetings/{meeting_id}/media": {
+      "get": {
+        "description": "Supports HTTP Range (206). Without it a browser can play the file but cannot SEEK \u2014 the scrubber silently snaps back, with no error anywhere. `Accept-Ranges: bytes` is always advertised.",
+        "operationId": "get_media_api_v1_meetings__meeting_id__media_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Range",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Range"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Stream a meeting's audio",
+        "tags": [
+          "transcript"
+        ]
+      }
+    },
     "/api/v1/meetings/{meeting_id}/restore": {
       "post": {
         "description": "Undoes a soft delete. Backs the 6-second Undo affordance in the UI.",
@@ -2401,6 +2849,82 @@
         "summary": "Restore a deleted meeting",
         "tags": [
           "meetings"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/speakers": {
+      "get": {
+        "operationId": "get_speakers_api_v1_meetings__meeting_id__speakers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SpeakerRef"
+                  },
+                  "title": "Response Get Speakers Api V1 Meetings  Meeting Id  Speakers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Every speaker in a meeting",
+        "tags": [
+          "transcript"
         ]
       }
     },
@@ -2557,6 +3081,127 @@
         "summary": "Regenerate a meeting summary",
         "tags": [
           "summaries"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/transcript": {
+      "get": {
+        "description": "Cursor-paginated on `sequence`, because a 55-minute meeting is ~1,200 segments. Speakers are sent BY REFERENCE once per page rather than inlined on every segment.\n\n`?q=` filters server-side and returns match offsets, so a long transcript does not have to be downloaded before it can be searched.",
+        "operationId": "get_transcript_api_v1_meetings__meeting_id__transcript_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "`sequence` of the last segment seen.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`sequence` of the last segment seen.",
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter to matching segments.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter to matching segments.",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "A page of transcript segments",
+        "tags": [
+          "transcript"
         ]
       }
     },

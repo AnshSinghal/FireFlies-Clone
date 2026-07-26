@@ -47,6 +47,7 @@ def run_migrations_offline() -> None:
     context.configure(
         url=config.get_main_option("sqlalchemy.url"),
         target_metadata=target_metadata,
+        include_object=include_object,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         render_as_batch=True,
@@ -55,6 +56,31 @@ def run_migrations_offline() -> None:
 
     with context.begin_transaction():
         context.run_migrations()
+
+
+#: FTS5 creates shadow tables (`_data`, `_idx`, `_docsize`, `_config`,
+#: `_content`) alongside the virtual table itself. No model declares any of
+#: them, so autogenerate sees six tables "in the database but not in the
+#: metadata" and proposes DROPPING them — which would silently destroy search
+#: on the next deploy. It did exactly that when the T-17 migration was
+#: generated (ADR-049).
+FTS_TABLE_PREFIX = "transcript_fts"
+
+
+def include_object(
+    obj: object,  # noqa: ARG001
+    name: str | None,
+    type_: str,
+    reflected: bool,  # noqa: ARG001
+    compare_to: object,  # noqa: ARG001
+) -> bool:
+    """Keep FTS5's tables out of autogenerate entirely.
+
+    They are created and maintained by a hand-written migration and by
+    triggers; Alembic has no model to compare them against and cannot produce a
+    correct diff for them.
+    """
+    return not (type_ == "table" and name is not None and name.startswith(FTS_TABLE_PREFIX))
 
 
 def run_migrations_online() -> None:
@@ -69,6 +95,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            include_object=include_object,
             render_as_batch=True,
             # Catch a column whose type drifted from the model, not just
             # columns added and removed.

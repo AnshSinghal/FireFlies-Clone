@@ -55,7 +55,4 @@ def regenerate_summary(
     service = MeetingService(db)
     meeting = service.get(meeting_id)
 
-    # T-29 swaps this for a real provider call. The endpoint exists now so the
-    # contract, the rate limit and the error envelope are settled before the
-    # thing that costs money is wired in.
-    return service.to_summary(meeting)
+    return service.regenerate_summary(meeting)

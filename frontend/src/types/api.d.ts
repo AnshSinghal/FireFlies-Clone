@@ -172,6 +172,46 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/segments/{segment_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Edit a transcript segment
+     * @description Sets `is_edited`, captures the original text once so the edit is reversible, and marks the summary stale — a summary derived from text that has since changed is confidently wrong.
+     */
+    patch: operations['update_segment_api_v1_meetings_segments__segment_id__patch']
+    trace?: never
+  }
+  '/api/v1/meetings/speakers/{speaker_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Rename a speaker
+     * @description One UPDATE, however long the transcript is: the label lives on `speakers` and segments reference it.
+     */
+    patch: operations['update_speaker_api_v1_meetings_speakers__speaker_id__patch']
+    trace?: never
+  }
   '/api/v1/meetings/{meeting_id}': {
     parameters: {
       query?: never
@@ -220,6 +260,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/{meeting_id}/media': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Stream a meeting's audio
+     * @description Supports HTTP Range (206). Without it a browser can play the file but cannot SEEK — the scrubber silently snaps back, with no error anywhere. `Accept-Ranges: bytes` is always advertised.
+     */
+    get: operations['get_media_api_v1_meetings__meeting_id__media_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/meetings/{meeting_id}/restore': {
     parameters: {
       query?: never
@@ -234,6 +294,23 @@ export interface paths {
      * @description Undoes a soft delete. Backs the 6-second Undo affordance in the UI.
      */
     post: operations['restore_meeting_api_v1_meetings__meeting_id__restore_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/speakers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Every speaker in a meeting */
+    get: operations['get_speakers_api_v1_meetings__meeting_id__speakers_get']
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -274,6 +351,28 @@ export interface paths {
      * @description Rate limited to 10 requests per minute — this is the endpoint that calls a model, and an accidental double-click should not double the bill.
      */
     post: operations['regenerate_summary_api_v1_meetings__meeting_id__summary_regenerate_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/transcript': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * A page of transcript segments
+     * @description Cursor-paginated on `sequence`, because a 55-minute meeting is ~1,200 segments. Speakers are sent BY REFERENCE once per page rather than inlined on every segment.
+     *
+     *     `?q=` filters server-side and returns match offsets, so a long transcript does not have to be downloaded before it can be searched.
+     */
+    get: operations['get_transcript_api_v1_meetings__meeting_id__transcript_get']
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -516,7 +615,13 @@ export interface components {
     }
     /**
      * MatchRange
-     * @description Character offsets of a matched term within a snippet.
+     * @description Character offsets of a matched term within some text.
+     *
+     *     Shared by global search and the transcript endpoints. It lived in both
+     *     modules as separate identical classes, which made openapi-typescript emit
+     *     `app__schemas__search__MatchRange` and `app__schemas__transcript__MatchRange`
+     *     — two mangled names for one concept, and a compile error in any client that
+     *     imported "MatchRange".
      */
     MatchRange: {
       /** End */
@@ -805,6 +910,41 @@ export interface components {
       transcripts: components['schemas']['TranscriptHit'][]
     }
     /**
+     * SegmentOut
+     * @description One transcript line.
+     */
+    SegmentOut: {
+      /** End Ms */
+      end_ms: number
+      /** Id */
+      id: number
+      /**
+       * Is Edited
+       * @default false
+       */
+      is_edited: boolean
+      /** Matches */
+      matches?: components['schemas']['MatchRange'][] | null
+      /** Sequence */
+      sequence: number
+      /** Speaker Id */
+      speaker_id: number
+      /** Start Ms */
+      start_ms: number
+      /** Text */
+      text: string
+    }
+    /**
+     * SegmentUpdate
+     * @description Edit a line's text, reassign its speaker, or both (T-17.5).
+     */
+    SegmentUpdate: {
+      /** Speaker Id */
+      speaker_id?: number | null
+      /** Text */
+      text?: string | null
+    }
+    /**
      * SidebarChannels
      * @description Everything the rail's CHANNELS section needs, in one request.
      *
@@ -820,6 +960,30 @@ export interface components {
       channels: components['schemas']['ChannelOut'][]
       /** My Meetings */
       my_meetings: number
+    }
+    /**
+     * SpeakerRef
+     * @description A speaker, sent once per page rather than once per segment.
+     */
+    SpeakerRef: {
+      /** Color Index */
+      color_index: number
+      /** Id */
+      id: number
+      /** Label */
+      label: string
+      /** Participant Id */
+      participant_id?: number | null
+    }
+    /**
+     * SpeakerUpdate
+     * @description Rename a speaker across the whole meeting (T-17.6).
+     */
+    SpeakerUpdate: {
+      /** Label */
+      label?: string | null
+      /** Participant Id */
+      participant_id?: number | null
     }
     /** SummaryOut */
     SummaryOut: {
@@ -877,6 +1041,24 @@ export interface components {
       speaker: string
       /** Start Ms */
       start_ms: number
+    }
+    /**
+     * TranscriptPage
+     * @description A page of segments plus everything needed to render them.
+     *
+     *     `speakers` is a per-page dictionary rather than a field on each segment:
+     *     a page of 200 segments typically has three or four distinct speakers, so
+     *     inlining them repeats the same label and colour ~50 times each.
+     */
+    TranscriptPage: {
+      /** Next Cursor */
+      next_cursor?: number | null
+      /** Segments */
+      segments: components['schemas']['SegmentOut'][]
+      /** Speakers */
+      speakers: components['schemas']['SpeakerRef'][]
+      /** Total */
+      total: number
     }
     /**
      * UserOut
@@ -1326,6 +1508,130 @@ export interface operations {
       }
     }
   }
+  update_segment_api_v1_meetings_segments__segment_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        segment_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SegmentUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SegmentOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  update_speaker_api_v1_meetings_speakers__speaker_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        speaker_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SpeakerUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SpeakerRef']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   get_meeting_api_v1_meetings__meeting_id__get: {
     parameters: {
       query?: never
@@ -1560,6 +1866,66 @@ export interface operations {
       }
     }
   }
+  get_media_api_v1_meetings__meeting_id__media_get: {
+    parameters: {
+      query?: never
+      header?: {
+        Range?: string | null
+      }
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   restore_meeting_api_v1_meetings__meeting_id__restore_post: {
     parameters: {
       query?: never
@@ -1578,6 +1944,64 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['MeetingDetail']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  get_speakers_api_v1_meetings__meeting_id__speakers_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SpeakerRef'][]
         }
       }
       /** @description No meeting with this id. */
@@ -1730,6 +2154,70 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  get_transcript_api_v1_meetings__meeting_id__transcript_get: {
+    parameters: {
+      query?: {
+        /** @description `sequence` of the last segment seen. */
+        cursor?: number | null
+        limit?: number
+        /** @description Filter to matching segments. */
+        q?: string | null
+      }
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TranscriptPage']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */
