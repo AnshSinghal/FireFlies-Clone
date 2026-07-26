@@ -30,6 +30,13 @@ interface HighlighterProps {
   className?: string
   /** Applied to each `<mark>`; defaults to the accent-tinted style. */
   markClassName?: string
+  /**
+   * Which match is the CURRENT one (T-10.9), for the transcript find bar's
+   * "3 of 17". That match gets `--ff-highlight-active`; the rest stay muted.
+   * Out of range means no match is active, which is the correct state before
+   * the user has stepped to one.
+   */
+  activeIndex?: number
 }
 
 /**
@@ -66,7 +73,7 @@ export function findRanges(text: string, query: string): HighlightRange[] {
 export function splitByRanges(
   text: string,
   ranges: readonly HighlightRange[],
-): Array<{ text: string; match: boolean }> {
+): Array<{ text: string; match: boolean; matchIndex?: number }> {
   const clean = ranges
     .map((r) => ({
       start: Math.max(0, Math.min(r.start, text.length)),
@@ -84,11 +91,14 @@ export function splitByRanges(
 
   if (merged.length === 0) return text ? [{ text, match: false }] : []
 
-  const parts: Array<{ text: string; match: boolean }> = []
+  const parts: Array<{ text: string; match: boolean; matchIndex?: number }> = []
   let cursor = 0
+  // Counted AFTER merging, so `activeIndex` refers to what the user can
+  // actually see and step through — two overlapping ranges are one highlight.
+  let matchIndex = 0
   for (const range of merged) {
     if (range.start > cursor) parts.push({ text: text.slice(cursor, range.start), match: false })
-    parts.push({ text: text.slice(range.start, range.end), match: true })
+    parts.push({ text: text.slice(range.start, range.end), match: true, matchIndex: matchIndex++ })
     cursor = range.end
   }
   if (cursor < text.length) parts.push({ text: text.slice(cursor), match: false })
@@ -102,6 +112,7 @@ export function Highlighter({
   query,
   className,
   markClassName = 'bg-accent-subtle font-semibold text-accent',
+  activeIndex,
 }: HighlighterProps): ReactNode {
   const effective = ranges ?? (query ? findRanges(text, query) : [])
   const parts = splitByRanges(text, effective)
@@ -112,7 +123,16 @@ export function Highlighter({
         part.match ? (
           // `rounded-none` because a `<mark>` inside a single word should not
           // look like a separate chip.
-          <mark key={i} className={`rounded-none bg-transparent ${markClassName}`}>
+          <mark
+            key={i}
+            data-match-index={part.matchIndex}
+            data-active={part.matchIndex === activeIndex || undefined}
+            className={
+              part.matchIndex === activeIndex
+                ? 'rounded-none bg-highlight-active font-semibold text-primary'
+                : `rounded-none bg-transparent ${markClassName}`
+            }
+          >
             {part.text}
           </mark>
         ) : (

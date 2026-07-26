@@ -11,6 +11,8 @@
 import { AlertTriangle } from 'lucide-react'
 import { useEffect } from 'react'
 
+import { Button } from '@/components/ui/button'
+
 export default function Error({
   error,
   reset,
@@ -42,14 +44,9 @@ export default function Error({
       {/* The digest correlates to the server log without exposing the message. */}
       {error.digest && <code className="text-xs text-muted">Reference: {error.digest}</code>}
 
-      <button
-        type="button"
-        onClick={reset}
-        data-testid="route-error-retry"
-        className="h-btn-md rounded-md bg-accent px-4 text-body-strong text-inverse transition-colors duration-fast hover:bg-accent-hover"
-      >
+      <Button variant="primary" onClick={reset} data-testid="route-error-retry">
         Try again
-      </button>
+      </Button>
     </div>
   )
 }

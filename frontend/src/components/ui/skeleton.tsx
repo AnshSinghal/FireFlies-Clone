@@ -1,5 +1,5 @@
 /**
- * Loading placeholders (T-06.9).
+ * Loading placeholders (T-06.9, T-10.13).
  *
  * The geometry matters more than the shimmer. A skeleton row must be EXACTLY as
  * tall as the row it stands in for, or content jumps when data lands and the
@@ -9,13 +9,42 @@
  * in globals.css collapses automatically — no separate handling needed here.
  */
 
-export function Skeleton({ className = '' }: { className?: string }) {
+import { cn } from '@/lib/utils/cn'
+
+export type SkeletonVariant = 'text' | 'circle' | 'rect'
+
+const VARIANT: Record<SkeletonVariant, string> = {
+  // `text` carries its own height, so the common case needs no className at all
+  // and every text skeleton in the app is the same height.
+  text: 'h-3.5 rounded-sm',
+  circle: 'rounded-full',
+  rect: 'rounded-md',
+}
+
+export function Skeleton({
+  variant = 'rect',
+  className = '',
+}: {
+  variant?: SkeletonVariant
+  className?: string
+}) {
   return (
     <div
       aria-hidden="true"
-      className={`animate-pulse rounded-sm bg-surface-2 ${className}`}
+      className={cn('ff-shimmer bg-surface-2', VARIANT[variant], className)}
       data-testid="skeleton"
     />
+  )
+}
+
+/** A block of text lines, the last one short so it reads as a paragraph. */
+export function SkeletonText({ lines = 3, className }: { lines?: number; className?: string }) {
+  return (
+    <div className={cn('space-y-2', className)} data-testid="skeleton-text">
+      {Array.from({ length: lines }, (_, i) => (
+        <Skeleton key={i} variant="text" className={i === lines - 1 ? 'w-2/3' : 'w-full'} />
+      ))}
+    </div>
   )
 }
 

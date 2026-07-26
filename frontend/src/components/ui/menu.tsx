@@ -132,3 +132,45 @@ export function MenuDivider() {
 export function MenuLabel({ children }: { children: ReactNode }) {
   return <div className="px-3 pb-1 pt-2 text-label uppercase text-muted">{children}</div>
 }
+
+interface MenuRadioItemProps {
+  icon?: ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
+  children: ReactNode
+  checked: boolean
+  onSelect: () => void
+  testId?: string
+}
+
+/**
+ * A one-of-many row inside a menu — the theme picker.
+ *
+ * `menuitemradio` with `aria-checked`, not a pressed button: assistive tech
+ * announces "Light, radio button, 1 of 3, checked", which is the whole shape of
+ * the choice. A row of independent buttons announces none of that.
+ */
+export function MenuRadioItem({
+  icon: Icon,
+  children,
+  checked,
+  onSelect,
+  testId,
+}: MenuRadioItemProps) {
+  return (
+    <button
+      type="button"
+      role="menuitemradio"
+      aria-checked={checked}
+      onClick={onSelect}
+      data-testid={testId}
+      className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-body transition-colors duration-fast hover:bg-surface-hover ${
+        checked ? 'text-accent' : 'text-primary'
+      }`}
+    >
+      {Icon && <Icon size={16} strokeWidth={1.75} className="shrink-0 text-muted" />}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {checked && (
+        <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+      )}
+    </button>
+  )
+}

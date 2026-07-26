@@ -13,6 +13,7 @@ import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react
 import { useEffect, useState, type ReactNode } from 'react'
 
 import { ToastProvider, useToast } from '@/components/ui/toast'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { ApiError } from '@/lib/api/client'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 
@@ -128,7 +129,9 @@ export function Providers({ children }: { children: ReactNode }) {
       {/* Inside the query provider, so a mutation's onError can raise a toast. */}
       <ToastProvider>
         <ToastBridge />
-        {children}
+        {/* One provider for the whole app, so every tooltip shares a single
+            delay timer — sweeping across a toolbar shows one tooltip, not six. */}
+        <TooltipProvider>{children}</TooltipProvider>
       </ToastProvider>
     </QueryClientProvider>
   )

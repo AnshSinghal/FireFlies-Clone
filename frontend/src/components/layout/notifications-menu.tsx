@@ -11,6 +11,8 @@
 
 import { Bell, CheckCheck, FileText, Sparkles, UserPlus } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
+import { IconButton } from '@/components/ui/icon-button'
 import { MenuPanel } from '@/components/ui/menu'
 import { useLocalStorage } from '@/lib/hooks/use-local-storage'
 import { usePopover } from '@/lib/hooks/use-popover'
@@ -61,43 +63,46 @@ export function NotificationsMenu() {
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
+      <IconButton
         onClick={toggle}
         data-testid="topbar-notifications"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={
+        label={
           unread.length > 0 ? `Notifications, ${unread.length} unread` : 'Notifications, all read'
         }
-        className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-surface-hover hover:text-primary"
-      >
-        <Bell size={18} strokeWidth={1.75} />
-        {unread.length > 0 && (
-          // The dot is decorative — the count is already in the button's label,
-          // and a screen reader announcing "bullet" adds nothing.
-          <span
-            data-testid="topbar-notifications-dot"
-            aria-hidden="true"
-            className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border border-subtle bg-danger"
-          />
-        )}
-      </button>
+        className="relative"
+        icon={
+          <>
+            <Bell size={18} strokeWidth={1.75} />
+            {unread.length > 0 && (
+              // Decorative — the count is already in the button's label, and a
+              // screen reader announcing "bullet" adds nothing.
+              <span
+                data-testid="topbar-notifications-dot"
+                aria-hidden="true"
+                className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full border border-subtle bg-danger"
+              />
+            )}
+          </>
+        }
+      />
 
       {open && (
         <MenuPanel label="Notifications" testId="topbar-notifications-menu">
           <div className="flex items-center justify-between gap-2 px-3 py-2">
             <span className="text-h3 text-primary">Notifications</span>
-            <button
-              type="button"
+            <Button
+              variant="link"
+              size="sm"
               onClick={() => setReadIds(NOTIFICATIONS.map((n) => n.id))}
               disabled={unread.length === 0}
               data-testid="notifications-mark-all"
-              className="flex items-center gap-1 rounded-sm px-1.5 py-1 text-xs text-accent transition-colors duration-fast hover:bg-surface-hover disabled:text-muted"
+              leftIcon={<CheckCheck size={14} strokeWidth={1.75} />}
+              className="text-xs"
             >
-              <CheckCheck size={14} strokeWidth={1.75} />
               Mark all as read
-            </button>
+            </Button>
           </div>
           <hr className="border-t border-subtle" role="separator" />
 

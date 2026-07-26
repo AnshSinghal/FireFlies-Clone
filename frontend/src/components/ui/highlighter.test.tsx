@@ -28,7 +28,9 @@ describe('findRanges', () => {
 describe('splitByRanges', () => {
   it('alternates plain and matched parts', () => {
     expect(splitByRanges('roadmap sync', [{ start: 0, end: 7 }])).toEqual([
-      { text: 'roadmap', match: true },
+      // `matchIndex` counts the visible highlights, so `activeIndex` refers to
+      // something the user can actually step through (T-10.9).
+      { text: 'roadmap', match: true, matchIndex: 0 },
       { text: ' sync', match: false },
     ])
   })
@@ -40,7 +42,9 @@ describe('splitByRanges', () => {
     ])
     expect(parts.map((p) => p.text).join('')).toBe('abcdef')
     expect(parts).toEqual([
-      { text: 'abcde', match: true },
+      // One merged range is ONE highlight, so it gets one index — otherwise
+      // stepping through matches would visit an invisible extra stop.
+      { text: 'abcde', match: true, matchIndex: 0 },
       { text: 'f', match: false },
     ])
   })
@@ -63,6 +67,15 @@ describe('splitByRanges', () => {
 
   it('returns the whole string unmatched when there are no ranges', () => {
     expect(splitByRanges('plain', [])).toEqual([{ text: 'plain', match: false }])
+  })
+
+  it('numbers matches in document order', () => {
+    const parts = splitByRanges('one two one two one', [
+      { start: 12, end: 15 },
+      { start: 0, end: 3 },
+      { start: 16, end: 19 },
+    ])
+    expect(parts.filter((p) => p.match).map((p) => p.matchIndex)).toEqual([0, 1, 2])
   })
 })
 
@@ -88,6 +101,25 @@ describe('Highlighter', () => {
       <Highlighter text="we priced it" query="pricing" ranges={[{ start: 3, end: 9 }]} />,
     )
     expect(container.querySelector('mark')?.textContent).toBe('priced')
+  })
+
+  it('marks one match as active and leaves the rest muted (T-10.9)', () => {
+    const { container } = render(
+      <Highlighter text="one two one two one" query="one" activeIndex={1} />,
+    )
+    const marks = Array.from(container.querySelectorAll('mark'))
+
+    expect(marks).toHaveLength(3)
+    expect(marks.map((m) => m.getAttribute('data-active'))).toEqual([null, 'true', null])
+    // The active one is the SECOND occurrence, not the second character run.
+    expect(marks[1]!.className).toContain('bg-highlight-active')
+  })
+
+  it('treats an out-of-range activeIndex as no active match', () => {
+    // The state before the user has stepped to one — nothing should be
+    // singled out.
+    const { container } = render(<Highlighter text="one one" query="one" activeIndex={9} />)
+    expect(container.querySelector('[data-active="true"]')).toBeNull()
   })
 
   it('renders plain text when nothing matches', () => {

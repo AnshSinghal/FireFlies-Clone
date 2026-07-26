@@ -11,7 +11,9 @@
 
 import { ChevronDown, LogOut, Monitor, Moon, Settings, Sun, User } from 'lucide-react'
 
-import { MenuDivider, MenuItem, MenuLabel, MenuPanel } from '@/components/ui/menu'
+import { Avatar } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { MenuDivider, MenuItem, MenuLabel, MenuPanel, MenuRadioItem } from '@/components/ui/menu'
 import { useToast } from '@/components/ui/toast'
 import { useCurrentUser } from '@/lib/api/me'
 import { useLocalStorage } from '@/lib/hooks/use-local-storage'
@@ -35,27 +37,28 @@ export function AvatarMenu() {
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
         onClick={toggle}
         data-testid="topbar-avatar"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={user ? `Account menu for ${user.name}` : 'Account menu'}
-        className="flex items-center gap-1 rounded-full p-0.5 transition-colors duration-fast hover:bg-surface-hover"
+        // Hugs the avatar rather than taking the 36px button height — the
+        // trigger IS the avatar, so a button-shaped box around it reads wrong.
+        className="h-auto gap-1 rounded-full p-0.5"
+        rightIcon={
+          <ChevronDown size={14} strokeWidth={2} className="text-muted" aria-hidden="true" />
+        }
       >
-        <span className="flex h-avatar-md w-avatar-md items-center justify-center overflow-hidden rounded-full bg-surface-2">
-          {user?.avatar_url ? (
-            /* eslint-disable-next-line @next/next/no-img-element -- a static local
-               SVG; next/image's optimisation pass does nothing for vector art
-               and only delays first paint. */
-            <img src={user.avatar_url} alt="" width={32} height={32} />
-          ) : (
+        {user ? (
+          <Avatar name={user.name} src={user.avatar_url} size="md" />
+        ) : (
+          <span className="flex h-avatar-md w-avatar-md items-center justify-center rounded-full bg-surface-2">
             <User size={16} strokeWidth={1.75} className="text-muted" aria-hidden="true" />
-          )}
-        </span>
-        <ChevronDown size={14} strokeWidth={2} className="text-muted" aria-hidden="true" />
-      </button>
+          </span>
+        )}
+      </Button>
 
       {open && (
         <MenuPanel label="Account" testId="topbar-avatar-menu">
@@ -79,23 +82,15 @@ export function AvatarMenu() {
           <MenuDivider />
           <MenuLabel>Theme</MenuLabel>
           {THEMES.map(({ value, label, icon: Icon }) => (
-            <button
+            <MenuRadioItem
               key={value}
-              type="button"
-              role="menuitemradio"
-              aria-checked={theme === value}
-              onClick={() => setTheme(value)}
-              data-testid={`avatar-theme-${value}`}
-              className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-body transition-colors duration-fast hover:bg-surface-hover ${
-                theme === value ? 'text-accent' : 'text-primary'
-              }`}
+              icon={Icon}
+              checked={theme === value}
+              onSelect={() => setTheme(value)}
+              testId={`avatar-theme-${value}`}
             >
-              <Icon size={16} strokeWidth={1.75} className="shrink-0 text-muted" />
-              <span className="min-w-0 flex-1 truncate">{label}</span>
-              {theme === value && (
-                <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-              )}
-            </button>
+              {label}
+            </MenuRadioItem>
           ))}
 
           <MenuDivider />

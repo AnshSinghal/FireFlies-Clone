@@ -10,6 +10,7 @@
 
 import { ChevronDown, FilePlus2, Plus, PlusCircle, Upload } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import { MenuItem, MenuPanel } from '@/components/ui/menu'
 import { usePopover } from '@/lib/hooks/use-popover'
 
@@ -24,20 +25,19 @@ export function NewMenu() {
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
+      <Button
+        variant="primary"
         onClick={toggle}
         data-testid="topbar-new-button"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex h-btn-md items-center gap-1.5 rounded-md bg-accent px-3 text-body-strong text-inverse transition-colors duration-fast hover:bg-accent-hover active:bg-accent-pressed"
+        leftIcon={<Plus size={16} strokeWidth={2.25} className="shrink-0" />}
+        rightIcon={<ChevronDown size={14} strokeWidth={2} className="hidden shrink-0 md:inline" />}
       >
-        <Plus size={16} strokeWidth={2.25} className="shrink-0" />
         {/* Icon-only below 768px — three fixed-width right-cluster items plus a
             label do not fit a 393px viewport (T-08.11). */}
         <span className="hidden md:inline">New</span>
-        <ChevronDown size={14} strokeWidth={2} className="hidden shrink-0 md:inline" />
-      </button>
+      </Button>
 
       {open && (
         <MenuPanel label="Create" testId="topbar-new-menu">

@@ -13,9 +13,12 @@
  * gets decided in T-12; this renders neither, deliberately.
  */
 
-import { AlertTriangle, Inbox, Trash2 } from 'lucide-react'
+import { AlertTriangle, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
+import { Button } from '@/components/ui/button'
+import { EmptyInbox, EmptySearch, EmptyState as UiEmptyState } from '@/components/ui/empty-state'
+import { IconButton } from '@/components/ui/icon-button'
 import { MeetingListSkeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api/client'
 import { useMeetings } from '@/lib/api/meetings'
@@ -130,15 +133,16 @@ function DeleteButton({ id, title }: { id: number; title: string }) {
   const deleteWithUndo = useDeleteWithUndo()
 
   return (
-    <button
-      type="button"
+    <IconButton
+      variant="danger"
+      // Names the meeting, so eight identical buttons are eight distinct
+      // controls to a screen reader.
+      label={`Delete ${title}`}
+      icon={<Trash2 size={16} strokeWidth={1.75} />}
       onClick={() => void deleteWithUndo(id)}
       data-testid={`meeting-delete-${id}`}
-      aria-label={`Delete ${title}`}
-      className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted transition-colors duration-fast hover:bg-danger-subtle hover:text-danger"
-    >
-      <Trash2 size={16} strokeWidth={1.75} />
-    </button>
+      className="absolute right-3 top-1/2 -translate-y-1/2"
+    />
   )
 }
 
@@ -146,24 +150,16 @@ function EmptyState({ hasQuery }: { hasQuery: boolean }) {
   // Two genuinely different situations, two different messages (T-13.10).
   // Reusing one for both is on the ❌ list.
   return (
-    <div
-      className="flex flex-col items-center justify-center gap-3 rounded-lg border border-subtle py-16 text-center"
-      data-testid="notebook-empty"
-    >
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2">
-        <Inbox size={24} strokeWidth={1.75} className="text-muted" />
-      </span>
-      <div className="space-y-1">
-        <h2 className="text-h3 text-primary">
-          {hasQuery ? 'No meetings match your search' : 'No meetings yet'}
-        </h2>
-        <p className="text-body text-secondary">
-          {hasQuery
-            ? 'Try a different term, or clear the search to see everything.'
-            : 'Upload a transcript or create a meeting to get started.'}
-        </p>
-      </div>
-    </div>
+    <UiEmptyState
+      testId="notebook-empty"
+      illustration={hasQuery ? <EmptySearch /> : <EmptyInbox />}
+      title={hasQuery ? 'No meetings match your search' : 'No meetings yet'}
+      body={
+        hasQuery
+          ? 'Try a different term, or clear the search to see everything.'
+          : 'Upload a transcript or create a meeting to get started.'
+      }
+    />
   )
 }
 
@@ -173,26 +169,23 @@ function ErrorState({ error, onRetry }: { error: unknown; onRetry: () => void })
     error instanceof Error ? error.message : 'Something went wrong loading your meetings.'
 
   return (
-    <div
-      className="flex flex-col items-center justify-center gap-3 rounded-lg border border-subtle py-16 text-center"
-      data-testid="notebook-error"
-    >
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-danger-subtle">
-        <AlertTriangle size={24} strokeWidth={1.75} className="text-danger" />
-      </span>
-      <div className="space-y-1">
-        <h2 className="text-h3 text-primary">Couldn&apos;t load meetings</h2>
-        <p className="text-body text-secondary">{message}</p>
-        <code className="text-xs text-muted">{code}</code>
-      </div>
-      <button
-        type="button"
-        onClick={onRetry}
-        data-testid="notebook-retry"
-        className="h-btn-md rounded-md bg-accent px-4 text-body-strong text-inverse transition-colors duration-fast hover:bg-accent-hover"
-      >
-        Try again
-      </button>
-    </div>
+    <UiEmptyState
+      testId="notebook-error"
+      illustration={
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-danger-subtle">
+          <AlertTriangle size={24} strokeWidth={1.75} className="text-danger" aria-hidden="true" />
+        </span>
+      }
+      title="Couldn't load meetings"
+      body={message}
+      action={
+        <Button variant="primary" onClick={onRetry} data-testid="notebook-retry">
+          Try again
+        </Button>
+      }
+      // The code is for whoever is reading the console alongside this; it is
+      // deliberately quiet rather than part of the message.
+      secondaryAction={<code className="text-xs text-muted">{code}</code>}
+    />
   )
 }
