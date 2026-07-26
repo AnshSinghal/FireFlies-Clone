@@ -94,7 +94,21 @@ Migrations are in `backend/alembic/versions/` and are committed — the app neve
 
 ## API Overview
 
-_(Endpoint table added in T-04.13. Interactive docs are served at `/docs` on the running backend.)_
+Full endpoint table, conventions and worked examples: **[docs/api.md](docs/api.md)**.
+Interactive docs at **`/docs`** on the running backend.
+
+Every list endpoint returns the same envelope, and every error — including FastAPI's own 404 on an
+unknown route — returns `{ error: { code, message, details } }`. Branch on `code`; it is stable.
+
+```bash
+curl localhost:8000/api/v1/meetings          # paginated, light row shape
+curl localhost:8000/api/v1/meetings/1        # 404 unknown · 410 deleted (restorable)
+curl localhost:8000/api/health               # runs a real SELECT 1; 503 when the DB is down
+```
+
+The TypeScript client at `frontend/src/types/api.d.ts` is generated from the schema — run
+`make types` after changing an endpoint, so a backend field rename surfaces as a frontend type error
+rather than a runtime `undefined`. A test fails the build if the committed schema falls behind.
 
 ---
 
