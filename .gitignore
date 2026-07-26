@@ -1,0 +1,56 @@
+# --- Secrets & local config ---
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- Databases (never commit; regenerate with `make seed`) ---
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+.eslintcache
+
+# --- Playwright ---
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# --- Media (large; sample audio is committed explicitly in T-05.8) ---
+backend/media/uploads/
+
+# --- Editors & OS ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Tooling scratch ---
+ruvector.db
+.claude/settings.local.json
