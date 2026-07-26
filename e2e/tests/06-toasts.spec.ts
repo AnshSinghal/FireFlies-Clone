@@ -169,6 +169,19 @@ test.describe('toasts · behaviour', () => {
     const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']
 
     /*
+     * Wait for the entrance animation to finish before measuring.
+     *
+     * `ff-toast-in` fades from `opacity: 0`, and axe computes contrast against
+     * the COMPOSITED colour — so a scan that lands mid-fade measures a blend of
+     * the text against the background and reports a contrast failure for a
+     * colour that exists for two hundred milliseconds. The toast's real
+     * contrast is what it has once it has arrived.
+     */
+    await expect
+      .poll(() => toast.evaluate((el) => getComputedStyle(el).opacity))
+      .toBe('1')
+
+    /*
      * The toast itself is held to the FULL bar, contrast included — it is new
      * code and has no excuse.
      */

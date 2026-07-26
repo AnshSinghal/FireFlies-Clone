@@ -18,8 +18,14 @@ export const TOAST_MESSAGES = {
   actionItemAdded: 'Action item added',
   summaryRegenerated: 'Summary regenerated',
   linkCopied: 'Link copied to clipboard',
+  segmentCopied: 'Segment copied to clipboard',
+  selectionCopied: 'Selection copied to clipboard',
+  transcriptCopied: 'Transcript copied to clipboard',
 
   saveFailed: "Couldn't save changes. Please try again.",
+  // The clipboard API refuses on an insecure origin and when the user has
+  // denied permission. Both leave a button that appears to do nothing.
+  copyFailed: "Couldn't copy — your browser blocked clipboard access",
   invalidFileType: 'File must be .txt, .vtt, .srt or .json',
 
   /** Every `Soon` affordance uses this exact sentence, so the build is honest about its edges. */

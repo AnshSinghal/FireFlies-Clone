@@ -119,3 +119,34 @@ export function Slider({
     />
   )
 }
+
+interface TimestampButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+  /** Already formatted — `MM:SS`. */
+  time: string
+  label: string
+}
+
+/**
+ * A timestamp that seeks (T-20.5, T-21.2).
+ *
+ * Its own primitive rather than `Button variant="link"`: that variant sets a
+ * text colour of its own, and `cn` does not resolve the conflict with the
+ * muted colour a timestamp wants — leaving which one wins up to the order
+ * Tailwind emitted them in.
+ */
+export function TimestampButton({ time, label, className, ...rest }: TimestampButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className={cn(
+        'tnum rounded shrink-0 px-1 text-xs text-muted transition-colors duration-fast',
+        'hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+        className,
+      )}
+      {...rest}
+    >
+      {time}
+    </button>
+  )
+}
