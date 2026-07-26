@@ -912,6 +912,36 @@ meeting under its own date heading, which is noise rather than structure.
 
 ---
 
+## ADR-038 · Assert the wiring when the interaction cannot be simulated
+
+**Date:** 2026-07-27 · **Task:** T-10.8 · **Status:** Accepted
+
+**Context.** `T10-G` originally hovered the AvatarGroup's `+N` chip and read the tooltip. It passed
+on macOS and failed all three attempts on Linux CI — twice. The first fix moved the *content*
+guarantee onto an `aria-label` (the right fix, and a real product improvement) but kept a separate
+hover test, on the grounds that its failure "would not be a correctness failure". It then broke the
+build.
+
+Radix's tooltip opens from `pointermove` heuristics that Playwright's synthetic events do not
+reproduce reliably across platforms.
+
+**Decision.** Assert what can be asserted deterministically — that the chip is wired as a tooltip
+trigger (`data-state` is present) — and let the content guarantee live where it cannot flake: the
+`aria-label` in `T10-G`, and `overflowLabel`'s unit tests.
+
+**The general rule.** A test that cannot be made deterministic is worse than no test: it trains the
+team to re-run the build, and the next real failure gets re-run too. When an interaction cannot be
+simulated faithfully, assert the wiring and move the guarantee to a layer that can be.
+
+That the *accessible* path is the one left under test is not a consolation prize — a tooltip does
+not exist for touch users and is not reliably announced, which `tooltip.tsx` says in its own header.
+
+**Consequences.** Visual tooltip behaviour is unverified by the suite. Acceptable: it is one
+presentational affordance on a secondary control, and the information it shows is guaranteed twice
+over elsewhere.
+
+---
+
 ## ADR-037 · Every test that writes lives in one file
 
 **Date:** 2026-07-27 · **Task:** T-12 · **Status:** Accepted · **Extends ADR-027**
