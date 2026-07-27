@@ -9,13 +9,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1.routers import channels, me, meetings, search, summaries, transcript, users
+from app.api.v1.routers import channels, export, me, meetings, search, summaries, transcript, users
 
 api_router = APIRouter()
 api_router.include_router(me.router)
 api_router.include_router(channels.router)
 api_router.include_router(search.router)
 api_router.include_router(transcript.router)
+# BEFORE meetings, so the static `GET /meetings/export` (bulk zip, T-34.9) is
+# matched ahead of `GET /meetings/{meeting_id}` — Starlette tries routes in
+# registration order, and `export` must never be parsed as an id.
+api_router.include_router(export.router)
 api_router.include_router(meetings.router)
 api_router.include_router(summaries.router)
 api_router.include_router(users.router)
