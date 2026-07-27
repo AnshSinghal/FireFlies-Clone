@@ -60,6 +60,4 @@ class UserService:
             )
             for user, hosted in rows
         ]
-        return Page.build(
-            members, page=pagination.page, page_size=pagination.limit, total=total
-        )
+        return Page.build(members, page=pagination.page, page_size=pagination.limit, total=total)

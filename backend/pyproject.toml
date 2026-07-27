@@ -22,6 +22,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "ruff>=0.7",
     "mypy>=1.13",
+    "pytest-cov>=7.1.0",
 ]
 
 [build-system]
@@ -131,4 +132,20 @@ filterwarnings = [
     # kept narrow so it cannot mask the same mistake in our own code.
     # Remove when slowapi ships a fix; it becomes a hard break in Python 3.16.
     "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning",
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Coverage (T-43.12). The ≥80% target applies to services/, parsers/ and ai/ —
+# the layers holding logic. Routers are thin by decree (check_layering.py) and
+# models are declarations; measuring them would pad the number, not the safety.
+# ─────────────────────────────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["app/services", "app/ai", "app/parsers"]
+
+[tool.coverage.report]
+precision = 0
+show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
 ]

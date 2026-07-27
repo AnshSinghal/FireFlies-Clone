@@ -7,6 +7,7 @@ app until the route-level fallback test (T29-F).
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import date
 from itertools import pairwise
@@ -15,10 +16,13 @@ from typing import TYPE_CHECKING
 import httpx2
 import pytest
 
+import app.ai.llm as llm_module
 from app.ai import (
     FALLBACK_PROVIDER_LABEL,
+    ChatTurn,
     LLMProvider,
     MockProvider,
+    ProviderError,
     SegmentInput,
     SummaryResult,
     Transcript,
@@ -32,6 +36,8 @@ from app.ai.prompts import load_prompt, prompts_fingerprint
 from tests.factories import make_full_meeting
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
+
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
     from sqlalchemy.orm import Session
@@ -332,3 +338,181 @@ def test_chunking_splits_with_overlap() -> None:
         assert current.segments[0] in previous.segments, "chunks must overlap"
         # Chunks advance through the meeting even though their edges overlap.
         assert previous.segments[0].start_ms < current.segments[0].start_ms
+
+
+# ── LLMProvider plumbing (T-43.6) ───────────────────────────────────────────
+# Everything below runs against httpx2.MockTransport — the tests exercise the
+# retry, chunking, merging and failure paths without a network in sight.
+
+
+def _anthropic_json(payload: dict[str, object]) -> httpx2.Response:
+    body = {"stop_reason": "end_turn", "content": [{"type": "text", "text": json.dumps(payload)}]}
+    return httpx2.Response(200, json=body)
+
+
+def _llm(
+    handler: Callable[[httpx2.Request], httpx2.Response], vendor: str = "anthropic"
+) -> LLMProvider:
+    return LLMProvider(vendor, api_key="k", transport=httpx2.MockTransport(handler))
+
+
+class TestLLMPlumbing:
+    def test_map_reduce_summarises_chunks_then_synthesises(self) -> None:
+        """A multi-chunk transcript costs one call per chunk plus a synthesis
+        pass, and the notes come from the mapped (transcript-grounded) halves."""
+        calls: list[str] = []
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            calls.append(json.loads(request.content)["messages"][0]["content"][:40])
+            n = len(calls)
+            return _anthropic_json(
+                {
+                    "overview": f"Part {n}.",
+                    "gist": None,
+                    "notes": [{"chapter": f"Chapter {n}", "bullets": [f"Point {n}."]}],
+                }
+            )
+
+        chunks = chunk_transcript(_long_transcript(2_000))
+        result = _llm(handler).generate_summary(_long_transcript(2_000))
+
+        assert len(calls) == len(chunks) + 1
+        # Synthesis sees the chunk summaries, not raw transcript.
+        assert calls[-1].startswith("Part 1 summary:")
+        # Notes are the mapped ones — the synthesis pass's notes are discarded.
+        assert [group.chapter for group in result.notes] == [
+            f"Chapter {n}" for n in range(1, len(chunks) + 1)
+        ]
+
+    def test_keywords_merge_across_chunks_and_renormalise(self) -> None:
+        responses: Iterator[dict[str, object]] = iter(
+            [
+                {"items": [{"term": "pricing", "weight": 0.4}, {"term": "beta", "weight": 0.2}]},
+                {"items": [{"term": "Pricing", "weight": 0.8}, {"term": "launch", "weight": 0.6}]},
+            ]
+        )
+        provider = _llm(lambda _request: _anthropic_json(next(responses)))
+        # Two chunks exactly: budget sized so the 2000-segment fixture splits.
+        transcript = _long_transcript(300)
+        assert len(chunk_transcript(transcript)) == 2
+
+        keywords = provider.extract_keywords(transcript)
+
+        by_term = {keyword.term: keyword.weight for keyword in keywords}
+        # Case-folded merge takes the max weight, then renormalises to 1.0.
+        assert by_term["pricing"] == 1.0
+        assert by_term["launch"] == 0.75
+        assert by_term["beta"] == 0.25
+
+    def test_outline_concatenation_enforces_strict_increase(self) -> None:
+        responses: Iterator[dict[str, object]] = iter(
+            [
+                {"items": [{"title": "Alpha", "start_ms": 0}, {"title": "Beta", "start_ms": 9000}]},
+                # The overlap region re-reports Beta at 9000 — it must be dropped.
+                {
+                    "items": [
+                        {"title": "Beta again", "start_ms": 9000},
+                        {"title": "Gamma", "start_ms": 20000},
+                    ]
+                },
+            ]
+        )
+        provider = _llm(lambda _request: _anthropic_json(next(responses)))
+        transcript = _long_transcript(300)
+
+        outline = provider.generate_outline(transcript)
+
+        assert [(entry.title, entry.start_ms) for entry in outline] == [
+            ("Alpha", 0),
+            ("Beta", 9000),
+            ("Gamma", 20000),
+        ]
+
+    def test_action_items_dedupe_and_carry_the_meeting_date(self) -> None:
+        seen_dates: list[bool] = []
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            text = json.loads(request.content)["messages"][0]["content"]
+            seen_dates.append(text.startswith("Meeting date: 2026-07-20"))
+            return _anthropic_json(
+                {"items": [{"text": "Draft the deck", "assignee": None, "due_date": None}]}
+            )
+
+        transcript = _long_transcript(300).model_copy(update={"reference_date": date(2026, 7, 20)})
+        items = _llm(handler).extract_action_items(transcript)
+
+        assert all(seen_dates), "every chunk prompt must carry the meeting date"
+        assert len(items) == 1, "identical items from overlapping chunks dedupe"
+
+    def test_answer_question_sends_history_and_picks_a_relevant_chunk(self) -> None:
+        captured: list[str] = []
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            captured.append(json.loads(request.content)["messages"][1]["content"])
+            answer = json.dumps({"text": "It shipped.", "citations": []})
+            return httpx2.Response(200, json={"choices": [{"message": {"content": answer}}]})
+
+        answer = _llm(handler, vendor="openai").answer_question(
+            _long_transcript(40),
+            "Did point 7 ship?",
+            history=[ChatTurn(role="user", text="context question")],
+        )
+
+        assert answer.text == "It shipped."
+        assert "Prior conversation:" in captured[0]
+        assert "Question: Did point 7 ship?" in captured[0]
+
+    def test_retryable_status_retries_then_succeeds(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(llm_module, "_BACKOFF_BASE_SECONDS", 0)
+        attempts: list[int] = []
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            attempts.append(1)
+            if len(attempts) < 3:
+                return httpx2.Response(429, json={})
+            return _anthropic_json({"overview": "Third time lucky.", "gist": None, "notes": []})
+
+        result = _llm(handler).generate_summary(_long_transcript(3))
+
+        assert len(attempts) == 3
+        assert result.overview == "Third time lucky."
+
+    def test_exhausted_retries_raise_provider_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(llm_module, "_BACKOFF_BASE_SECONDS", 0)
+        attempts: list[int] = []
+
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            attempts.append(1)
+            return httpx2.Response(503, json={})
+
+        with pytest.raises(ProviderError):
+            _llm(handler).generate_summary(_long_transcript(3))
+        assert len(attempts) == llm_module.MAX_RETRIES + 1
+
+    def test_a_refusal_is_a_provider_error_not_a_parse_attempt(self) -> None:
+        def handler(_request: httpx2.Request) -> httpx2.Response:
+            return httpx2.Response(200, json={"stop_reason": "refusal", "content": []})
+
+        with pytest.raises(ProviderError):
+            _llm(handler).generate_summary(_long_transcript(3))
+
+    def test_schema_mismatch_is_a_provider_error(self) -> None:
+        def handler(_request: httpx2.Request) -> httpx2.Response:
+            return _anthropic_json({"totally": "wrong shape"})
+
+        with pytest.raises(ProviderError):
+            _llm(handler).generate_summary(_long_transcript(3))
+
+    def test_the_token_pre_check_refuses_before_spending(self) -> None:
+        def handler(request: httpx2.Request) -> httpx2.Response:
+            raise AssertionError("the guard must refuse before any request is made")
+
+        absurd = Transcript(
+            segments=[SegmentInput(speaker="A", text="x" * 2_000_000, start_ms=0, end_ms=1000)]
+        )
+        with pytest.raises(ProviderError, match="cost guard"):
+            _llm(handler).generate_summary(absurd)
+
+    def test_an_unknown_vendor_is_rejected_at_construction(self) -> None:
+        with pytest.raises(ValueError, match="vendor"):
+            LLMProvider("gemini", api_key="k")

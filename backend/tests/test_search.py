@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -115,3 +117,37 @@ def test_to_fts_query_quotes_tokens_and_prefixes_the_last() -> None:
     assert to_fts_query("a.*b") == ""
     assert to_fts_query('say "hi"') == '"say" "hi"*'
     assert to_fts_query("   ") == ""
+
+
+def test_t43_9_search_goes_through_the_fts_index_not_a_scan(db: Session) -> None:
+    """`EXPLAIN QUERY PLAN` on the real search SQL (T-43.9).
+
+    The plan must show the FTS5 virtual-table lookup. If someone "simplifies"
+    the query into a LIKE over `transcript_segments`, results still come back
+    and every other test still passes — only the plan betrays that search has
+    become a full-table scan.
+    """
+    from sqlalchemy import text
+
+    from app.db.search import _SEARCH_SQL
+
+    plan_rows = db.execute(
+        text(f"EXPLAIN QUERY PLAN {_SEARCH_SQL.text}"),
+        {
+            "query": "pricing",
+            "meeting_id": None,
+            "limit": 20,
+            "offset": 0,
+            "open": "[",
+            "close": "]",
+        },
+    ).all()
+    plan = " | ".join(str(row) for row in plan_rows)
+
+    # The FTS5 MATCH drives the query: the virtual table is scanned via its
+    # index (`SCAN f VIRTUAL TABLE INDEX 0:M...`), and every joined base table
+    # is reached by primary key, never by walking the whole table.
+    assert "VIRTUAL TABLE INDEX" in plan, plan
+    assert re.search(r"\bSCAN (transcript_segments|meetings|speakers|s|m|sp|p)\b", plan) is None, (
+        f"full-table scan crept in: {plan}"
+    )
