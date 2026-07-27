@@ -60,6 +60,12 @@ const MEDIA_TIMEOUT_MS = 8000
 /** `HTMLMediaElement.HAVE_METADATA` — duration known, no data buffered yet. */
 const HAVE_METADATA = 1
 
+/** A soundbite's bounds, armed by `playRange` (T-33.6). */
+export interface PlaybackRange {
+  startMs: number
+  endMs: number
+}
+
 /**
  * What consumers get. Deliberately WITHOUT the media element's ref: a ref is
  * not render data, and handing one out invites components to read
@@ -79,11 +85,17 @@ export interface PlayerApi {
   hasMedia: boolean
   /** The meeting has media but it could not be loaded or decoded (T-19.14). */
   mediaFailed: boolean
+  /** The armed soundbite range, or null when playback is unconstrained. */
+  activeRange: PlaybackRange | null
   seek: (ms: number) => void
   play: () => void
   pause: () => void
   toggle: () => void
   skip: (deltaMs: number) => void
+  /** Seek to `startMs`, play, and auto-pause at `endMs` (T-33.6). */
+  playRange: (startMs: number, endMs: number) => void
+  /** Disarm the range without touching playback. */
+  clearRange: () => void
   setRate: (rate: PlaybackRate) => void
   setVolume: (volume: number) => void
   toggleMute: () => void
@@ -142,6 +154,22 @@ export function usePlayer({ durationMs, src }: UsePlayerOptions): PlayerEngine {
   const pendingSeekMs = useRef<number | null>(null)
   const usingMedia = Boolean(src) && mediaReady && !mediaFailed
 
+  /*
+   * The soundbite constraint (T-33.6): state for the UI, a ref for the clock.
+   *
+   * The tick must read the CURRENT range without re-subscribing the interval —
+   * the same reason the position lives in `positionRef` — so the ref is the
+   * authority and `activeRange` is the committed copy consumers render from.
+   */
+  const [activeRange, setActiveRange] = useState<PlaybackRange | null>(null)
+  const rangeRef = useRef<PlaybackRange | null>(null)
+
+  const clearRange = useCallback(() => {
+    if (rangeRef.current === null) return
+    rangeRef.current = null
+    setActiveRange(null)
+  }, [])
+
   const commit = useCallback(
     (ms: number) => {
       const clamped = Math.max(0, Math.min(ms, durationMs))
@@ -178,10 +206,29 @@ export function usePlayer({ durationMs, src }: UsePlayerOptions): PlayerEngine {
         positionRef.current += delta * rate
       }
 
+      /*
+       * Range-constrained playback (T-33.6): the clip's end is checked the
+       * same way the track's end is below — in the clock, against the measured
+       * position. NOT a `setTimeout`: a timer armed at play time drifts from
+       * the transport the moment the rate changes, the media stalls, or the
+       * user pauses mid-clip, and it would fire at a wall-clock moment that no
+       * longer corresponds to the position it was scheduled for.
+       */
+      const range = rangeRef.current
+      if (range && positionRef.current >= range.endMs) {
+        commit(range.endMs)
+        setIsPlaying(false)
+        media?.pause()
+        clearRange()
+        return
+      }
+
       if (positionRef.current >= durationMs) {
         commit(durationMs)
         setIsPlaying(false)
         media?.pause()
+        // A range that reached the end of the track is finished either way.
+        clearRange()
         return
       }
 
@@ -200,7 +247,7 @@ export function usePlayer({ durationMs, src }: UsePlayerOptions): PlayerEngine {
 
     const timer = window.setInterval(tick, TICK_MS)
     return () => window.clearInterval(timer)
-  }, [isPlaying, usingMedia, rate, durationMs, commit])
+  }, [isPlaying, usingMedia, rate, durationMs, commit, clearRange])
 
   // ── Media element wiring ──────────────────────────────────────────────────
 
@@ -304,16 +351,48 @@ export function usePlayer({ durationMs, src }: UsePlayerOptions): PlayerEngine {
   const seek = useCallback(
     (ms: number) => {
       const target = commit(ms)
+
+      /*
+       * A seek OUTSIDE the armed range cancels the constraint (T33-F).
+       *
+       * Scrubbing away from a clip is the user leaving it, and playback must
+       * continue normally rather than auto-pausing at a boundary that no
+       * longer means anything. A seek WITHIN the range — nudging around inside
+       * the clip — keeps it, so previewing stays constrained while trimming.
+       */
+      const range = rangeRef.current
+      if (range && (target < range.startMs || target >= range.endMs)) clearRange()
+
       const media = mediaRef.current
       if (usingMedia && media) {
         pendingSeekMs.current = target
         media.currentTime = target / 1000
       }
     },
-    [commit, usingMedia],
+    [commit, usingMedia, clearRange],
   )
 
   const skip = useCallback((deltaMs: number) => seek(positionRef.current + deltaMs), [seek])
+
+  const playRange = useCallback(
+    (startMs: number, endMs: number) => {
+      const start = Math.max(0, Math.min(startMs, durationMs))
+      const end = Math.max(0, Math.min(endMs, durationMs))
+      if (end <= start) return
+
+      // Seek FIRST: `seek` clears any previously armed range (the new start is
+      // usually outside it), so the old constraint can never outlive this call.
+      seek(start)
+
+      const range: PlaybackRange = { startMs: start, endMs: end }
+      rangeRef.current = range
+      setActiveRange(range)
+      // The flag directly — `play()`'s restart-from-the-end special case would
+      // fight the seek that just happened.
+      setIsPlaying(true)
+    },
+    [durationMs, seek],
+  )
 
   const setRate = useCallback(
     (next: PlaybackRate) => {
@@ -348,11 +427,14 @@ export function usePlayer({ durationMs, src }: UsePlayerOptions): PlayerEngine {
     bufferedMs: usingMedia ? bufferedMs : durationMs,
     hasMedia: usingMedia,
     mediaFailed: Boolean(src) && mediaFailed,
+    activeRange,
     seek,
     play,
     pause,
     toggle,
     skip,
+    playRange,
+    clearRange,
     setRate,
     setVolume,
     toggleMute,
