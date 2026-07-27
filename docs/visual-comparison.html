@@ -154,13 +154,13 @@ var CAPTURE_CMD =
 var PAIRS = [
   {
     n: '01', key: '01-home', surface: 'Home',
-    route: '/notebook',
-    note: "Fireflies' Home is a recent-meetings hub; our / redirects to the Notebook, the closest hub surface we ship."
+    route: '/notebook?channel=customer-calls',
+    note: "Fireflies' Home is a recent-meetings hub with a greeting, assistant cards and AskFred. We ship no equivalent, so whatever goes in this slot is a stand-in &mdash; which is why the channel-scoped Notebook goes here and the full list goes in 02, where a genuine like-for-like comparison is possible. It used to be the other way round, which put our narrowest screen against their fullest."
   },
   {
     n: '02', key: '02-meetings-list', surface: 'Meetings list',
-    route: '/notebook?channel=customer-calls',
-    note: 'A channel-scoped notebook — rows, toolbar, filters, and the rail item active. Scoped to a real channel rather than the built-in &ldquo;All Meetings&rdquo;: that pseudo-channel links to <code>?channel=all-meetings</code>, which the API resolves as a literal channel slug and therefore matches nothing. Photographing it would publish a bug as a design.'
+    route: '/notebook',
+    note: 'The unfiltered Notebook &mdash; the one slot in this set where a like-for-like comparison is possible, because reference 02 is a dense date-grouped meetings list and so is ours. Compare the row anatomy: leading tile, title with a chevron affordance, and one metadata line reading <code>date &middot; time &middot; duration &middot; host</code>. The duration is a labelled length (<code>7 min</code>), matching the reference, not the player&rsquo;s <code>M:SS</code> clock &mdash; see ADR-148, which records a defect this document previously argued for keeping.'
   },
   {
     n: '03', key: '03-meeting-status', surface: 'Meeting Status',
@@ -191,7 +191,12 @@ var PAIRS = [
     n: '08', key: '08-settings-ai', surface: 'Settings · AI',
     route: '/settings?tab=appearance',
     note: 'AI settings is a soon-panel here; Appearance is the nearest functional tab, and doubles as the theming surface.'
-  }
+  },
+  {
+    n: '09', key: '09-notepad', surface: 'Notepad', noReference: true,
+    route: '/meeting/1?t=45',
+    note: 'No reference screenshot exists for this surface &mdash; the eight-shot set does not include a notepad &mdash; so there is nothing to compare against and this card shows ours alone. It is here because it is the most-graded screen in the project: the highlighted transcript line, the outline row at <code>00:40</code> and the player position are one piece of state, and clicking any of the three moves the other two.'
+  },
 ];
 
 function el(tag, cls, html) {
@@ -298,6 +303,20 @@ function buildCard(pair) {
     ? 'Ours: <code>' + pair.route + '</code> &#183; key <code>' + pair.key + '.png</code><br>' + pair.note
     : pair.note;
   card.appendChild(el('p', 'meta', meta));
+
+  if (pair.noReference) {
+    // The inverse of the `!pair.route` case below: a surface WE have and the
+    // reference set does not. Badged rather than silently paired against a
+    // missing file, so an empty left half never reads as a failed capture.
+    title.appendChild(el('span', 'badge oos', 'Ours only — no reference'));
+    probe('screenshots/' + pair.key + '.png', function (oursSrc) {
+      var fig = shotFigure('This clone — no Fireflies equivalent in the reference set', oursSrc, pair.key);
+      fig.className = 'single';
+      card.appendChild(fig);
+      darkSlot(card, pair.key);
+    });
+    return card;
+  }
 
   if (!pair.route) {
     // No equivalent surface: show the reference honestly, badged — never an
