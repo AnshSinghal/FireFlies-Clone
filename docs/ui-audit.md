@@ -20,9 +20,44 @@ Taken from the deployed origin at 1440px with `getComputedStyle` /
 | Meeting row height | 72px | 72px | exact |
 | Row title type | 15px / 600 | 15px / 600 | exact |
 
-The layout primitives match the spec they were built from. What follows is
-about structure and content, because that is where the remaining differences
-are.
+The layout primitives match the spec they were built from.
+
+**But that table measures the wrong thing, and it took until now to notice.**
+Every row above compares the build against `design.md` — our own spec. It
+proves we built what we wrote down. It says nothing about whether what we wrote
+down matches Fireflies, and the plan's unsampled values have now lost to the
+reference four times (ADR-011 accent, ADR-021 rail, ADR-036 layout, ADR-148
+duration). Conformance to our spec was being reported as fidelity to theirs.
+
+So here is the same screen measured against the **reference PNG** instead, by
+edge-detecting full-width rules in `docs/reference/fireflies/02.png` and
+`docs/screenshots/02-meetings-list.png`. The two were captured at different
+widths, so everything below is a **ratio** — scale- and DPR-independent, which
+sidesteps having to know what device pixel ratio the reference was shot at:
+
+| Ratio | Fireflies | Ours | |
+|---|---|---|---|
+| Row title type ÷ topbar height | 0.268 | 0.255 | within 5% — type scale is right |
+| Card height ÷ topbar height | 1.51 | 1.29 | **ours 15% tighter** |
+| Gap between cards in one date group ÷ card height | 0.274 | 0.127 | **ours 54% tighter** |
+| Gap across a date-group heading ÷ card height | 0.94 | 0.78 | **ours 18% tighter** |
+
+Raw measurements, for anyone re-deriving: Fireflies' cards are 107–108px with
+29–30px between cards in a group and ~101px across a group heading, on a 71px
+topbar. Ours are 71–72px with 9px and 55px, on a 55–56px topbar.
+
+**The type scale is right and the density is not.** Our list is meaningfully
+tighter than the reference — most of all in the gap between cards inside one
+date group, which is less than half the reference's in proportional terms. That
+is a spacing difference on the single most-compared screen, which is the
+criterion weighted highest, and no amount of looking at the two images side by
+side had made me see it. It took measuring.
+
+Not changed in this pass — see *Not fixed here*. The 72px row height is pinned
+by `design.md`, by T12-B, and by the skeleton that mirrors it, so this is a
+token-layer decision rather than a CSS tweak, and it re-baselines 165 visual
+snapshots. It is specified and queued rather than rushed at the end of a
+verification cycle.
 
 ## Differences we are keeping, and why
 
