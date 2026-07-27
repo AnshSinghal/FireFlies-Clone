@@ -118,6 +118,22 @@ export default defineConfig({
       grep: /@mutates/,
       dependencies: ['read-only'],
       fullyParallel: false,
+      /*
+       * ONE worker, not just `fullyParallel: false`.
+       *
+       * `fullyParallel: false` serialises tests *within* a file but still
+       * hands whole files to different workers — so `90-mutations` was
+       * deleting meetings while `27-tags` bulk-tagged "the first three rows",
+       * and `25-comments` was growing meeting 1's rows under
+       * `26-soundbites`. Both surfaced as feature bugs that reproduced only in
+       * a full run: measured here as 60/61 across four workers versus 61/61
+       * serial, on identical code.
+       *
+       * These specs share ONE database by design — that is what the read-only
+       * split exists to contain — so the writers must not overlap each other
+       * either. The cost is ~1.8min against ~1.3min, paid once per run.
+       */
+      workers: 1,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
     {
@@ -163,6 +179,15 @@ export default defineConfig({
         DATABASE_URL: 'sqlite:///./e2e.db',
         SEED_ANCHOR_DATE: ANCHOR_DATE,
         CORS_ORIGINS: FRONTEND_URL,
+        /*
+         * The AI budget is per client address, and the whole suite is one
+         * address (127.0.0.1). Opening the soundbites flyout fetches Magic
+         * Soundbite proposals, so the plan's 10/minute is spent on setup and
+         * T33-H — which asserts three proposals — 429s for reasons unrelated
+         * to what it tests. The 429 path itself stays covered by pytest
+         * (T37-C), which runs against the production default.
+         */
+        AI_RATE_LIMIT: '1000/minute',
       },
     },
     {

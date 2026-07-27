@@ -7,6 +7,7 @@ model, and an accidental double-click should not double the bill.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 from slowapi import Limiter
@@ -19,7 +20,15 @@ if TYPE_CHECKING:
     from starlette.responses import Response
 
 #: The plan's budget for AI endpoints.
-AI_RATE_LIMIT = "10/minute"
+#:
+#: Overridable by env because the limit is keyed on the CLIENT ADDRESS, and an
+#: E2E run is one address: every Playwright worker is 127.0.0.1, so the whole
+#: suite shares a single 10-per-minute allowance. Opening the soundbites flyout
+#: fetches Magic Soundbite proposals, so a normal run spends that budget on
+#: setup and T33-H — which asserts three proposals — starts 429ing for reasons
+#: that have nothing to do with the code under test. Production keeps the
+#: plan's number; only the E2E webServer raises it.
+AI_RATE_LIMIT = os.getenv("AI_RATE_LIMIT", "10/minute")
 
 #: In-memory storage is correct for a single-instance demo. A multi-instance
 #: deployment needs a shared backend (Redis), or each instance enforces its own
