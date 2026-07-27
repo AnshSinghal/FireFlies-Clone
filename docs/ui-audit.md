@@ -46,6 +46,13 @@ Raw measurements, for anyone re-deriving: Fireflies' cards are 107–108px with
 29–30px between cards in a group and ~101px across a group heading, on a 71px
 topbar. Ours are 71–72px with 9px and 55px, on a 55–56px topbar.
 
+**The card's horizontal rhythm matches; everything still open is vertical.**
+Worth stating plainly, because it is the shape of the remaining work. Title
+inset from the card edge is 1.01× card height for Fireflies and 0.94× for us;
+the gap between the leading tile and the title is 0.21× in both. Whatever is
+left to close on this screen is row height and the distribution of vertical
+space — not padding, not the measure, not the type scale.
+
 One row-internal metric came out fine, which is worth recording so the next
 person does not re-derive it: the leading tile. Fireflies' is 56×55px inside a
 108px card — 0.509 of card height — inset 31px from the card edge. Ours is the
