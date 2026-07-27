@@ -2221,6 +2221,47 @@ variable-height, this becomes the grid-rows trick — noted in the stylesheet.
 
 ---
 
+## ADR-095 — One theme store, and it's the avatar menu's
+
+**Context.** T-30.7's Appearance tab needs a theme preference. The avatar menu
+(T-08.9) already shipped one — `ff.theme` via `useLocalStorage` — that nothing
+applied yet. Building the tab on a fresh key would have left two switchers
+that disagree.
+
+**Decision.** Settings → Appearance adopts the existing key and the existing
+`useLocalStorage` subscription bus (`useThemePref` in `lib/prefs/app-prefs`);
+the avatar menu is rewired through the same hook. Application to the DOM is
+centralised: a before-paint boot script in the root layout (no white flash on
+reload) plus a `ThemeApplier` in Providers that follows the pref bus and, on
+`system`, the OS via `matchMedia`. Default stays `light` until T-38 signs off
+dark mode — an OS-dark visitor should not get a half-finished theme
+unprompted.
+
+**Consequence.** Two surfaces, one store, one applier. T-38's remaining work
+is purely visual (finishing the dark token audit), not plumbing.
+
+---
+
+## ADR-096 — A `Soon` badge inside a functional tab beats a lying toggle
+
+**Context.** T-30.7 lists five preferences. Four wire to real consumers —
+default sort and page size feed the Notebook's URL-state defaults (URL still
+wins, so shared links stay identical for everyone), playback rate writes the
+same `ff.player.rate` key the player persists (T-19.6), autoplay is honoured
+by `player-card` once per mount. Date format has no consumer yet: the row that
+renders dates is `meeting-row.tsx`, mid-edit on the T-28 branch in the other
+worktree.
+
+**Decision.** Ship four live settings and render Date format as a visibly
+deferred `Soon` row — the same voice as every other placeholder — rather than
+a select that persists a value nothing reads.
+
+**Consequence.** Everything interactive on the Preferences tab genuinely
+works, which is the tab's whole claim. Date format joins its consumer after
+T-28 merges.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

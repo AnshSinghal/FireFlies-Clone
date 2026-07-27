@@ -16,19 +16,15 @@ import { Badge, ToggleChip } from '@/components/ui/chip'
 import { IconButton } from '@/components/ui/icon-button'
 import { SearchInput } from '@/components/ui/search-input'
 import { Select } from '@/components/ui/select'
+import { SORT_OPTIONS } from '@/lib/meetings/sort-options'
 import { cn } from '@/lib/utils/cn'
 
 export type NotebookView = 'list' | 'grid'
 
-/** Whitelisted server-side; the labels are the client's business. */
-export const SORT_OPTIONS = [
-  { value: '-started_at', label: 'Newest first' },
-  { value: 'started_at', label: 'Oldest first' },
-  { value: '-duration_seconds', label: 'Longest first' },
-  { value: 'duration_seconds', label: 'Shortest first' },
-  { value: 'title', label: 'Title A–Z' },
-  { value: '-title', label: 'Title Z–A' },
-] as const
+/** Whitelisted server-side; the labels are the client's business. Moved to
+ * lib so Settings → Preferences can offer the same list without a
+ * features→features import (T-30.7); re-exported to keep existing importers. */
+export { SORT_OPTIONS } from '@/lib/meetings/sort-options'
 
 /**
  * The four quick filters from the reference's own toolbar.

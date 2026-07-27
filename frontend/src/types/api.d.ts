@@ -453,6 +453,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/users': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List workspace members
+     * @description Everyone in the (single, seeded) workspace, for the Team page. Emails are deliberately absent — those are only ever returned for the current user via /me.
+     */
+    get: operations['list_users_api_v1_users_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1011,6 +1031,27 @@ export interface components {
       /** Total Pages */
       readonly total_pages: number
     }
+    /** Page[TeamMemberOut] */
+    Page_TeamMemberOut_: {
+      /** Has Next */
+      readonly has_next: boolean
+      /** Items */
+      items: components['schemas']['TeamMemberOut'][]
+      /**
+       * Page
+       * @description 1-indexed page number.
+       */
+      page: number
+      /** Page Size */
+      page_size: number
+      /**
+       * Total
+       * @description Total matching rows, ignoring pagination.
+       */
+      total: number
+      /** Total Pages */
+      readonly total_pages: number
+    }
     /**
      * ParticipantDetail
      * @description A participant, as the details drawer shows them (T-15.8, T-15.9).
@@ -1200,6 +1241,30 @@ export interface components {
       id: number
       /** Name */
       name: string
+    }
+    /**
+     * TeamMemberOut
+     * @description A row of the Team page's members table (T-30.4).
+     *
+     *     No email — `UserOut` establishes that email is only ever returned for the
+     *     current user, and a placeholder page is not a reason to widen that.
+     *     `role` is presentation-only until real auth exists: the seeded default
+     *     user reads as the workspace admin, everyone else as a member.
+     */
+    TeamMemberOut: {
+      /** Avatar Url */
+      avatar_url?: string | null
+      /** Id */
+      id: number
+      /** Meetings Hosted */
+      meetings_hosted: number
+      /** Name */
+      name: string
+      /**
+       * Role
+       * @description 'Admin' for the seeded default user, else 'Member'.
+       */
+      role: string
     }
     /**
      * TranscriptHit
@@ -2715,6 +2780,49 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['SearchResults']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  list_users_api_v1_users_get: {
+    parameters: {
+      query?: {
+        /** @description 1-indexed page number. */
+        page?: number
+        /** @description Items per page. Clamped to 100. */
+        page_size?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Page_TeamMemberOut_']
         }
       }
       /** @description Validation Error */

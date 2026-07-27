@@ -1,17 +1,16 @@
-import { Settings } from 'lucide-react'
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
 
-import { ComingSoon } from '@/components/ui/coming-soon'
+import { SettingsView } from '@/features/placeholders/settings/settings-view'
 
 export const metadata: Metadata = { title: 'Settings' }
 
 export default function Page() {
   return (
-    <ComingSoon
-      title="Settings"
-      description="Recording, privacy, AI and account preferences."
-      icon={Settings}
-      detail="Auto-record rules, meeting language, retention policy, integrations and team permissions."
-    />
+    // `useSearchParams` (the active tab) opts the view out of static
+    // prerendering unless it sits under Suspense — same rule as the sidebar.
+    <Suspense>
+      <SettingsView />
+    </Suspense>
   )
 }

@@ -9,6 +9,7 @@
 
 import {
   BarChart3,
+  Blocks,
   CircleHelp,
   Globe,
   Hash,
@@ -50,6 +51,8 @@ export const PRIMARY_NAV: NavItem[] = [
   { id: 'uploads', label: 'Uploads', href: '/upload', icon: Upload },
   { id: 'apps', label: 'AI Apps', href: '/apps', icon: LayoutGrid, soon: true },
   { id: 'analytics', label: 'Analytics', href: '/analytics', icon: BarChart3, soon: true },
+  { id: 'integrations', label: 'Integrations', href: '/integrations', icon: Blocks, soon: true },
+  { id: 'team', label: 'Team', href: '/team', icon: Users, soon: true },
 ]
 
 /** Built-in views. Filters over the same data, not stored channels. */
