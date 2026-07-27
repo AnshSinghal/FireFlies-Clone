@@ -2104,6 +2104,80 @@ violation on a notification is usually two systems reporting the same event.
 
 ---
 
+## ADR-091 — LLMProvider speaks raw HTTP, not two vendor SDKs
+
+**Context.** T-29.3 requires one abstraction over both OpenAI and Anthropic,
+selected by `AI_PROVIDER`. The demo never exercises either — `mock` is the
+default — and the repo already depends on `httpx2`.
+
+**Decision.** One thin client over both wire dialects (`app/ai/llm.py`). The
+vendor differences reduce to two methods: `_request_body` and `_extract_text`.
+Structured output is requested from both (Anthropic `output_config.format`,
+OpenAI `response_format`), against JSON schemas derived from the same pydantic
+types the rest of the app consumes.
+
+**Consequence.** No `openai` or `anthropic` packages shipped for a path that
+is off by default; the retry/timeout policy is ours and identical for both
+vendors; and the injectable `httpx2` transport is what makes T29-F testable
+without a network. The cost: no SDK conveniences (typed errors, auto-retry) —
+which T-29.8 required us to build explicitly anyway.
+
+---
+
+## ADR-092 — The AI response cache is process-local, not a table
+
+**Context.** T-29.10 wants identical input to never re-bill, keyed on
+`hash(transcript + prompt_version)`.
+
+**Decision.** An in-memory LRU (`app/ai/cache.py`), not a SQLite table. A
+table would survive restarts but needs a migration, an eviction policy and a
+cleanup job — for a guard whose worst-case miss costs exactly one extra
+provider call, on a path that is mock-by-default. The key is strengthened
+beyond the spec: full segment JSON (timestamps and speakers change outlines,
+not just words), every prompt version, and the provider identity — so bumping
+a prompt's front-matter version invalidates precisely the responses that
+prompt produced.
+
+**Consequence.** Restart forgets the cache; acceptable, the mock regenerates
+in milliseconds. If the LLM path ever carries real traffic, the `ResponseCache`
+interface swaps to Redis without callers changing.
+
+---
+
+## ADR-093 — Regenerate replaces the summary; it never touches action items
+
+**Context.** T-29's interface includes `extract_action_items`, and regeneration
+(T-29.9) replaces overview, gist, sections and keywords. Should it also replace
+action items?
+
+**Decision.** No. Action items carry user state — completed flags,
+reassignments, edited text, due dates (T-24). Blowing that away because
+someone clicked Regenerate is data loss wearing an AI costume. Keywords and
+sections carry no user edits, so wholesale replacement is safe there.
+`extract_action_items` stays on the interface for ingest-time extraction and
+future explicit "re-extract" affordances, where the user asks for exactly that.
+
+**Consequence.** After a regenerate, the summary panel is fresh while the
+action-item list is stable — which is also what the real Fireflies does.
+
+---
+
+## ADR-094 — Due dates resolve against the meeting date, never the wall clock
+
+**Context.** The mock's action-item extraction resolves "by Friday" and
+"next week" to real dates. Resolving against `date.today()` would make output
+depend on when the test ran — breaking T29-A's byte-identical determinism and
+the pinned-clock Playwright suite.
+
+**Decision.** `Transcript` carries an optional `reference_date` (the meeting's
+start date), and `_resolve_due` is a pure function of phrase + reference. No
+reference, no resolved date — an honest null beats a clock-dependent guess.
+
+**Consequence.** The provider layer contains zero calls to `now()`, and the
+same fixture asserts the same dates forever.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

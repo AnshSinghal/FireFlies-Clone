@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from app.ai import AIProviderDep
 from app.api.responses import NOT_FOUND_OR_GONE, RATE_LIMITED
 from app.core.deps import DbSession
 from app.core.rate_limit import AI_RATE_LIMIT, limiter
@@ -51,8 +52,9 @@ def regenerate_summary(
     request: Request,  # noqa: ARG001
     db: DbSession,
     meeting_id: int,
+    provider: AIProviderDep,
 ) -> SummaryOut:
     service = MeetingService(db)
     meeting = service.get(meeting_id)
 
-    return service.regenerate_summary(meeting)
+    return service.regenerate_summary(meeting, provider)

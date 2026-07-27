@@ -16,20 +16,24 @@ from typing import TYPE_CHECKING, Any, cast
 from sqlalchemy import Select, UnaryExpression, case, func, select, update
 from sqlalchemy.orm import selectinload
 
+from app.ai import GenerationLimitExceeded, SegmentInput, Transcript, generation_counter
 from app.core.exceptions import (
     ActionItemNotFoundError,
     AssigneeNotInMeetingError,
     InvalidSortError,
     MeetingDeletedError,
     MeetingNotFoundError,
+    RateLimitError,
     ValidationError,
 )
 from app.models import (
     ActionItem,
+    Keyword,
     Meeting,
     Participant,
     Speaker,
     Summary,
+    SummarySection,
     TranscriptSegment,
     User,
 )
@@ -66,6 +70,7 @@ if TYPE_CHECKING:
     from sqlalchemy import CursorResult
     from sqlalchemy.orm import Session
 
+    from app.ai import AIProvider
     from app.schemas.meeting import MeetingCreate, MeetingUpdate
 
 #: How many participant avatars a Notebook row shows before collapsing to "+N".
@@ -558,11 +563,12 @@ class MeetingService:
             generated_at=summary.generated_at,
         )
 
-    def regenerate_summary(self, meeting: Meeting) -> SummaryOut:
-        """Regenerate, idempotently under concurrent calls (T-17.8).
+    def regenerate_summary(self, meeting: Meeting, provider: AIProvider) -> SummaryOut:
+        """Regenerate through `provider`, idempotently under concurrent calls.
 
         Two clicks on `Regenerate` — or a double-submit — must not produce two
-        generations. The guard is a conditional UPDATE, not a read-then-write:
+        generations (T-17.8). The guard is a conditional UPDATE, not a
+        read-then-write:
 
             UPDATE summaries SET is_generating = 1
             WHERE id = ? AND is_generating = 0
@@ -574,19 +580,30 @@ class MeetingService:
         A `SELECT ... then UPDATE` has a window between the two where both
         callers see "not generating" — which is precisely the race being closed,
         and it is wide enough to hit with two clicks.
+
+        What regeneration replaces: overview, gist, outline/notes sections,
+        keywords, and provenance (T-29.9). What it does NOT touch: action
+        items — users check those off, reassign and edit them, and blowing
+        away that state because someone clicked Regenerate would be data loss
+        (see docs/decisions.md).
         """
+        # Cost guard (T-29.8): the slowapi limit on the route stops
+        # double-clicks; this stops a patient caller from burning hundreds of
+        # paid generations on one meeting. The mock is free, so it is exempt.
+        if provider.name != "mock":
+            try:
+                generation_counter.bump(meeting.id)
+            except GenerationLimitExceeded as error:
+                raise RateLimitError(str(error), code="GENERATION_LIMIT") from error
+
         summary = meeting.summary
         if summary is None:
-            return SummaryOut(
-                meeting_id=meeting.id,
-                provider="mock",
-                keywords=[],
-                outline=[],
-                notes=[],
-                # Nothing to be stale against. Stated rather than defaulted,
-                # so the field stays required in the schema.
-                is_stale=False,
-            )
+            # A meeting imported without a summary (manual create, T-26) gets
+            # its first one here — "regenerate" doubles as "generate".
+            summary = Summary(meeting_id=meeting.id, provider=provider.name)
+            self.db.add(summary)
+            self.db.flush()
+            meeting.summary = summary
 
         # `CursorResult` is what an UPDATE actually returns; the annotation on
         # `Session.execute` is the wider `Result`, which has no `rowcount`.
@@ -607,11 +624,48 @@ class MeetingService:
             return self.to_summary(meeting)
 
         try:
-            # T-29 swaps this for a real provider call. Everything around it —
-            # the claim, the transaction, the stale flag — is the part that has
-            # to be right before the part that costs money is wired in.
+            transcript = self._transcript_for_ai(meeting)
+            generated = provider.generate_summary(transcript)
+            outline = provider.generate_outline(transcript)
+            keywords = provider.extract_keywords(transcript)
+
+            summary.overview = generated.overview
+            summary.gist = generated.gist
+            summary.provider = generated.provider
+            summary.model = generated.model
             summary.generated_at = datetime.now(UTC)
             summary.is_stale = False
+
+            # Wholesale replacement; delete-orphan cascades clear the old rows.
+            sections: list[SummarySection] = [
+                SummarySection(
+                    kind=SummarySectionKind.OUTLINE,
+                    title=entry.title,
+                    start_ms=entry.start_ms,
+                    sequence=sequence,
+                )
+                for sequence, entry in enumerate(outline)
+            ]
+            outline_count = len(sections)
+            sections.extend(
+                SummarySection(
+                    kind=SummarySectionKind.NOTES,
+                    title=group.chapter,
+                    body="\n".join(group.bullets),
+                    sequence=outline_count + offset,
+                )
+                for offset, group in enumerate(generated.notes)
+            )
+            summary.sections = sections
+            # Clear-and-flush BEFORE inserting: the unit of work orders
+            # INSERTs ahead of DELETEs, so replacing 'pricing' with 'pricing'
+            # in one flush trips uq_keywords_meeting_term.
+            meeting.keywords.clear()
+            self.db.flush()
+            meeting.keywords.extend(
+                Keyword(meeting_id=meeting.id, term=keyword.term, weight=keyword.weight)
+                for keyword in keywords
+            )
         finally:
             # ALWAYS released, including on a provider failure. A stuck flag
             # would make Regenerate permanently do nothing, with no way back.
@@ -620,6 +674,31 @@ class MeetingService:
 
         self.db.refresh(summary)
         return self.to_summary(meeting)
+
+    def _transcript_for_ai(self, meeting: Meeting) -> Transcript:
+        """The meeting's transcript in the shape the AI layer speaks.
+
+        `reference_date` is the meeting date, so the provider can resolve
+        "by Friday" deterministically instead of consulting the wall clock.
+        """
+        rows = self.db.execute(
+            select(TranscriptSegment, Speaker.label)
+            .join(Speaker, TranscriptSegment.speaker_id == Speaker.id)
+            .where(TranscriptSegment.meeting_id == meeting.id)
+            .order_by(TranscriptSegment.sequence)
+        ).all()
+        return Transcript(
+            segments=[
+                SegmentInput(
+                    speaker=label,
+                    text=segment.text,
+                    start_ms=segment.start_ms,
+                    end_ms=segment.end_ms,
+                )
+                for segment, label in rows
+            ],
+            reference_date=meeting.started_at.date() if meeting.started_at else None,
+        )
 
     # ── Writes ──────────────────────────────────────────────────────────────
 
