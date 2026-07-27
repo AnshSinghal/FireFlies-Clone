@@ -23,6 +23,20 @@ const DEFAULT_TIMEOUT_MS = 15_000
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
 /**
+ * What `new URL(path, base)` actually receives.
+ *
+ * Production builds set NEXT_PUBLIC_API_URL="" so the app talks to its OWN
+ * origin and nginx routes /api to the backend — but an empty string is not a
+ * valid base for the URL constructor ("Invalid base URL", found live in
+ * T-44). Empty therefore means "this page's origin" in the browser, and the
+ * dev backend during SSR, where no page origin exists.
+ */
+function resolveBase(): string {
+  if (API_BASE_URL !== '') return API_BASE_URL
+  return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000'
+}
+
+/**
  * A failed request, carrying the backend's error envelope.
  *
  * `code` is what callers branch on — it is stable, unlike `message`, which is
@@ -88,7 +102,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 export type RequestParams = Record<string, string | number | boolean | undefined | null | string[]>
 
 function buildUrl(path: string, params: RequestOptions['params']): string {
-  const url = new URL(path.startsWith('/') ? path : `/${path}`, API_BASE_URL)
+  const url = new URL(path.startsWith('/') ? path : `/${path}`, resolveBase())
 
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value === undefined || value === null || value === '') continue
