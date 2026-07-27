@@ -106,6 +106,7 @@ function Row({
   onRemoveRecent?: (term: string) => void
 }) {
   const Icon = ROW_ICON[row.kind]
+  const removable = row.kind === 'recent' && onRemoveRecent !== undefined
 
   return (
     <li
@@ -129,9 +130,9 @@ function Row({
         // Rows are reached with ↑/↓ against aria-activedescendant, so focus
         // never leaves the input and the links must stay out of the tab order.
         tabIndex={-1}
-        className={`flex items-start gap-3 px-3 py-2 transition-colors duration-fast ${
+        className={`flex items-start gap-3 py-2 pl-3 transition-colors duration-fast ${
           active ? 'bg-surface-hover' : ''
-        }`}
+        } ${removable ? 'pr-10' : 'pr-3'}`}
       >
         <Icon size={16} strokeWidth={1.75} className="mt-0.5 shrink-0 text-muted" />
         <span className="min-w-0 flex-1">
@@ -141,29 +142,6 @@ function Row({
               ranges={row.ranges}
               className="truncate text-body-strong text-primary"
             />
-            {row.kind === 'recent' && onRemoveRecent && (
-              /*
-               * Pointer-only, and OUTSIDE the tab order (tabIndex -1), like the
-               * link itself: focus lives in the input while the listbox is
-               * driven by aria-activedescendant. The keyboard's route to the
-               * same outcome is the "Clear history" row below.
-               */
-              <IconButton
-                label={`Remove "${row.label}" from history`}
-                size="sm"
-                icon={<X size={14} strokeWidth={2} />}
-                tabIndex={-1}
-                hideTooltip
-                data-testid={`${row.id}-remove`}
-                onMouseDown={(event) => {
-                  // Neither blur the input nor run the row's own search.
-                  event.preventDefault()
-                  event.stopPropagation()
-                  onRemoveRecent(row.label)
-                }}
-                className="shrink-0 opacity-0 transition-opacity duration-fast group-hover/row:opacity-100"
-              />
-            )}
             {row.meta && row.kind === 'meeting' && (
               <span className="shrink-0 text-xs text-muted">{row.meta}</span>
             )}
@@ -180,6 +158,38 @@ function Row({
           )}
         </span>
       </Link>
+
+      {removable && (
+        /*
+         * A SIBLING of the link, not a child of it.
+         *
+         * Nested, this was a `<button>` inside an `<a>` — invalid content, and
+         * worse: `preventDefault` on mousedown does not stop the `click` that
+         * follows, so the click bubbled to the anchor and Next navigated. It
+         * only misfired when React had already re-rendered the list, so what
+         * you saw was an ✕ that USUALLY removed an entry and occasionally ran
+         * the search that had just moved into its place.
+         *
+         * Pointer-only and outside the tab order, like the link: focus lives in
+         * the input while the listbox is driven by aria-activedescendant. The
+         * keyboard's route to the same outcome is the "Clear history" row.
+         */
+        <IconButton
+          label={`Remove "${row.label}" from history`}
+          size="sm"
+          icon={<X size={14} strokeWidth={2} />}
+          tabIndex={-1}
+          hideTooltip
+          data-testid={`${row.id}-remove`}
+          onMouseDown={(event) => {
+            // Still needed: without it the mousedown blurs the input, which
+            // closes the dropdown before the click arrives.
+            event.preventDefault()
+            onRemoveRecent?.(row.label)
+          }}
+          className="absolute right-2 top-1.5 opacity-0 transition-opacity duration-fast group-hover/row:opacity-100"
+        />
+      )}
     </li>
   )
 }
