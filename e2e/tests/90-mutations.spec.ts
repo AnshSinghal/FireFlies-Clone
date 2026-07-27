@@ -1,6 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 
-import { API_BASE } from '../api-base'
+import { API_URL, expect, test } from '../fixtures'
 
 /**
  * Every test that WRITES to the database (T-09.4, T-12.11).
@@ -17,12 +17,11 @@ import { API_BASE } from '../api-base'
  * test writes, it goes here, and it restores what it changed.
  */
 
-const ANCHOR = '2026-07-26T12:00:00Z'
-
 const toasts = (page: Page) => page.getByTestId('toast')
 
+// The clock is pinned to the seed anchor by the `frozenClock` fixture, so the
+// date groups these tests count rows inside stay put across runs.
 async function notebook(page: Page): Promise<void> {
-  await page.clock.setFixedTime(new Date(ANCHOR))
   await page.goto('/notebook')
   await expect(page.getByTestId('meeting-list')).toBeVisible()
 }
@@ -321,7 +320,7 @@ test.describe('summary · regenerate', { tag: '@mutates' }, () => {
      * editor will: edit, badge appears; regenerate, badge clears.
      */
     const transcript = await request.get(
-      `${API_BASE}/api/v1/meetings/${HERO}/transcript`,
+      `${API_URL}/api/v1/meetings/${HERO}/transcript`,
     )
     const segment = (await transcript.json()).segments[0]
 
@@ -333,7 +332,7 @@ test.describe('summary · regenerate', { tag: '@mutates' }, () => {
      * nothing changed.
      */
     const edit = await request.patch(
-      `${API_BASE}/api/v1/meetings/segments/${segment.id}`,
+      `${API_URL}/api/v1/meetings/segments/${segment.id}`,
       { data: { text: `${segment.text} (edited by T23-L)` } },
     )
     expect(edit.ok()).toBe(true)
@@ -350,7 +349,7 @@ test.describe('summary · regenerate', { tag: '@mutates' }, () => {
 
     // Put the segment back the way the seed left it.
     await request.patch(
-      `${API_BASE}/api/v1/meetings/segments/${segment.id}`,
+      `${API_URL}/api/v1/meetings/segments/${segment.id}`,
       { data: { text: segment.text } },
     )
   })
@@ -583,12 +582,12 @@ test.describe('transcript · editing', { tag: '@mutates' }, () => {
      * app remembers to call.
      */
     const found = await request.get(
-      `${API_BASE}/api/v1/search?q=Zarquon&scope=transcript`,
+      `${API_URL}/api/v1/search?q=Zarquon&scope=transcript`,
     )
     expect(found.ok()).toBe(true)
     expect(JSON.stringify(await found.json())).toContain('Zarquon')
 
-    await request.patch(`${API_BASE}/api/v1/meetings/segments/${id}`, {
+    await request.patch(`${API_URL}/api/v1/meetings/segments/${id}`, {
       data: { text: original },
     })
   })
@@ -629,13 +628,13 @@ test.describe('transcript · editing', { tag: '@mutates' }, () => {
     await page.keyboard.press('Escape')
 
     const speakers = (await (
-      await request.get(`${API_BASE}/api/v1/meetings/${HERO}/speakers`)
+      await request.get(`${API_URL}/api/v1/meetings/${HERO}/speakers`)
     ).json()) as Array<{ id: number; label: string }>
 
     const current = speakers.find((speaker) => speaker.label === before)!
     const target = speakers.find((speaker) => speaker.label !== before)!
 
-    await request.patch(`${API_BASE}/api/v1/meetings/segments/${id}`, {
+    await request.patch(`${API_URL}/api/v1/meetings/segments/${id}`, {
       data: { speaker_id: target.id },
     })
 
@@ -649,7 +648,7 @@ test.describe('transcript · editing', { tag: '@mutates' }, () => {
       .evaluate((el) => getComputedStyle(el).color)
     expect(afterColour).not.toBe(beforeColour)
 
-    await request.patch(`${API_BASE}/api/v1/meetings/segments/${id}`, {
+    await request.patch(`${API_URL}/api/v1/meetings/segments/${id}`, {
       data: { speaker_id: current.id },
     })
   })
@@ -687,7 +686,7 @@ test.describe('create meeting', { tag: '@mutates' }, () => {
    * counts the rest of the suite asserts against still hold.
    */
   async function cleanUp(page: Page, id: number): Promise<void> {
-    await page.request.delete(`${API_BASE}/api/v1/meetings/${id}`)
+    await page.request.delete(`${API_URL}/api/v1/meetings/${id}`)
   }
 
   async function openCreate(page: Page, tab = 'upload'): Promise<void> {
@@ -928,7 +927,7 @@ test.describe('edit meeting', { tag: '@mutates' }, () => {
       { timeout: 20_000 },
     )
 
-    await page.request.patch(`${API_BASE}/api/v1/meetings/${HERO}`, {
+    await page.request.patch(`${API_URL}/api/v1/meetings/${HERO}`, {
       data: { title: original },
     })
   })
@@ -938,7 +937,7 @@ test.describe('edit meeting', { tag: '@mutates' }, () => {
     // partway through this test must not leave a participant behind for the
     // next one to trip over.
     const original = (
-      (await (await request.get(`${API_BASE}/api/v1/meetings/${HERO}`)).json()) as {
+      (await (await request.get(`${API_URL}/api/v1/meetings/${HERO}`)).json()) as {
         participants: Array<{ display_name: string }>
       }
     ).participants.map((person) => person.display_name)
@@ -968,7 +967,7 @@ test.describe('edit meeting', { tag: '@mutates' }, () => {
     await expect(page.getByTestId('details-drawer')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('details-attended-list')).toContainText('Temporary Attendee')
 
-    await request.patch(`${API_BASE}/api/v1/meetings/${HERO}`, {
+    await request.patch(`${API_URL}/api/v1/meetings/${HERO}`, {
       data: { participant_names: original },
     })
   })
@@ -1088,7 +1087,7 @@ test.describe('delete meeting', { tag: '@mutates' }, () => {
 
   test('T28-G · deleting from the Notepad returns to the Notebook', async ({ page, request }) => {
     // A throwaway meeting, so the seeded eight are untouched.
-    const created = await request.post(`${API_BASE}/api/v1/meetings`, {
+    const created = await request.post(`${API_URL}/api/v1/meetings`, {
       data: { title: 'Meeting to delete from the notepad' },
     })
     const id = (await created.json()).id as number

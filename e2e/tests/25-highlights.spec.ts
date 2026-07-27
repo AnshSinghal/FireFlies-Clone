@@ -26,12 +26,17 @@ async function openTranscript(page: Page): Promise<void> {
   await expect(page.getByTestId('transcript-list')).toBeVisible({ timeout: 20_000 })
 }
 
+/** The element whose text content is exactly one segment's text. */
+function segmentText(page: Page, segmentId: number) {
+  return page.locator(`[data-segment-text="${segmentId}"]`)
+}
+
 /** The first rendered segment's id, and its text. */
 async function firstSegment(page: Page): Promise<{ id: number; text: string }> {
   const row = page.locator('[data-testid^="transcript-segment-"]').first()
   const testId = await row.getAttribute('data-testid')
   const id = Number(testId?.replace('transcript-segment-', ''))
-  const text = (await page.locator(`[data-segment-text="${id}"]`).innerText()).trim()
+  const text = (await segmentText(page, id).innerText()).trim()
   return { id, text }
 }
 
@@ -173,13 +178,13 @@ test.describe('highlights @mutates', () => {
     await highlight(page, segment.id, 0, 6)
     await highlight(page, segment.id, 10, 20, 'green')
 
-    const marks = page.locator(`[data-segment-text="${segment.id}"] [data-highlight-id]`)
+    const marks = segmentText(page, segment.id).locator('[data-highlight-id]')
     await expect(marks).toHaveCount(2)
     await expect(marks.nth(0)).toHaveText(segment.text.slice(0, 6))
     await expect(marks.nth(1)).toHaveText(segment.text.slice(10, 20))
 
     // No characters lost or duplicated by the split.
-    await expect(page.locator(`[data-segment-text="${segment.id}"]`)).toHaveText(segment.text)
+    await expect(segmentText(page, segment.id)).toHaveText(segment.text)
   })
 
   test('T32-C · a highlight and a search mark coexist without breaking either', async ({
@@ -188,23 +193,24 @@ test.describe('highlights @mutates', () => {
     await openTranscript(page)
     const segment = await firstSegment(page)
 
-    // A word that is definitely inside the range about to be highlighted.
+    // A word long enough to be a meaningful search, taken from the range about
+    // to be highlighted so the two channels are guaranteed to collide.
     const word = segment.text.slice(0, 40).split(' ').find((part) => part.length > 4)
-    test.skip(!word, 'first segment has no word long enough to search for')
+    expect(word, 'first segment has no word long enough to search for').toBeTruthy()
 
-    const at = segment.text.indexOf(word!)
-    await highlight(page, segment.id, at, at + word!.length + 6)
+    const at = segment.text.indexOf(word as string)
+    await highlight(page, segment.id, at, at + (word as string).length + 6)
 
     await page.getByTestId('transcript-find-open').click()
-    await page.getByTestId('transcript-find-input').fill(word!)
+    await page.getByTestId('transcript-find-input').fill(word as string)
     await expect.poll(() => new URL(page.url()).searchParams.get('find')).toBe(word)
 
-    const paragraph = page.locator(`[data-segment-text="${segment.id}"]`)
+    const paragraph = segmentText(page, segment.id)
     // Both channels still present…
     await expect(paragraph.locator('[data-highlight-id]').first()).toBeVisible()
     await expect(paragraph.locator('[data-match-index]').first()).toBeVisible()
     // …no nesting…
-    await expect(paragraph.locator('mark mark')).toHaveCount(0)
+    await expect(paragraph.locator('mark').locator('mark')).toHaveCount(0)
     // …and not one character lost at the seam.
     await expect(paragraph).toHaveText(segment.text)
   })
@@ -248,7 +254,7 @@ test.describe('highlights @mutates', () => {
 
     await expect(page.locator('[data-highlight-id]')).toHaveCount(0)
     // No residual markup: the paragraph is back to exactly its own text.
-    await expect(page.locator(`[data-segment-text="${segment.id}"]`)).toHaveText(segment.text)
+    await expect(segmentText(page, segment.id)).toHaveText(segment.text)
   })
 
   test('a note survives a reload and shows in the flyout', async ({ page }) => {
@@ -274,14 +280,12 @@ test.describe('highlights @mutates', () => {
     await page.getByTestId('transcript-scroll').evaluate((element) => {
       element.scrollTop = element.scrollHeight
     })
-    await expect(page.locator(`[data-segment-text="${segment.id}"]`)).toHaveCount(0)
+    await expect(segmentText(page, segment.id)).toHaveCount(0)
 
     await page.getByTestId('transcript-scroll').evaluate((element) => {
       element.scrollTop = 0
     })
-    await expect(page.locator(`[data-segment-text="${segment.id}"] [data-highlight-id]`)).toHaveText(
-      expected,
-    )
+    await expect(segmentText(page, segment.id).locator('[data-highlight-id]')).toHaveText(expected)
   })
 
   test('a selection spanning two segments is refused with an explanation', async ({ page }) => {
@@ -375,10 +379,7 @@ test.describe('bookmarks @mutates', () => {
     await page.getByTestId(`bookmark-toggle-${segmentId}`).click()
     await page.getByTestId('icon-rail-bookmarks').click()
 
-    const stamp = await page
-      .getByTestId(`bookmark-entry-${segmentId}`)
-      .locator('.tabular-nums')
-      .innerText()
+    const stamp = await page.getByTestId(`bookmark-time-${segmentId}`).innerText()
 
     await page.getByTestId(`bookmark-entry-${segmentId}`).click()
 

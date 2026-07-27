@@ -60,7 +60,10 @@ export function BookmarksFlyout({ meetingId }: { meetingId: number }) {
               className="min-w-0 flex-1 px-0 py-0 hover:bg-transparent"
             >
               <span className="flex items-center gap-2">
-                <span className="text-xs tabular-nums text-muted">
+                <span
+                  data-testid={`bookmark-time-${bookmark.segment_id}`}
+                  className="text-xs tabular-nums text-muted"
+                >
                   {formatTimestamp(bookmark.start_ms)}
                 </span>
                 <span className="min-w-0 truncate text-xs text-secondary">

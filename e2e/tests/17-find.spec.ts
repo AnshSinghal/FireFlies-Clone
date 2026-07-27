@@ -269,7 +269,7 @@ test.describe('smart search', () => {
     await expect(results).toBeVisible()
 
     // Every line listed under Questions ends in a question mark.
-    const texts = await results.locator('li span.line-clamp-2').allInnerTexts()
+    const texts = await results.getByTestId('smart-search-result-text').allInnerTexts()
     expect(texts.length).toBeGreaterThan(0)
     for (const text of texts) expect(text.trim().endsWith('?')).toBe(true)
 

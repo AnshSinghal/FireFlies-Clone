@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+import { expect, test } from '../fixtures'
 
 /**
  * The Notebook (T-12, cases T12-A → T12-P).
@@ -9,12 +11,10 @@ import { expect, test, type Page } from '@playwright/test'
  * inline; every behavioural case is unchanged.
  */
 
-const ANCHOR = '2026-07-26T12:00:00Z'
-
 async function notebook(page: Page): Promise<void> {
-  // The seeder anchored on this instant, so "Today" means the same day every
-  // run rather than whatever day the suite happens to execute on.
-  await page.clock.setFixedTime(new Date(ANCHOR))
+  // The `frozenClock` fixture pins the browser to the seeder's anchor, so
+  // "Today" means the same day every run rather than whatever day the suite
+  // happens to execute on.
   await page.goto('/notebook')
   await expect(page.getByTestId('meeting-list')).toBeVisible()
 }

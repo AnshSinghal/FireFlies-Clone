@@ -82,6 +82,7 @@ export function DetailsDrawer({ meetingId, onClose, onNavigate }: DetailsDrawerP
       <div
         aria-hidden="true"
         onClick={onClose}
+        data-testid="details-drawer-scrim"
         className="fixed inset-0 z-drawer bg-scrim sm:hidden"
       />
 
@@ -357,6 +358,7 @@ function AttendeeRow({ person, longest }: { person: ParticipantDetail; longest: 
         */}
         <span aria-hidden="true" className="block h-1 overflow-hidden rounded-full bg-surface-2">
           <span
+            data-testid="details-talktime-bar"
             className="block h-full rounded-full"
             style={{
               width: `${Math.round(share * 100)}%`,
