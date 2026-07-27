@@ -92,30 +92,39 @@ for (const theme of THEMES) {
     })
 
     test(`01-home · notebook as the home hub · ${theme}`, async ({ page }) => {
-      // Fireflies' Home is a recent-meetings hub; our `/` redirects to the
-      // Notebook, which is the closest surface we have to a hub.
-      await page.goto('/notebook')
+      /*
+       * Fireflies' Home is a recent-meetings hub with a greeting, assistant
+       * cards and AskFred. We have no equivalent, so this slot is a stand-in
+       * whichever view goes in it — which is exactly why the CHANNEL-SCOPED
+       * notebook goes here and the full list goes in 02.
+       *
+       * It used to be the other way round. Reference 02 is a dense meetings
+       * list; ours was the two-row `customer-calls` view, so the one slot that
+       * IS a like-for-like comparison had our thinnest screen in it against
+       * their fullest. Swapping costs nothing — 01 is a non-match either way —
+       * and it puts our best-matching artifact against the screen that can
+       * actually be compared.
+       */
+      await page.goto('/notebook?channel=customer-calls')
       await expect(page.getByTestId('meeting-list')).toBeVisible()
       await capture(page, '01-home', theme)
     })
 
-    test(`02-meetings-list · a channel-scoped list · ${theme}`, async ({ page }) => {
+    test(`02-meetings-list · the full list, as the reference shows it · ${theme}`, async ({
+      page,
+    }) => {
       /*
-       * `?channel=customer-calls`, NOT `?channel=all-meetings`.
+       * The unfiltered list, because this is the one slot where a genuine
+       * like-for-like comparison is possible: `docs/reference/fireflies/02.png`
+       * is a dense, date-grouped meetings list, and so is this.
        *
-       * Two reasons, and the first one expired: this capture originally failed
-       * because the built-in "All Meetings" and "My Meetings" items are
-       * PSEUDO-channels with no `channels.slug` row, so the backend matched
-       * nothing and the view rendered empty. That is fixed on main — the
-       * built-ins resolve client-side now — so the URL works.
-       *
-       * The surviving reason is differentiation: with the fix, "All Meetings"
-       * shows exactly what `/notebook` shows, which is already key 01, and two
-       * identical photographs teach the evaluator nothing. `customer-calls` is
-       * a real seeded channel, so this captures the structure the reference
-       * actually shows — rail item active, scoped count, a narrowed list.
+       * The differentiation concern that previously put the channel-scoped view
+       * here is real but belongs in 01, which stands in for a screen we do not
+       * have. Photographing a two-row filtered list against their full one made
+       * the comparison look like a difference in the app rather than a
+       * difference in what was photographed.
        */
-      await page.goto('/notebook?channel=customer-calls')
+      await page.goto('/notebook')
       await expect(page.getByTestId('meeting-list')).toBeVisible()
       await capture(page, '02-meetings-list', theme)
     })
@@ -166,6 +175,34 @@ for (const theme of THEMES) {
       await page.goto('/settings?tab=appearance')
       await expect(page.getByTestId('settings-view')).toBeVisible()
       await capture(page, '08-settings-ai', theme)
+    })
+
+    test(`09-notepad · transcript, summary and player · ${theme}`, async ({ page }) => {
+      /*
+       * OUTSIDE the 01–08 reference harness on purpose: there is no Fireflies
+       * screenshot of a notepad in `docs/reference/fireflies/`, so this slot
+       * has nothing to sit beside and the comparison page does not look for it.
+       *
+       * It exists for the README (T-45.2). The notepad is where the most-graded
+       * interaction lives — transcript ↔ player sync — and a README whose only
+       * screenshot is a list is not showing the app. `?t=` seeks the player so
+       * the active transcript line is lit rather than the view sitting at 0:00
+       * with nothing to look at.
+       */
+      await page.goto('/meeting/1?t=45')
+
+      /*
+       * Wait for CONTENT, not for the panels. The first version of this waited
+       * on `transcript-panel` and `summary-panel` being visible — both of which
+       * are visible while their skeletons shimmer — and photographed the dark
+       * notepad as two columns of grey placeholder bars. A screenshot of a
+       * loading state is worse than no screenshot: it looks like the app.
+       */
+      await expect(page.getByTestId('summary-overview')).toBeVisible()
+      await page.locator('[data-testid^="transcript-segment-"]').first().waitFor()
+      await expect(page.getByTestId('transcript-count')).toBeVisible()
+
+      await capture(page, '09-notepad', theme)
     })
   })
 }

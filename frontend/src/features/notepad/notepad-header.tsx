@@ -283,7 +283,14 @@ function MetadataLine({
     <div className="flex min-w-0 items-center gap-2 text-sm text-muted" data-testid="notepad-meta">
       <span className="truncate">{formatFullDate(meeting.started_at)}</span>
       <Separator />
-      <span className="tnum">{formatDurationLabel(meeting.duration_seconds * 1000)}</span>
+      {/*
+        `whitespace-nowrap` because the label contains a space (ADR-148) and
+        this row is a flex that shrinks. `09:06` could not wrap; `9 min`
+        wraps to "9" over "min" and doubles the header height.
+      */}
+      <span className="tnum whitespace-nowrap">
+        {formatDurationLabel(meeting.duration_seconds * 1000)}
+      </span>
       <Separator />
 
       <Popover

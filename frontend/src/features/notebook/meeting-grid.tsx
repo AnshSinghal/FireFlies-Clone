@@ -67,7 +67,9 @@ export function MeetingGrid({
                   {formatRelativeDate(meeting.started_at)}
                 </span>
                 <span aria-hidden="true">·</span>
-                <span className="tnum">{formatDurationLabel(meeting.duration_seconds * 1000)}</span>
+                <span className="tnum whitespace-nowrap">
+                  {formatDurationLabel(meeting.duration_seconds * 1000)}
+                </span>
               </span>
 
               <span className="mt-auto flex items-center justify-between gap-2">

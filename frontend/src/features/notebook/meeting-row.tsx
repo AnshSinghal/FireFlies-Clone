@@ -247,8 +247,12 @@ export function MeetingRow({
             <Separator />
             <span>{formatTime(meeting.started_at)}</span>
             <Separator />
-            {/* tnum so durations line up down the list even unaligned. */}
-            <span className="tnum" data-testid="meeting-row-duration">
+            {/*
+              tnum so durations line up down the list even unaligned, and
+              nowrap because the label carries a space (ADR-148) — this line
+              shrinks, and "7" over "min" would break the row height token.
+            */}
+            <span className="tnum whitespace-nowrap" data-testid="meeting-row-duration">
               {formatDurationLabel(meeting.duration_seconds * 1000)}
             </span>
             <Separator />

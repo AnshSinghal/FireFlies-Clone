@@ -92,6 +92,20 @@ and nothing wrapped them, and the sub-nav's `Soon` badges were ragged because
 the two longest labels overflowed the 224px rail. Both are in
 `docs/screenshots/` as re-captured.
 
+**6 · The notepad's tag strip clips its last chip (ours only).**
+The header packs date, duration, participant count, language, the full tag list
+and T-36.4's suggestions onto one line whose height is a token, so the strip is
+`overflow-x-auto` and scrolls rather than wrapping. Working as designed — but
+with no fade or arrow at the edge, a chip sliced mid-word reads as a broken
+layout rather than as "there is more, scroll". Visible at 1440px in
+`docs/screenshots/09-notepad.png`.
+
+Not fixed here because the behaviour is deliberate and adding a new visual
+affordance during a verification cycle is how regressions get in. The honest
+options are a gradient mask on the scroll container or moving suggestions out
+of the metadata line entirely; the second is better and is a T-36 design
+question, not a polish pass.
+
 ## Verified equivalent
 
 - Date-grouped rows with a group header and per-group checkbox (reference 02).
