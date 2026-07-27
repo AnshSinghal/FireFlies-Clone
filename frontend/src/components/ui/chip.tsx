@@ -24,13 +24,55 @@ interface ChipBaseProps {
   testId?: string
 }
 
-/** A keyword or tag. Not interactive — no hover, no cursor change. */
-export function Chip({ children, icon, className, testId }: ChipBaseProps) {
-  return (
-    <span data-testid={testId} className={cn(CHIP_BASE, 'bg-surface-2 text-secondary', className)}>
+interface ChipProps extends ChipBaseProps {
+  /** Makes the chip a button. */
+  onAction?: () => void
+  /** Required with `onAction` — the visible text alone rarely says what happens. */
+  actionLabel?: string
+}
+
+/**
+ * A keyword or tag.
+ *
+ * Static by default — no hover, no cursor change, because most chips are
+ * labels. Pass `onAction` and it becomes a real `<button>` with the affordances
+ * to match: a chip that responds to clicks while looking inert is worse than
+ * one that does nothing at all.
+ */
+export function Chip({ children, icon, className, testId, onAction, actionLabel }: ChipProps) {
+  const content = (
+    <>
       {icon}
       {children}
-    </span>
+    </>
+  )
+
+  if (!onAction) {
+    return (
+      <span
+        data-testid={testId}
+        className={cn(CHIP_BASE, 'bg-surface-2 text-secondary', className)}
+      >
+        {content}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onAction}
+      aria-label={actionLabel}
+      data-testid={testId}
+      className={cn(
+        CHIP_BASE,
+        'cursor-pointer bg-surface-2 text-secondary hover:bg-surface-hover hover:text-primary',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+        className,
+      )}
+    >
+      {content}
+    </button>
   )
 }
 

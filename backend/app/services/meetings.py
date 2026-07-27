@@ -384,7 +384,14 @@ class MeetingService:
         summary = meeting.summary
         if summary is None:
             return SummaryOut(
-                meeting_id=meeting.id, provider="mock", keywords=[], outline=[], notes=[]
+                meeting_id=meeting.id,
+                provider="mock",
+                keywords=[],
+                outline=[],
+                notes=[],
+                # Nothing to be stale against. Stated rather than defaulted,
+                # so the field stays required in the schema.
+                is_stale=False,
             )
 
         sections = sorted(summary.sections, key=lambda s: s.sequence)
@@ -401,17 +408,28 @@ class MeetingService:
             if section.kind == SummarySectionKind.OUTLINE
         ]
 
-        notes = [
-            NoteGroup(
-                chapter=section.title,
-                # Stored as one body with newline-separated bullets; split here
-                # so the client renders a list rather than parsing prose.
-                bullets=[
-                    line.strip() for line in (section.body or "").splitlines() if line.strip()
-                ],
+        # GROUPED BY CHAPTER, because that is what the section is for.
+        #
+        # Each note row stores one bullet and repeats its chapter title, so a
+        # one-row-per-group mapping produced fifteen groups for a meeting with
+        # five chapters — the same heading printed four times in a row, with a
+        # single bullet under each. Grouping here rather than in the client
+        # keeps the response the shape the UI actually renders.
+        #
+        # A `dict` preserves insertion order, so the chapters stay in the order
+        # their rows were sequenced, and a bullet body with several lines still
+        # contributes all of them.
+        grouped: dict[str | None, list[str]] = {}
+        for section in sections:
+            if section.kind != SummarySectionKind.NOTES:
+                continue
+            bullets = grouped.setdefault(section.title, [])
+            bullets.extend(
+                line.strip() for line in (section.body or "").splitlines() if line.strip()
             )
-            for section in sections
-            if section.kind == SummarySectionKind.NOTES
+
+        notes = [
+            NoteGroup(chapter=chapter, bullets=bullets) for chapter, bullets in grouped.items()
         ]
 
         return SummaryOut(
@@ -446,7 +464,14 @@ class MeetingService:
         summary = meeting.summary
         if summary is None:
             return SummaryOut(
-                meeting_id=meeting.id, provider="mock", keywords=[], outline=[], notes=[]
+                meeting_id=meeting.id,
+                provider="mock",
+                keywords=[],
+                outline=[],
+                notes=[],
+                # Nothing to be stale against. Stated rather than defaulted,
+                # so the field stays required in the schema.
+                is_stale=False,
             )
 
         # `CursorResult` is what an UPDATE actually returns; the annotation on

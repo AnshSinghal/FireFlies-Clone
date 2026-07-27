@@ -42,6 +42,16 @@ export interface SeekOptions {
 interface NotepadCommands {
   seekTo: (ms: number, options?: SeekOptions) => void
   /**
+   * Opens the transcript's find bar on a term (T-23.2).
+   *
+   * A REQUEST rather than a call into the search hook, because the search
+   * state belongs to the transcript panel and the summary panel is its
+   * sibling. The nonce is what makes asking for the same term twice
+   * observable — the same reason `revealNonce` is a counter.
+   */
+  requestFind: (term: string) => void
+  findRequest: { term: string; nonce: number }
+  /**
    * Bumped by every `reveal` seek.
    *
    * A counter rather than a boolean: two reveals to the same position must
@@ -55,6 +65,7 @@ const CommandsContext = createContext<NotepadCommands | null>(null)
 export function NotepadCommandsProvider({ children }: { children: ReactNode }) {
   const player = usePlayer()
   const [revealNonce, setRevealNonce] = useState(0)
+  const [findRequest, setFindRequest] = useState({ term: '', nonce: 0 })
 
   /*
    * The player is read through a REF so `seekTo` can have no dependencies.
@@ -86,7 +97,15 @@ export function NotepadCommandsProvider({ children }: { children: ReactNode }) {
     if (options?.reveal) setRevealNonce((value) => value + 1)
   }, [])
 
-  const value = useMemo(() => ({ seekTo, revealNonce }), [seekTo, revealNonce])
+  const requestFind = useCallback(
+    (term: string) => setFindRequest((current) => ({ term, nonce: current.nonce + 1 })),
+    [],
+  )
+
+  const value = useMemo(
+    () => ({ seekTo, revealNonce, requestFind, findRequest }),
+    [seekTo, revealNonce, requestFind, findRequest],
+  )
 
   return <CommandsContext.Provider value={value}>{children}</CommandsContext.Provider>
 }

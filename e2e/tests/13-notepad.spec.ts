@@ -117,7 +117,12 @@ test.describe('notepad shell', () => {
     )
     await page.reload()
 
-    await expect(page.getByTestId('summary-panel')).toContainText("Couldn't load the summary")
+    // The generous timeout is for the QUERY RETRIES: the client retries a
+    // failed request with backoff, so `isError` — and therefore this text —
+    // arrives seconds after the reload rather than immediately.
+    await expect(page.getByTestId('summary-panel')).toContainText("Couldn't load the summary", {
+      timeout: 15_000,
+    })
     // The transcript is unaffected.
     await expect(page.getByTestId('transcript-list')).toBeVisible()
   })

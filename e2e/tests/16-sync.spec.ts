@@ -221,7 +221,7 @@ test.describe('transcript ↔ player sync', () => {
     await page.mouse.wheel(0, 3000)
     await page.waitForTimeout(200)
 
-    const chapter = page.getByTestId('outline-timestamp-2')
+    const chapter = page.getByTestId('summary-outline-time-2')
     const label = (await chapter.getAttribute('aria-label'))!
     const [minutes, seconds] = label.split('from ').at(-1)!.split(':').map(Number)
     const expected = minutes! * 60 + seconds!

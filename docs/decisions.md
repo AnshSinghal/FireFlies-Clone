@@ -1769,6 +1769,64 @@ the measurement was wrong, not the code.
 
 ---
 
+## ADR-074 — The summary's five sections keep the reference product's names and order
+
+**Context.** Keywords, Meeting Overview, Meeting Outline, Bullet-Point Notes,
+Action Items. "TL;DR" and "Highlights" are better words in isolation.
+
+**Decision.** Use the reference product's labels, in its order, verbatim — and
+assert both in the e2e suite.
+
+They are not decoration: they are how someone who has used Fireflies knows
+where to look. Renaming them costs that recognition and buys nothing a reader
+of this app would notice. Action Items ships as a stub pointing at T-24 for the
+same reason — it holds its place now rather than appearing later and shifting
+everything above it.
+
+**Consequence.** The test asserts the labels in TITLE case, because that is the
+text; the panel uppercases in CSS. Asserting the rendered capitals would be
+asserting a stylesheet, and a screen reader hears "Meeting Overview" either way.
+
+---
+
+## ADR-075 — Bullet notes are grouped by chapter in the SERVICE
+
+**Context.** Each note row stores one bullet and repeats its chapter title, so
+the naive one-row-per-group mapping produced fifteen groups for a five-chapter
+meeting: the same heading printed four times with a single bullet under each.
+It looked almost right, which is why it survived until a test counted.
+
+**Decision.** Group in `to_summary`, keyed on the title and preserving
+insertion order. The client renders what it is given.
+
+Grouping in the client was the alternative, and it would have put the same
+logic in every consumer — the panel, the Markdown export, the Index flyout —
+each free to disagree about what a group is.
+
+**Consequence.** Three backend tests pin it: one group per chapter, a
+multi-line body contributing every line, and the chapter order following the
+sequence. The e2e test additionally asserts no heading repeats, which is the
+symptom that was visible on screen.
+
+---
+
+## ADR-076 — `NoteGroup` and `is_stale` lost their defaults
+
+**Context.** The fourth instance of the same defect: a Pydantic field with a
+default is OPTIONAL in the emitted OpenAPI, so the generated client types it
+possibly-undefined for an absence the API never produces. `SummaryOut` already
+carried a comment about this; `NoteGroup` and `is_stale` were written after it
+and repeated the mistake.
+
+**Decision.** No defaults on response schema fields. `chapter: str | None` is
+nullable AND required — a different claim from optional, and the correct one.
+
+**Consequence.** Two call sites now pass `is_stale=False` explicitly, which is
+the point: the value is stated where it is known rather than defaulted where it
+is not.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
