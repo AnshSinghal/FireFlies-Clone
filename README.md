@@ -20,8 +20,62 @@ _(Captured in T-45.2: notebook, notepad, dark mode, and a GIF of transcript ↔ 
 
 ## Overview
 
-_(Written in T-45.3 — feature list mapped to the assignment's Core Features with ✅ / 🚧 / ❌
-markers, plus a separate bonus table.)_
+Every row below maps to a Core Feature bullet from the assignment brief. The right-hand column
+names the test that proves it, because a claim in a README is worth what its evidence is worth —
+the full mapping, including Playwright IDs, is in **[e2e/COVERAGE.md](e2e/COVERAGE.md)**.
+
+| Core feature | | Where it is proved |
+|---|:--:|---|
+| Past meetings list — title, date, duration, participants | ✅ | `08-notebook.spec.ts`, `11-details.spec.ts` |
+| Search and filter by title, date, participant | ✅ | `09-filters.spec.ts` |
+| Sort by recency | ✅ | `09-filters.spec.ts › sorting` |
+| Navbar with profile and settings | ✅ | `05-topbar.spec.ts`, `24-placeholders.spec.ts` |
+| Interactive transcript — speaker labels, timestamps | ✅ | `15-transcript.spec.ts` |
+| Media player with seek bar | ✅ | `14-player.spec.ts` |
+| **Click a transcript line → the player seeks, and vice versa** | ✅ | `16-sync.spec.ts` (T21-A → T21-N, both directions and the edges) |
+| Search within the transcript, matches highlighted | ✅ | `17-find.spec.ts` |
+| AI-generated meeting summary | ✅ | `18-summary.spec.ts` — see the note on the provider below |
+| Action items extracted from the transcript | ✅ | `19-action-items.spec.ts` |
+| Key topics, outline, chapters | ✅ | `18-summary.spec.ts`, `16-sync.spec.ts` (T21-J) |
+| Create a meeting — upload, paste, or form | ✅ | `21-create.spec.ts`, `90-mutations.spec.ts` |
+| Edit meeting metadata | ✅ | `22-edit.spec.ts` |
+| Delete a meeting | ✅ | `23-delete.spec.ts` (+ undo) |
+| Add, edit and complete action items | ✅ | `19-action-items.spec.ts` (T24-O cross-view badge sync) |
+| All data persists across reloads | ✅ | pytest round-trips; `90-mutations.spec.ts` re-reads after reload |
+| Loading, empty and error states | ✅ | `12-states.spec.ts` |
+| Notifications / toasts | ✅ | `06-toasts.spec.ts` |
+
+**The one qualification worth reading.** Summaries, outlines, keywords, action items and Q&A are
+real features with real output, but the **default provider is deterministic classical IR, not a
+language model** — TF-IDF keywords, TextRank-style extraction, regex commitment patterns. That is a
+deliberate choice, not an unfinished one: it makes the demo reproducible, offline, free, and
+snapshot-testable. `AI_PROVIDER=openai|anthropic` swaps in a real model through the same interface.
+The UI always names which provider produced what it is showing.
+
+### Deliberately not built
+
+Each of these is a surface in the app that says so honestly, rather than a dead link.
+
+| | | Why |
+|---|:--:|---|
+| Authentication | ❌ | Out of scope per the brief. One seeded user behind a `get_current_user` dependency — the single place real auth would attach |
+| Speech-to-text | ❌ | Transcripts are uploaded or pasted. The audio pipeline is the mocked boundary |
+| Live meeting bot | 🚧 | Placeholder surface (T-30.6) |
+| Calendar / Slack / CRM integrations | 🚧 | Placeholder surface (T-30.3) |
+| Teams and sharing | 🚧 | Placeholder surface (T-30.4) |
+
+### Bonus features, all shipped
+
+| Bonus | | Notes |
+|---|:--:|---|
+| Comments and threads on transcript lines | ✅ | `25-comments.spec.ts` |
+| Highlights and bookmarks | ✅ | Character-exact ranges that survive a transcript edit — `27-highlights.spec.ts` |
+| Soundbites | ✅ | Trimmable, range-locked clips — `26-soundbites.spec.ts` |
+| Export — Markdown, TXT, PDF, DOCX | ✅ | `34-export.spec.ts` + renderer tests in pytest |
+| Global search across all meetings | ✅ | FTS5-ranked, deep-linkable — `24-search.spec.ts` |
+| Tags and topics with OR/AND filtering | ✅ | `27-tags.spec.ts` |
+| AskFred — Q&A over a transcript with citations | ✅ | Citations seek the player — `26-askfred.spec.ts` |
+| Dark mode | ✅ | System-tracking, axe-clean in both themes — `25-dark-mode.spec.ts` |
 
 ---
 
