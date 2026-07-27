@@ -20,8 +20,8 @@ matches, or was changed to match:
 | Card height ÷ title glyph | 5.658 | 5.786 |
 | Gap between cards in a group ÷ card | 0.274 | 0.259 |
 | Gap across a date heading ÷ card | 0.94 | 0.926 |
-| Title inset ÷ card height | 1.01 | 0.94 |
-| Leading tile ÷ card height | 0.509 | 0.563 |
+| Tile→title gap ÷ tile width | 0.411 | 0.400 |
+| Leading tile ÷ card height | 0.509 | 0.494 |
 | Settings block ÷ content column | 57.6% | 57.4% |
 | Settings gutters | 336 / 345 | 202 / 204 |
 
@@ -98,12 +98,19 @@ Raw measurements, for anyone re-deriving: Fireflies' cards are 107–108px with
 29–30px between cards in a group and ~101px across a group heading, on a 71px
 topbar. Ours are 71–72px with 9px and 55px, on a 55–56px topbar.
 
-**The card's horizontal rhythm matches; everything still open is vertical.**
-Worth stating plainly, because it is the shape of the remaining work. Title
-inset from the card edge is 1.01× card height for Fireflies and 0.94× for us;
-the gap between the leading tile and the title is 0.21× in both. Whatever is
-left to close on this screen is row height and the distribution of vertical
-space — not padding, not the measure, not the type scale.
+**The card's horizontal rhythm matches.** The gap between the leading tile and
+the title is **0.411× the tile width** for Fireflies and **0.400×** for us.
+
+**That row used to read "title inset ÷ card height, 1.01 vs 0.94" and it was a
+bad measurement** — a horizontal distance normalised by a vertical one. It
+looked like a match by coincidence. When ADR-150 raised the card from 72px to
+82px the *same unchanged 67px inset* re-read as 0.84, and the apparent 7% match
+became an apparent 17% miss with nothing on screen having moved horizontally.
+The normaliser moved, not the layout.
+
+Replaced with tile→title gap over tile width: both terms horizontal, so the
+ratio means something. A scale-free comparison is only scale-free if the two
+quantities scale together.
 
 One row-internal metric came out fine, which is worth recording so the next
 person does not re-derive it: the leading tile. Fireflies' is 56×55px inside a
