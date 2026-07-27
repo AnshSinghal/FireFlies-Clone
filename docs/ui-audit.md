@@ -46,6 +46,22 @@ Raw measurements, for anyone re-deriving: Fireflies' cards are 107–108px with
 29–30px between cards in a group and ~101px across a group heading, on a 71px
 topbar. Ours are 71–72px with 9px and 55px, on a 55–56px topbar.
 
+One row-internal metric came out fine, which is worth recording so the next
+person does not re-derive it: the leading tile. Fireflies' is 56×55px inside a
+108px card — 0.509 of card height — inset 31px from the card edge. Ours is the
+reserved 40×40 box (T-12.6, ADR-036) inside a 71px card, 0.563. Slightly larger
+proportionally, well inside anything an eye would catch. **The tile is not the
+problem; the vertical rhythm around it is.**
+
+A caveat on method, since these numbers will be re-checked. The reference tile
+was isolated by hue (a saturated orange squircle) and is a clean measurement.
+Ours could not be isolated the same way — a grey tile on white sits in the same
+luminance band as the card border and the group checkbox, and every threshold I
+tried caught all three — so its 40×40 comes from the component, not from
+pixels. Two different methods, stated rather than blended, because publishing a
+measured-looking number that was actually a bad threshold is the specific
+mistake this document has already made three times.
+
 **The type scale is right and the density is not.** Our list is meaningfully
 tighter than the reference — most of all in the gap between cards inside one
 date group, which is less than half the reference's in proportional terms. That
