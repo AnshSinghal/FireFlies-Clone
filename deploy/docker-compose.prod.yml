@@ -1,0 +1,64 @@
+# Production stack for the shared demo VM (T-44).
+#
+# The box also runs the ai-mesh-firewall stack, so everything here is scoped to
+# stay out of its way:
+#   - project name `fireflies` → distinct network and volume names
+#   - containers bind to 127.0.0.1 only; nginx (port 8600) is the sole public
+#     door, and the GCP firewall opens exactly that port
+#   - host ports 8501/3301 were chosen against the box's live listen list
+#     (8000 is their redactor, 8100/8180/8300/8311/8770/9999/5432/6379/5772 the
+#     rest of their stack)
+#
+# Run from the repo root:
+#   docker compose -f deploy/docker-compose.prod.yml up -d --build
+
+name: fireflies
+
+services:
+  backend:
+    container_name: fireflies-backend
+    build:
+      context: ../backend
+      dockerfile: ../deploy/backend.Dockerfile
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8501:8000'
+    environment:
+      # Named volume: the demo database survives redeploys (T-44.3). Verified
+      # by deploy.sh, which only rebuilds containers, never touches volumes.
+      DATABASE_URL: sqlite:////data/fireflies.db
+      # Same-origin through nginx means CORS never fires in practice; the
+      # public origin is listed anyway so direct-to-port API calls from the
+      # demo page still work if anyone bypasses the proxy (T-44.5).
+      CORS_ORIGINS: http://8.231.115.48:8600
+      AI_PROVIDER: mock
+      # On the volume, not in the image: uploads must be writable by the
+      # non-root user and must survive redeploys, same as the DB.
+      MEDIA_DIR: /data/media
+      MAX_UPLOAD_MB: 10
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - db_data:/data
+
+  frontend:
+    container_name: fireflies-frontend
+    build:
+      context: ../frontend
+      dockerfile: ../deploy/frontend.Dockerfile
+      args:
+        # Empty = same-origin /api — see frontend.Dockerfile.
+        NEXT_PUBLIC_API_URL: ''
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3301:3000'
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  db_data:
