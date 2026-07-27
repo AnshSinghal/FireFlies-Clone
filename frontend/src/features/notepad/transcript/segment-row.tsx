@@ -34,7 +34,7 @@ export interface SegmentRowProps {
   segment: SegmentOut & TurnAware
   speaker: SpeakerRef | undefined
   isActive: boolean
-  /** Seeks the player. Wired to the row and to the timestamp (T-21). */
+  /** The one seek path (T-21.8). The row seeks; the timestamp seeks and plays. */
   onSeek: (ms: number, options?: { play?: boolean }) => void
   onCopyText: (segment: SegmentOut) => void
   onCopyLink: (segment: SegmentOut) => void
@@ -55,10 +55,29 @@ function SegmentRowImpl({
     <article
       data-testid={`transcript-segment-${segment.id}`}
       data-active={isActive || undefined}
+      // Announced as the current item rather than only coloured (T-21.12).
+      aria-current={isActive ? 'true' : undefined}
+      /*
+       * Clicking the LINE seeks (T-21.1) — but on `onClick` of the article
+       * rather than a wrapping button, because the text has to stay
+       * selectable and a button's contents are not reliably selectable.
+       *
+       * The check below is what makes that safe: a click that landed on the
+       * timestamp, the menu, or inside a text selection is not a "seek here".
+       */
+      onClick={(event) => {
+        if (event.target instanceof Element && event.target.closest('button, a, [role="menu"]')) {
+          return
+        }
+        // Dragging out a selection ends in a click. Seeking then would move the
+        // player every time somebody copied a quote.
+        if ((window.getSelection()?.toString().length ?? 0) > 0) return
+        onSeek(segment.start_ms)
+      }}
       // `group` so the timestamp and the ⋯ can appear on hover without either
       // of them needing hover state of its own.
       className={cn(
-        'group/segment relative px-4 py-3 transition-colors duration-fast',
+        'group/segment relative cursor-pointer px-4 py-3 transition-colors duration-fast',
         isActive ? 'bg-accent-subtle' : 'hover:bg-surface-hover',
       )}
     >

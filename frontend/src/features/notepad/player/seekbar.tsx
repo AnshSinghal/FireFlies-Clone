@@ -36,6 +36,8 @@ interface SeekbarProps {
   /** Sorted by `startMs`; used for the hover preview's speaker name. */
   cues: SpeakerCue[]
   onSeek: (ms: number) => void
+  /** Chapter ticks seek AND reveal, which scrubbing does not (T-21.6). */
+  onSeekChapter: (ms: number) => void
 }
 
 /** Keyboard step, matching the `←`/`→` shortcut so both routes agree. */
@@ -64,6 +66,7 @@ export function Seekbar({
   chapters,
   cues,
   onSeek,
+  onSeekChapter,
 }: SeekbarProps) {
   const trackRef = useRef<HTMLDivElement | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -209,7 +212,7 @@ export function Seekbar({
               title={chapter.title}
               label={`${chapter.title} at ${formatTimestamp(chapter.startMs)}`}
               ratio={ratioOf(chapter.startMs, durationMs)}
-              onClick={() => onSeek(chapter.startMs)}
+              onClick={() => onSeekChapter(chapter.startMs)}
             />
           ))}
         </div>

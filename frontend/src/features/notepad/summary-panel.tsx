@@ -1,19 +1,22 @@
 'use client'
 
 /**
- * The summary panel — SHELL ONLY (T-18).
+ * The summary panel — the five sections and the action items are T-23.
  *
- * T-20 builds the five sections, the outline and the action items. What is
- * settled here is the panel's place in the layout and the fact that it owns its
- * own scroll container, which is the property T-18.10 exists for.
+ * What is settled here is the panel's place in the layout, that it owns its own
+ * scroll container (T-18.10), and that its outline chapters SEEK (T-21.6).
  */
 
-import { StateView } from '@/components/ui/state-view'
 import { SkeletonText } from '@/components/ui/skeleton'
+import { StateView } from '@/components/ui/state-view'
+import { TimestampButton } from '@/components/ui/media-controls'
 import { useSummary } from '@/lib/api/summaries'
+import { useNotepadCommands } from '@/lib/notepad/commands'
+import { formatTimestamp } from '@/lib/utils/format'
 
 export function SummaryPanel({ meetingId }: { meetingId: number }) {
   const { data: summary, isPending, isError } = useSummary(meetingId)
+  const { seekTo } = useNotepadCommands()
 
   return (
     /*
@@ -60,8 +63,22 @@ export function SummaryPanel({ meetingId }: { meetingId: number }) {
               <h2 className="text-label uppercase text-muted">Outline</h2>
               <ol className="space-y-1" data-testid="summary-outline">
                 {summary.outline.map((entry) => (
-                  <li key={entry.sequence} className="text-body text-secondary">
-                    {entry.title}
+                  <li
+                    key={entry.sequence}
+                    className="flex items-baseline gap-2 text-body text-secondary"
+                  >
+                    {/*
+                      An explicit "take me there": it seeks, starts playback and
+                      reveals the line in the transcript even if the reader has
+                      scrolled away (T-21.6).
+                    */}
+                    <TimestampButton
+                      data-testid={`outline-timestamp-${entry.sequence}`}
+                      time={formatTimestamp(entry.start_ms)}
+                      label={`Play ${entry.title}, from ${formatTimestamp(entry.start_ms)}`}
+                      onClick={() => seekTo(entry.start_ms, { play: true, reveal: true })}
+                    />
+                    <span className="min-w-0 flex-1">{entry.title}</span>
                   </li>
                 ))}
               </ol>

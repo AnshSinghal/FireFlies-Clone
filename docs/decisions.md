@@ -1567,6 +1567,84 @@ would cost every other test that uses it.
 
 ---
 
+## ADR-064 — One seek path: `useNotepadCommands`
+
+**Context.** Five things seek — a transcript line, a transcript timestamp, an
+outline chapter, a chapter tick on the seekbar, a `?t=` link — with comments,
+soundbites and search results still to come.
+
+**Decision.** One `seekTo(ms, { play, reveal })`, in a command bus above the
+player. The two flags are the entire vocabulary of the differences that
+actually exist: a timestamp starts playback and a line does not; an outline
+chapter is an explicit "take me there" that overrides the auto-scroll
+suspension, while the playhead advancing on its own does not.
+
+`reveal` is a COUNTER rather than a boolean, because two reveals to the same
+position must both be observable and a boolean that is already `true` is not.
+
+**Consequence.** Written five times these would drift — one starting playback
+and another not, one scrolling the transcript and another leaving it — and the
+difference is invisible until someone notices the app behaves differently
+depending on which timestamp they clicked.
+
+---
+
+## ADR-065 — The transcript takes the active INDEX, not the playhead
+
+**Context.** The clock commits ten times a second. The active line changes every
+few seconds.
+
+**Decision.** The panel resolves `activeSegmentIndex` and passes the index; the
+list is wrapped in `memo`. The panel still re-renders with the clock — it reads
+`currentMs` — but it renders almost nothing, and the ten-times-a-second cadence
+stops there instead of reaching a virtualised list of hundreds of rows.
+
+**Consequence.** Two memoisation layers, each doing a different job: this one
+keeps the clock out of the list, and `SegmentRow`'s comparator (ADR-062) keeps a
+line change from re-rendering the rows around it.
+
+---
+
+## ADR-066 — Two bugs that only a real navigation could find
+
+Recorded together because both were invisible to any test that did not leave
+the page and come back, and both had the same shape: code reading state from
+something that had already moved on.
+
+**Scroll restoration saved zero.** The cleanup persisted
+`element.scrollTop` — and at teardown that reads 0, because the element's
+content is already gone. Every navigation overwrote a good position with zero,
+so the feature did nothing while appearing to be wired correctly. The offset is
+now tracked in a ref, written on a 250ms debounce, and persisted from the REF.
+
+**`initialOffset` does not scroll.** It tells the virtualiser which rows to
+RENDER; it does not move the element. Setting it alone leaves the DOM at the top
+with the right rows drawn below the fold. The element is scrolled explicitly in
+a layout effect, with `initialOffset` still supplied so the correct window is
+rendered on the first paint rather than after a jump.
+
+---
+
+## ADR-067 — The waveform decoder strides instead of scanning
+
+**Context.** T21-K budgets long tasks at under 200ms across twenty seconds of
+playback. The measurement came in at 222ms and did not move when the sync loop
+was memoised — because the sync loop was not what was spending it.
+
+Eighteen minutes of mono at 22kHz is 24 million samples, and `decodePeaks` was
+reading every one of them to draw 400 bars.
+
+**Decision.** Sample at most 256 points per bar. A peak that only one sample in
+a hundred thousand reaches is a click, not a shape, so the strip is visually
+indistinguishable and the loop is two orders of magnitude cheaper.
+
+**Consequence.** The budget passes with room, and it passes because the cost
+went away rather than because the number was raised. Worth noting as a method:
+the first fix — memoising the list — was a real improvement that did not move
+this measurement at all, which is what said the diagnosis was wrong.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

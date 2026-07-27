@@ -12,19 +12,28 @@
 
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ArrowDown } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import type { SegmentOut, SpeakerRef } from '@/lib/api/types'
-import { activeSegmentIndex, markTurns } from '@/lib/transcript/grouping'
+import { useNotepadCommands } from '@/lib/notepad/commands'
+import { markTurns } from '@/lib/transcript/grouping'
 import { getSpeakerColorByIndex } from '@/lib/utils/speaker-color'
 
 import { SegmentRow } from './segment-row'
 
 interface TranscriptListProps {
+  meetingId: number
   segments: SegmentOut[]
   speakers: SpeakerRef[]
-  currentMs: number
+  /**
+   * The resolved active row, NOT the playhead (T-21.4).
+   *
+   * The clock commits ten times a second; the active line changes every few
+   * seconds. Taking the index means this component — and the memo around it —
+   * re-renders on the second cadence rather than the first.
+   */
+  activeIndex: number
   isPlaying: boolean
   onSeek: (ms: number, options?: { play?: boolean }) => void
   onCopyText: (segment: SegmentOut) => void
@@ -52,27 +61,55 @@ const SUSPEND_MS = 5000
  */
 const SELF_SCROLL_MS = 800
 
+const OFFSET_KEY = 'ff.transcript.offset.'
+
+/**
+ * The remembered scroll position, per meeting.
+ *
+ * `sessionStorage`, not `localStorage`: coming back to a meeting during the
+ * same visit should land where you were, but opening it fresh next week should
+ * start at the top rather than halfway down a conversation you no longer
+ * remember leaving.
+ */
+function readSavedOffset(meetingId: number): number {
+  try {
+    const raw = window.sessionStorage.getItem(`${OFFSET_KEY}${meetingId}`)
+    const value = Number(raw)
+    return Number.isFinite(value) && value >= 0 ? value : 0
+  } catch {
+    return 0
+  }
+}
+
+function saveOffset(meetingId: number, offset: number): void {
+  try {
+    window.sessionStorage.setItem(`${OFFSET_KEY}${meetingId}`, String(Math.round(offset)))
+  } catch {
+    // A blocked store costs the convenience, not the transcript.
+  }
+}
+
 /** Keys that scroll a focused container, and so mean the user took over. */
 const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '])
 
-export function TranscriptList({
+function TranscriptListImpl({
+  meetingId,
   segments,
   speakers,
-  currentMs,
+  activeIndex,
   isPlaying,
   onSeek,
   onCopyText,
   onCopyLink,
 }: TranscriptListProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const { revealNonce } = useNotepadCommands()
 
   const rows = useMemo(() => markTurns(segments), [segments])
   const speakerById = useMemo(
     () => new Map(speakers.map((speaker) => [speaker.id, speaker])),
     [speakers],
   )
-
-  const activeIndex = activeSegmentIndex(rows, currentMs)
 
   /*
    * The React Compiler cannot memoise a component that uses this hook: the
@@ -93,6 +130,16 @@ export function TranscriptList({
     // point — `measureElement` replaces it with the real height as each row
     // mounts.
     overscan: 10,
+    /*
+     * Where the reader left off (T-21.10).
+     *
+     * `initialOffset` tells the virtualiser which rows to RENDER — it does not
+     * move the element, which is a distinction worth stating because assuming
+     * otherwise leaves the DOM at the top with the correct rows drawn below the
+     * fold, and the panel silently forgets every remembered position. The
+     * element itself is scrolled in the effect below.
+     */
+    initialOffset: readSavedOffset(meetingId),
   })
 
   // ── Following the playhead ────────────────────────────────────────────────
@@ -154,6 +201,78 @@ export function TranscriptList({
     }
   }, [])
 
+  // Restore the remembered position, once, before anything is painted.
+  useLayoutEffect(() => {
+    const element = scrollRef.current
+    const saved = readSavedOffset(meetingId)
+    if (!element || saved <= 0) return
+
+    selfScrollUntil.current = performance.now() + SELF_SCROLL_MS
+    element.scrollTop = saved
+    // A deep link is an explicit instruction and outranks a remembered
+    // position, so the `?t=` effect below is allowed to move this again.
+  }, [meetingId])
+
+  // Remember where the reader is, for coming back to (T-21.10).
+  const latestOffset = useRef(0)
+  useEffect(() => {
+    const element = scrollRef.current
+    if (!element) return
+
+    let timer = 0
+    const onScroll = () => {
+      latestOffset.current = element.scrollTop
+      // Debounced: a scroll fires dozens of events, and `sessionStorage` is
+      // synchronous — writing on each one puts storage in the scroll path.
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => saveOffset(meetingId, latestOffset.current), 250)
+    }
+
+    element.addEventListener('scroll', onScroll, { passive: true })
+
+    return () => {
+      window.clearTimeout(timer)
+      /*
+       * From the REF, never from the element.
+       *
+       * At teardown the element's `scrollTop` reads 0 — its content is already
+       * gone — so saving from it overwrites a good position with zero on every
+       * navigation, and the feature silently does nothing at all.
+       */
+      saveOffset(meetingId, latestOffset.current)
+      element.removeEventListener('scroll', onScroll)
+    }
+  }, [meetingId])
+
+  /*
+   * An explicit "take me there" (T-21.6) beats the suspension.
+   *
+   * Clicking an outline chapter is a request to be moved; the playhead
+   * advancing on its own is not. Skipped on the very first render, where the
+   * nonce is still 0 and there is nothing to reveal.
+   */
+  useEffect(() => {
+    if (revealNonce === 0) return
+    setSuspendedUntil(0)
+    setPinned(false)
+    scrollToActive('smooth')
+  }, [revealNonce, scrollToActive])
+
+  /*
+   * The first scroll, after the rows have been MEASURED (T-21.9).
+   *
+   * A `?t=` deep link resolves an active index before any row has a real
+   * height, so scrolling then lands on an estimate. Running once more when the
+   * transcript arrives — with `auto`, because an instant landing is what a
+   * deep link should look like — corrects it.
+   */
+  const didInitialScroll = useRef(false)
+  useEffect(() => {
+    if (didInitialScroll.current || segments.length === 0 || activeIndex <= 0) return
+    didInitialScroll.current = true
+    scrollToActive('auto')
+  }, [segments.length, activeIndex, scrollToActive])
+
   /*
    * Follow only when the ACTIVE INDEX changes, which is why this depends on the
    * index and not on `currentMs`. Scrolling on every clock tick would compete
@@ -172,6 +291,10 @@ export function TranscriptList({
 
   // The pill only makes sense while something is moving underneath it.
   const showJump = pinned && isPlaying && activeIndex >= 0
+
+  const activeSpeakerId = activeIndex >= 0 ? rows[activeIndex]?.speaker_id : undefined
+  const activeSpeakerLabel =
+    activeSpeakerId === undefined ? '' : (speakerById.get(activeSpeakerId)?.label ?? '')
 
   // ── Sticky speaker (T-20.10) ──────────────────────────────────────────────
 
@@ -224,6 +347,15 @@ export function TranscriptList({
       >
         <ol
           data-testid="transcript-list"
+          /*
+           * Explicitly OFF (T-21.12).
+           *
+           * Rows mount and unmount constantly as the list virtualises, and an
+           * assistive technology that announced each one would read the
+           * transcript aloud at scrolling speed. The speaker announcer below
+           * is the polite version of the same information.
+           */
+          aria-live="off"
           className="relative w-full"
           // The full scroll height, so the scrollbar reflects the whole
           // transcript rather than the handful of rows in the DOM.
@@ -255,6 +387,17 @@ export function TranscriptList({
         </ol>
       </div>
 
+      {/*
+        Announces the SPEAKER, and only when it changes (T-21.12).
+        
+        The active line changes every few seconds; the person talking changes
+        far less often, and "Marcus Patel" is the part a listener cannot get
+        from the audio they are already hearing.
+      */}
+      <p className="sr-only" role="status" aria-live="polite" data-testid="transcript-announcer">
+        {activeSpeakerLabel}
+      </p>
+
       {showJump && (
         <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
           <Button
@@ -276,3 +419,14 @@ export function TranscriptList({
     </div>
   )
 }
+
+/**
+ * Memoised BY HAND (T-21.4).
+ *
+ * The React Compiler declines to memoise anything using `useVirtualizer`, and
+ * the default shallow comparison is enough here anyway: every prop is either
+ * stable (`useCallback`, `useMemo` at the call site) or changes exactly when
+ * this list needs to redraw. Without it, the panel's ten-times-a-second
+ * re-render reaches the whole transcript.
+ */
+export const TranscriptList = memo(TranscriptListImpl)
