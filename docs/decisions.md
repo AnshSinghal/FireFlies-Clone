@@ -2634,6 +2634,99 @@ otherwise.
 
 ---
 
+## ADR-119 — Soundbite lists are `{items}`, not the six-key page envelope
+
+**Context.** T-33.1. A meeting owns a handful of hand-picked clips, and the
+seekbar overlay needs every one on load; the proposals endpoint returns
+exactly three by definition.
+
+**Decision.** Plain `{items: [...]}` — the `speakers` precedent for
+non-pageable collections, with the wrapper kept so client unwrapping stays
+uniform. The page envelope remains the rule for anything that can grow.
+
+**Consequence.** No pagination affordance for a state that cannot occur.
+
+---
+
+## ADR-120 — Magic Soundbite proposals are computed, never persisted; dismissal is client-side
+
+**Context.** T-33.8 wants three auto-proposed clips that can be saved or
+dismissed.
+
+**Decision.** `GET …/soundbites/proposals` computes through the provider each
+call (memoised under the T-29.10 cache key `soundbites`; determinism is the
+provider contract). Saving is an ordinary `POST` with `auto_generated=true` —
+one write path, the Auto badge is a flag. Dismissing is localStorage keyed by
+meeting + range: a dismissed *suggestion* is UI preference, not domain data,
+and persisting it would cost a migration plus a second tombstone concept for a
+bonus feature.
+
+**Consequence.** Dismissals don't roam across browsers — accepted. Saved and
+dismissed ranges are filtered client-side, or the deterministic endpoint would
+re-propose the same clips forever.
+
+---
+
+## ADR-121 — The proposal heuristic lives in MockProvider; LLMProvider declines it
+
+**Context.** Clip proposal is constraint satisfaction — snap to segment
+boundaries, hard 3 s–3 min bounds — which a heuristic does exactly and a model
+does approximately.
+
+**Decision.** Segment score = summed TF-IDF weight of the meeting's top-6
+keywords; window score = weight per second, so a tight exchange beats a
+ramble; greedy top-3 non-overlapping with deterministic tie-breaks.
+`LLMProvider.propose_soundbites` raises `ProviderError` unconditionally, so
+the T-29.7 degradation path serves the heuristic — silently delegating inside
+LLMProvider would lie about provenance.
+
+**Consequence.** Byte-identical proposals per meeting, asserted in tests and
+usable by visual regression. Revisit only if a prompt demonstrably beats it.
+
+---
+
+## ADR-122 — Soundbites hard-delete, and validate against the transcript's milliseconds
+
+**Context.** Comments needed tombstones because replies hang off parents. A
+clip is a pointer into the transcript: nothing references it, and two integers
+recreate it.
+
+**Decision.** No SoftDeleteMixin, `DELETE` is final. Range validation caps at
+`MAX(segment.end_ms)`, not `duration_seconds * 1000` — the duration column is
+a floored display denormalisation, and validating against the floor would make
+the provider's own boundary-snapped proposals unsaveable. Service-boundary
+ValidationErrors are the error path; the table's CheckConstraints are the
+backstop for non-API writers.
+
+**Consequence.** A deliberate contrast with ADR-… comments-tombstones, ready
+for the interview question. Seeded clips resolve segment *indices* against the
+built timeline (the T05-D argument), so the 3 s–3 min invariants hold by
+construction.
+
+---
+
+## ADR-123 — Range-constrained playback lives in the player's clock tick
+
+**Context.** T-33.6 explicitly bans `setTimeout` for the auto-pause.
+
+**Decision.** `playRange(start, end)` arms a ref the existing 100 ms tick
+checks exactly like the track-end auto-stop. `seek()` cancels the constraint
+only when the target leaves the range — scrubbing away is the user leaving the
+clip; nudging inside it isn't. `pause()` keeps it armed so resume finishes the
+clip. Adjacent decisions: the seekbar bands carry their own alpha in
+`--ff-soundbite-band` (Tailwind can't apply modifiers to `var()` colours — the
+scrim precedent) and stay decorative because interactive children of a
+`role=slider` are invalid; the download button ships `aria-disabled`, not
+`disabled`, because the ffmpeg-absent tooltip IS the feature and a natively
+disabled button swallows the pointer events it needs; `&clip=` is read once in
+state initializers and explicitly deleted on deselect, or the player's 5 s
+`?t=` writeback would carry a stale clip forever.
+
+**Consequence.** Auto-pause is exact at any rate and survives stalls; nine
+unit tests tick the clock through every path.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
