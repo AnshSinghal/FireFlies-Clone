@@ -70,7 +70,7 @@ export function CommentsPanel({ meetingId }: { meetingId: number }) {
           thread={thread}
           snippet={thread.segment_id != null ? snippets.get(thread.segment_id) : undefined}
           onOpen={() => {
-            if (thread.start_ms != null) seekTo(thread.start_ms, { reveal: true })
+            if (thread.start_ms != null) seekTo(thread.start_ms, { play: true, reveal: true })
           }}
         />
       ))}
@@ -96,7 +96,7 @@ export function CommentsPanel({ meetingId }: { meetingId: number }) {
                   thread.segment_id != null ? snippets.get(thread.segment_id) : undefined
                 }
                 onOpen={() => {
-                  if (thread.start_ms != null) seekTo(thread.start_ms, { reveal: true })
+                  if (thread.start_ms != null) seekTo(thread.start_ms, { play: true, reveal: true })
                 }}
               />
             ))}

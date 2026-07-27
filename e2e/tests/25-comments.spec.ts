@@ -36,12 +36,12 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     const segmentId = await firstSegment.getAttribute('data-segment-id')
 
     await firstSegment.hover()
-    await firstSegment.getByTestId('transcript-segment-menu').click()
+    await firstSegment.getByRole('button', { name: 'Segment actions' }).click()
     await page.getByTestId(`segment-add-comment-${segmentId}`).click()
     await page.getByTestId('comment-composer-input').fill('Strong opening point.')
     await page.getByTestId('comment-submit').click()
 
-    await expect(page.getByText('Strong opening point.')).toBeVisible()
+    await expect(page.getByText('Strong opening point.').first()).toBeVisible()
     await expect(page.getByTestId(`comment-gutter-${segmentId}`)).toHaveText('1')
 
     await page.reload()
@@ -59,7 +59,7 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
       .fill('Agreed — and the numbers back it up.')
     await page.getByTestId('comment-submit').last().click()
 
-    await expect(page.getByText('Agreed — and the numbers back it up.')).toBeVisible()
+    await expect(page.getByText('Agreed — and the numbers back it up.').first()).toBeVisible()
   })
 
   test('T31-C/D · @ lists only participants; a pick becomes an accent token', async ({
@@ -70,13 +70,13 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     const segmentId = await firstSegment.getAttribute('data-segment-id')
 
     await firstSegment.hover()
-    await firstSegment.getByTestId('transcript-segment-menu').click()
+    await firstSegment.getByRole('button', { name: 'Segment actions' }).click()
     await page.getByTestId(`segment-add-comment-${segmentId}`).click()
     await page.getByTestId('comment-composer-input').fill('What do you think @')
 
     await expect(page.getByTestId('comment-mention-list')).toBeVisible()
     const first = page.getByTestId(/^comment-mention-\d+$/).first()
-    const mentionedName = (await first.textContent())?.trim() ?? ''
+    const mentionedName = (await first.locator('span.truncate').textContent())?.trim() ?? ''
     await first.click()
 
     await page.getByTestId('comment-submit').click()
@@ -97,18 +97,6 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     await expect(page.getByText('(edited)').first()).toBeVisible()
   })
 
-  test('T31-H · a flyout entry seeks the player to its segment', async ({ page }) => {
-    await openMeeting(page)
-
-    await page.getByTestId('icon-rail-comments').click()
-    await expect(page.getByTestId('comments-flyout')).toBeVisible()
-
-    await page.getByTestId(/^comments-flyout-entry-\d+$/).first().click()
-
-    // Seeking rewrites ?t= in place — the player position IS the URL (T-19).
-    await expect(page).toHaveURL(/[?&]t=/)
-  })
-
   test('T31-G · a failed post rolls back and keeps the text', async ({ page }) => {
     await openMeeting(page)
     const segment = page.locator('[data-segment-id]').nth(3)
@@ -121,7 +109,7 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     )
 
     await segment.hover()
-    await segment.getByTestId('transcript-segment-menu').click()
+    await segment.getByRole('button', { name: 'Segment actions' }).click()
     await page.getByTestId(`segment-add-comment-${segmentId}`).click()
     await page.getByTestId('comment-composer-input').fill('This must not be lost')
     await page.getByTestId('comment-submit').click()
@@ -139,12 +127,33 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     const segmentId = await segment.getAttribute('data-segment-id')
 
     await segment.hover()
-    await segment.getByTestId('transcript-segment-menu').click()
+    await segment.getByRole('button', { name: 'Segment actions' }).click()
     await page.getByTestId(`segment-add-comment-${segmentId}`).click()
     await page.getByTestId('comment-composer-input').fill('<script>alert(1)</script>')
     await page.getByTestId('comment-submit').click()
 
     await expect(page.getByText('<script>alert(1)</script>')).toBeVisible()
+  })
+
+  test('T31-H · a flyout entry seeks the player to its segment', async ({ page }) => {
+    await openMeeting(page)
+
+    await page.getByTestId('icon-rail-comments').click()
+    await expect(page.getByTestId('comments-flyout')).toBeVisible()
+
+    const before = await page.getByTestId('player-time').textContent()
+    // The last entry is T31-K's thread, anchored well past 00:00.
+    await page
+      .getByTestId(/^comments-flyout-entry-\d+$/)
+      .last()
+      .click()
+
+    // A paused seek moves the CLOCK, not the URL (?t= belongs to playback,
+    // T19-I) — and it reveals the thread's segment in the transcript.
+    await expect(page.getByTestId('player-time')).not.toHaveText(before ?? '')
+    await expect(
+      page.getByText('<script>alert(1)</script>').first(),
+    ).toBeInViewport()
   })
 
   test('T31-F · deleting a parent with replies leaves a tombstone', async ({ page }) => {
@@ -154,7 +163,7 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     await page.getByTestId(/^comment-delete-\d+$/).first().click()
 
     await expect(page.getByText('Comment deleted').first()).toBeVisible()
-    await expect(page.getByText('Agreed — and the numbers back it up.')).toBeVisible()
+    await expect(page.getByText('Agreed — and the numbers back it up.').first()).toBeVisible()
   })
 
   test('T31-I · resolving collapses the thread behind a badge', async ({ page }) => {
