@@ -288,14 +288,23 @@ const config: Config = {
          * heading read as attached to the card beneath it rather than sitting
          * between groups.
          *
-         * Derived by holding the 67px total (that ratio is already correct at
-         * 0.944 against their 0.94) and the 14px glyph band (the type scale is
-         * already correct), then splitting the remaining 53px in their
-         * below:above ratio. A first attempt at 28/18 pushed the total to 70px
-         * and would have broken the ratio ADR-149 had just fixed.
+         * Derived by holding the group gap at 0.94 x CARD HEIGHT — their ratio —
+         * and the 14px glyph band, then splitting the rest in their below:above
+         * ratio of 0.52:0.31.
+         *
+         * These read 26/17 until ADR-150 raised the card from 72px to 82px, and
+         * that is the trap worth naming: these tokens are absolute pixels
+         * expressing a ratio TO THE CARD, so changing the card silently moved
+         * the ratio. Group fell from 0.930 to 0.815 against a reference of 0.94
+         * — a 13% shortfall introduced by a change that measured only the card
+         * and re-verified only the card. Re-derived at 32/20 for an 81px card.
+         *
+         * **Any future change to `row` must re-derive these.** The ratio table
+         * in `docs/ui-audit.md` is what catches it; re-measure against the
+         * committed screenshot, not against intent.
          */
-        'group-gap': '26px',
-        'heading-gap': '17px',
+        'group-gap': '32px',
+        'heading-gap': '20px',
         'btn-sm': '32px',
         'btn-md': '36px',
         'btn-lg': '40px',

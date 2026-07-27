@@ -18,8 +18,8 @@ matches, or was changed to match:
 | Row title type ÷ topbar | 0.268 | 0.255 |
 | Card height ÷ topbar | 1.514 | 1.446 |
 | Card height ÷ title glyph | 5.658 | 5.786 |
-| Gap between cards in a group ÷ card | 0.274 | 0.296 |
-| Gap across a date heading ÷ card | 0.94 | 0.930 |
+| Gap between cards in a group ÷ card | 0.274 | 0.259 |
+| Gap across a date heading ÷ card | 0.94 | 0.926 |
 | Title inset ÷ card height | 1.01 | 0.94 |
 | Leading tile ÷ card height | 0.509 | 0.563 |
 | Settings block ÷ content column | 57.6% | 57.4% |
@@ -29,6 +29,24 @@ Ratios, not pixels, because the reference was captured at a different width and
 an unknown device pixel ratio — solving for that scale gives three different
 answers (1.268 via the topbar, 1.357 via the type, 1.493 via the card), which is
 itself the finding that their proportions differ rather than their zoom.
+
+**A regression this table caught, after it was published.** ADR-149 tuned the two
+gap tokens as a *fraction of card height* but stored them as absolute pixels.
+ADR-150 then raised the card from 72px to 82px and the gaps did not move, so the
+ratio silently did: `group ÷ card` fell from 0.930 to **0.815** against a
+reference of 0.94 — a 13% shortfall introduced by a change that had just
+improved two other rows.
+
+Nothing would have caught it. The tests assert `toBe(82)`, which is correct. The
+visual baselines were regenerated, so the wrong spacing became the expected
+spacing. CI was green. It surfaced only because these published numbers were
+re-derived from the committed screenshot rather than trusted. Re-derived tokens
+(32/20) restore it to 0.926.
+
+**The rule that follows:** changing a value invalidates every ratio with that
+value in its denominator. Verifying the thing you changed is not verifying what
+depended on it — and the `row` token has two dependants that live in a different
+file.
 
 **Three of those rows started 12–54% off** and were closed by ADR-148, -149 and
 -150. **Two differences remain and neither is geometric:** Settings cards carry
