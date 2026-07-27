@@ -57,6 +57,6 @@ ruvector.db
 
 # Local agent-harness state — machine-specific, and it swept itself in on a
 # `git add -A`. Session ids, pid files, daemon logs and loop scratch files
-# have nothing to do with this project.
+# have nothing to do with this project or the build.
 .claude/
 .claude-flow/
