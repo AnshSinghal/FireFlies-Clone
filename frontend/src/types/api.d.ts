@@ -318,7 +318,11 @@ export interface paths {
     /** Every speaker in a meeting */
     get: operations['get_speakers_api_v1_meetings__meeting_id__speakers_get']
     put?: never
-    post?: never
+    /**
+     * Add a speaker
+     * @description For a voice the diariser missed. The colour index continues the meeting's sequence, so the new speaker is visibly distinct from the ones already on screen.
+     */
+    post: operations['create_speaker_api_v1_meetings__meeting_id__speakers_post']
     delete?: never
     options?: never
     head?: never
@@ -965,13 +969,12 @@ export interface components {
       end_ms: number
       /** Id */
       id: number
-      /**
-       * Is Edited
-       * @default false
-       */
+      /** Is Edited */
       is_edited: boolean
       /** Matches */
-      matches?: components['schemas']['MatchRange'][] | null
+      matches: components['schemas']['MatchRange'][] | null
+      /** Original Text */
+      original_text: string | null
       /** Sequence */
       sequence: number
       /** Speaker Id */
@@ -1009,6 +1012,16 @@ export interface components {
       my_meetings: number
     }
     /**
+     * SpeakerCreate
+     * @description A voice the diariser did not find (T-25.6).
+     */
+    SpeakerCreate: {
+      /** Label */
+      label: string
+      /** Participant Id */
+      participant_id?: number | null
+    }
+    /**
      * SpeakerRef
      * @description A speaker, sent once per page rather than once per segment.
      */
@@ -1020,7 +1033,11 @@ export interface components {
       /** Label */
       label: string
       /** Participant Id */
-      participant_id?: number | null
+      participant_id: number | null
+      /** Segment Count */
+      segment_count: number
+      /** Talk Ms */
+      talk_ms: number
     }
     /**
      * SpeakerUpdate
@@ -2195,6 +2212,68 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  create_speaker_api_v1_meetings__meeting_id__speakers_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SpeakerCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SpeakerRef']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */

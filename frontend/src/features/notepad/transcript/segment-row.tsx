@@ -9,20 +9,12 @@
  * which are stable, and compares only what the row draws.
  */
 
-import {
-  MessageSquarePlus,
-  MoreHorizontal,
-  Pencil,
-  Quote,
-  Copy,
-  Link2,
-  UserCog,
-} from 'lucide-react'
+import { Copy, Link2, MessageSquarePlus, MoreHorizontal, Quote, Undo2, UserCog } from 'lucide-react'
 import { memo } from 'react'
 
 import { Avatar } from '@/components/ui/avatar'
 import { Highlighter, type HighlightRange } from '@/components/ui/highlighter'
-import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/dropdown'
+import { Dropdown, DropdownItem, DropdownSeparator, DropdownSub } from '@/components/ui/dropdown'
 import { IconButton } from '@/components/ui/icon-button'
 import { TimestampButton } from '@/components/ui/media-controls'
 import type { SegmentOut, SpeakerRef } from '@/lib/api/types'
@@ -30,6 +22,8 @@ import type { TurnAware } from '@/lib/transcript/grouping'
 import { cn } from '@/lib/utils/cn'
 import { formatTimestamp } from '@/lib/utils/format'
 import { getSpeakerColorByIndex } from '@/lib/utils/speaker-color'
+
+import { SegmentEditor } from './segment-editor'
 
 export interface SegmentRowProps {
   segment: SegmentOut & TurnAware
@@ -43,6 +37,13 @@ export interface SegmentRowProps {
   matchRanges?: HighlightRange[]
   /** Which of those is the CURRENT match, or -1 for none. */
   activeMatch?: number
+  /** Edit mode (T-25). The row becomes editable and gains its own affordances. */
+  editing?: boolean
+  speakers?: SpeakerRef[]
+  onEditText?: (segmentId: number, previous: string, next: string) => void
+  onCommitEdit?: () => void
+  onReassign?: (segmentId: number, speakerId: number) => void
+  onRevert?: (segment: SegmentOut) => void
 }
 
 function SegmentRowImpl({
@@ -54,6 +55,12 @@ function SegmentRowImpl({
   onCopyLink,
   matchRanges,
   activeMatch = -1,
+  editing = false,
+  speakers,
+  onEditText,
+  onCommitEdit,
+  onReassign,
+  onRevert,
 }: SegmentRowProps) {
   const color = speaker ? getSpeakerColorByIndex(speaker.color_index) : undefined
   const label = speaker?.label ?? 'Unknown speaker'
@@ -107,6 +114,16 @@ function SegmentRowImpl({
           >
             {label}
           </span>
+
+          {segment.is_edited && (
+            <span
+              data-testid={`segment-edited-${segment.id}`}
+              title="This line was edited after transcription"
+              className="shrink-0 rounded-full bg-surface-2 px-1.5 text-xs text-muted"
+            >
+              Edited
+            </span>
+          )}
         </header>
       )}
 
@@ -122,7 +139,14 @@ function SegmentRowImpl({
           // the transcript uncopyable — the one thing people do with one.
           style={{ userSelect: 'text' }}
         >
-          {matchRanges && matchRanges.length > 0 ? (
+          {editing && onEditText && onCommitEdit ? (
+            <SegmentEditor
+              segmentId={segment.id}
+              value={segment.text}
+              onChange={(previous, next) => onEditText(segment.id, previous, next)}
+              onCommit={onCommitEdit}
+            />
+          ) : matchRanges && matchRanges.length > 0 ? (
             <Highlighter
               text={segment.text}
               ranges={matchRanges}
@@ -190,12 +214,35 @@ function SegmentRowImpl({
             <DropdownItem icon={<Quote size={16} strokeWidth={1.75} />} soon>
               Create soundbite
             </DropdownItem>
-            <DropdownItem icon={<Pencil size={16} strokeWidth={1.75} />} soon>
-              Edit
-            </DropdownItem>
-            <DropdownItem icon={<UserCog size={16} strokeWidth={1.75} />} soon>
-              Reassign speaker
-            </DropdownItem>
+            {/*
+              Reassignment is a submenu of the meeting's own speakers (T-25.6).
+              Cross-meeting reassignment would corrupt two transcripts at once,
+              which is why the API refuses it and why the list is scoped here.
+            */}
+            {onReassign && speakers && speakers.length > 1 && (
+              <DropdownSub label="Reassign speaker" icon={<UserCog size={16} strokeWidth={1.75} />}>
+                {speakers.map((speaker) => (
+                  <DropdownItem
+                    key={speaker.id}
+                    testId={`segment-reassign-${speaker.id}`}
+                    onSelect={() => onReassign(segment.id, speaker.id)}
+                  >
+                    {speaker.label}
+                  </DropdownItem>
+                ))}
+              </DropdownSub>
+            )}
+
+            {/* Only where there is something to revert TO. */}
+            {onRevert && segment.original_text !== null && (
+              <DropdownItem
+                icon={<Undo2 size={16} strokeWidth={1.75} />}
+                testId={`segment-revert-${segment.id}`}
+                onSelect={() => onRevert(segment)}
+              >
+                Revert to original
+              </DropdownItem>
+            )}
           </Dropdown>
         </span>
       </div>
@@ -226,6 +273,10 @@ export const SegmentRow = memo(SegmentRowImpl, (previous, next) => {
     // changes, and never mutated in place.
     previous.matchRanges === next.matchRanges &&
     previous.activeMatch === next.activeMatch &&
+    previous.editing === next.editing &&
+    previous.segment.is_edited === next.segment.is_edited &&
+    previous.segment.original_text === next.segment.original_text &&
+    previous.speakers === next.speakers &&
     previous.speaker?.label === next.speaker?.label &&
     previous.speaker?.color_index === next.speaker?.color_index
   )

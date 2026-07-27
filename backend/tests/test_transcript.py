@@ -417,3 +417,111 @@ def test_regenerating_clears_the_stale_flag(client: TestClient, long_meeting: Me
 
     client.post(f"/api/v1/meetings/{long_meeting.id}/summary/regenerate")
     assert client.get(f"/api/v1/meetings/{long_meeting.id}/summary").json()["is_stale"] is False
+
+
+class TestSpeakerStats:
+    """The legend's shares and the rename popover's count (T-25.7, T-25.8)."""
+
+    def test_a_speaker_carries_its_segment_count_and_talk_time(
+        self, client: TestClient, db: Session
+    ) -> None:
+        meeting = make_meeting(db)
+        alice = make_speaker(db, meeting, label="Alice", color_index=0)
+        bob = make_speaker(db, meeting, label="Bob", color_index=1)
+
+        for index in range(3):
+            db.add(
+                TranscriptSegment(
+                    meeting_id=meeting.id,
+                    speaker_id=alice.id,
+                    sequence=index,
+                    start_ms=index * 10_000,
+                    end_ms=index * 10_000 + 4_000,
+                    text=f"Alice line {index}",
+                )
+            )
+        db.add(
+            TranscriptSegment(
+                meeting_id=meeting.id,
+                speaker_id=bob.id,
+                sequence=3,
+                start_ms=40_000,
+                end_ms=41_000,
+                text="Bob line",
+            )
+        )
+        db.commit()
+
+        speakers = client.get(f"/api/v1/meetings/{meeting.id}/speakers").json()
+        by_label = {speaker["label"]: speaker for speaker in speakers}
+
+        assert by_label["Alice"]["segment_count"] == 3
+        # Three four-second lines.
+        assert by_label["Alice"]["talk_ms"] == 12_000
+        assert by_label["Bob"]["segment_count"] == 1
+        assert by_label["Bob"]["talk_ms"] == 1_000
+
+    def test_a_new_speaker_gets_the_next_colour(self, client: TestClient, db: Session) -> None:
+        """Distinct from the ones already on screen — the point of the index."""
+        meeting = make_meeting(db)
+        make_speaker(db, meeting, label="Alice", color_index=0)
+        make_speaker(db, meeting, label="Bob", color_index=1)
+        db.commit()
+
+        response = client.post(
+            f"/api/v1/meetings/{meeting.id}/speakers", json={"label": "Priya Raman"}
+        )
+
+        assert response.status_code == 201
+        assert response.json()["color_index"] == 2
+        assert response.json()["segment_count"] == 0
+
+    def test_an_edited_segment_reports_its_original_text(
+        self, client: TestClient, db: Session
+    ) -> None:
+        """So "Revert to original" is exact rather than remembered."""
+        meeting = make_meeting(db)
+        speaker = make_speaker(db, meeting)
+        segment = TranscriptSegment(
+            meeting_id=meeting.id,
+            speaker_id=speaker.id,
+            sequence=0,
+            start_ms=0,
+            end_ms=1_000,
+            text="As it was said",
+        )
+        db.add(segment)
+        db.commit()
+
+        client.patch(
+            f"/api/v1/meetings/segments/{segment.id}", json={"text": "As it was corrected"}
+        )
+
+        page = client.get(f"/api/v1/meetings/{meeting.id}/transcript").json()
+        assert page["segments"][0]["original_text"] == "As it was said"
+        assert page["segments"][0]["is_edited"] is True
+
+    def test_segment_text_is_trimmed_and_bounded(self, client: TestClient, db: Session) -> None:
+        meeting = make_meeting(db)
+        speaker = make_speaker(db, meeting)
+        segment = TranscriptSegment(
+            meeting_id=meeting.id,
+            speaker_id=speaker.id,
+            sequence=0,
+            start_ms=0,
+            end_ms=1_000,
+            text="Original",
+        )
+        db.add(segment)
+        db.commit()
+
+        trimmed = client.patch(
+            f"/api/v1/meetings/segments/{segment.id}", json={"text": "  padded  "}
+        )
+        assert trimmed.json()["text"] == "padded"
+
+        # A paste accident, not a transcript line.
+        too_long = client.patch(
+            f"/api/v1/meetings/segments/{segment.id}", json={"text": "x" * 5001}
+        )
+        assert too_long.status_code == 422

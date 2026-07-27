@@ -40,6 +40,12 @@ interface TranscriptListProps {
   matchRanges?: Map<number, HighlightRange[]>
   /** `{ segmentIndex, indexInSegment }` of the current match, or null. */
   currentMatch?: { segmentIndex: number; indexInSegment: number } | null
+  /** Edit mode (T-25), passed straight through to the rows. */
+  editing?: boolean
+  onEditText?: (segmentId: number, previous: string, next: string) => void
+  onCommitEdit?: () => void
+  onReassign?: (segmentId: number, speakerId: number) => void
+  onRevert?: (segment: SegmentOut) => void
   onSeek: (ms: number, options?: { play?: boolean }) => void
   onCopyText: (segment: SegmentOut) => void
   onCopyLink: (segment: SegmentOut) => void
@@ -105,6 +111,11 @@ function TranscriptListImpl({
   isPlaying,
   matchRanges,
   currentMatch,
+  editing,
+  onEditText,
+  onCommitEdit,
+  onReassign,
+  onRevert,
   onSeek,
   onCopyText,
   onCopyLink,
@@ -452,6 +463,12 @@ function TranscriptListImpl({
                   onSeek={onSeek}
                   onCopyText={onCopyText}
                   onCopyLink={onCopyLink}
+                  editing={editing}
+                  speakers={speakers}
+                  onEditText={onEditText}
+                  onCommitEdit={onCommitEdit}
+                  onReassign={onReassign}
+                  onRevert={onRevert}
                   matchRanges={matchRanges?.get(row.id)}
                   activeMatch={
                     currentMatch?.segmentIndex === virtualRow.index

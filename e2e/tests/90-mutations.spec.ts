@@ -314,9 +314,16 @@ test.describe('summary · regenerate', { tag: '@mutates' }, () => {
     )
     const segment = (await transcript.json()).segments[0]
 
+    /*
+     * A REAL change, not a trailing space.
+     *
+     * T-25 made the API trim segment text, so a whitespace-only "edit" now
+     * lands as the same string and nothing is marked stale — correctly, since
+     * nothing changed.
+     */
     const edit = await request.patch(
       `http://127.0.0.1:8100/api/v1/meetings/segments/${segment.id}`,
-      { data: { text: `${segment.text} ` } },
+      { data: { text: `${segment.text} (edited by T23-L)` } },
     )
     expect(edit.ok()).toBe(true)
 
@@ -496,5 +503,169 @@ test.describe('action items · editing', { tag: '@mutates' }, () => {
     await page.getByTestId(`action-item-text-${id}-input`).fill(original)
     await page.keyboard.press('Enter')
     await expect(page.getByTestId(`action-item-text-${id}`)).toHaveText(original)
+  })
+})
+
+test.describe('transcript · editing', { tag: '@mutates' }, () => {
+  const HERO = 1
+
+  async function edit(page: Page): Promise<void> {
+    await page.goto(`/meeting/${HERO}`)
+    await expect(page.getByTestId('transcript-list')).toBeVisible({ timeout: 20_000 })
+    await page.getByTestId('transcript-edit-toggle').click()
+    await expect(page.getByTestId('transcript-edit-status')).toBeVisible()
+  }
+
+  test('T25-B/D/E · an edit autosaves, is badged, and can be reverted', async ({ page }) => {
+    await edit(page)
+
+    const editor = page.locator('[data-testid^="segment-editor-"]').first()
+    const id = (await editor.getAttribute('data-testid'))!.replace('segment-editor-', '')
+    const original = await editor.inputValue()
+
+    await editor.fill('Edited by the transcript suite')
+
+    // Autosaved 800ms after the last keystroke — no button, no blur needed.
+    await expect(page.getByTestId('transcript-edit-status')).toHaveText('Saved', {
+      timeout: 10_000,
+    })
+
+    await page.reload()
+    await expect(page.getByTestId('transcript-list')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId(`transcript-segment-${id}`)).toContainText(
+      'Edited by the transcript suite',
+    )
+
+    // T25-D: badged, so a corrected line is distinguishable from a transcribed one.
+    await expect(page.getByTestId(`segment-edited-${id}`)).toBeVisible()
+
+    // T25-L: and the summary knows it is now describing text that has changed.
+    await expect(page.getByTestId('summary-stale-badge')).toBeVisible({ timeout: 15_000 })
+
+    // T25-E: revert restores the ORIGINAL, not the previous edit.
+    await page.getByTestId(`transcript-segment-${id}`).hover()
+    await page.getByTestId(`transcript-segment-actions-${id}`).click()
+    await page.getByTestId(`segment-revert-${id}`).click()
+
+    await expect(page.getByTestId(`transcript-segment-${id}`)).toContainText(original, {
+      timeout: 15_000,
+    })
+  })
+
+  test('T25-M · search finds the new text, not the old', async ({ page, request }) => {
+    await edit(page)
+
+    const editor = page.locator('[data-testid^="segment-editor-"]').first()
+    const id = Number((await editor.getAttribute('data-testid'))!.replace('segment-editor-', ''))
+    const original = await editor.inputValue()
+
+    await editor.fill('Zarquon pricing anomaly')
+    await expect(page.getByTestId('transcript-edit-status')).toHaveText('Saved', {
+      timeout: 10_000,
+    })
+
+    /*
+     * Asked of the SERVER, not the client-side find bar.
+     *
+     * The point of this case is that the FTS index moved with the edit — which
+     * it does through triggers on the segments table, not through anything the
+     * app remembers to call.
+     */
+    const found = await request.get(
+      'http://127.0.0.1:8100/api/v1/search?q=Zarquon&scope=transcript',
+    )
+    expect(found.ok()).toBe(true)
+    expect(JSON.stringify(await found.json())).toContain('Zarquon')
+
+    await request.patch(`http://127.0.0.1:8100/api/v1/meetings/segments/${id}`, {
+      data: { text: original },
+    })
+  })
+
+  test('T25-H · a line can be reassigned, and the row follows', async ({ page, request }) => {
+    await page.goto(`/meeting/${HERO}`)
+    await expect(page.getByTestId('transcript-list')).toBeVisible({ timeout: 20_000 })
+
+    const row = page
+      .locator('[data-testid^="transcript-segment-"]:not([data-testid*="actions"])')
+      .first()
+    const id = Number((await row.getAttribute('data-testid'))!.replace('transcript-segment-', ''))
+
+    const nameEl = page.getByTestId(`transcript-speaker-${id}`)
+    const before = (await nameEl.innerText()).trim()
+    const beforeColour = await nameEl.evaluate((el) => getComputedStyle(el).color)
+
+    /*
+     * The MENU offers every other speaker — asserted while it is open.
+     *
+     * The selection itself then goes through the API rather than the submenu.
+     * A Radix submenu lives in a portal and unmounts when its row re-renders,
+     * and this row re-renders on any background refetch of the transcript — so
+     * a test that holds the submenu open across several steps is testing
+     * whether a refetch landed, not whether reassignment works.
+     */
+    await row.hover()
+    await page.getByTestId(`transcript-segment-actions-${id}`).click()
+    await page.getByRole('menuitem', { name: 'Reassign speaker' }).hover()
+
+    const options = page.locator('[data-testid^="segment-reassign-"]')
+    await expect(options.first()).toBeVisible()
+    const labels = (await options.allInnerTexts()).map((label) => label.trim())
+    expect(labels.length).toBeGreaterThan(1)
+    expect(labels).toContain(before)
+
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+
+    const speakers = (await (
+      await request.get(`http://127.0.0.1:8100/api/v1/meetings/${HERO}/speakers`)
+    ).json()) as Array<{ id: number; label: string }>
+
+    const current = speakers.find((speaker) => speaker.label === before)!
+    const target = speakers.find((speaker) => speaker.label !== before)!
+
+    await request.patch(`http://127.0.0.1:8100/api/v1/meetings/segments/${id}`, {
+      data: { speaker_id: target.id },
+    })
+
+    await page.reload()
+    await expect(page.getByTestId('transcript-list')).toBeVisible({ timeout: 20_000 })
+
+    // The name, and with it the colour, follow the reassignment.
+    await expect(page.getByTestId(`transcript-speaker-${id}`)).toHaveText(target.label)
+    const afterColour = await page
+      .getByTestId(`transcript-speaker-${id}`)
+      .evaluate((el) => getComputedStyle(el).color)
+    expect(afterColour).not.toBe(beforeColour)
+
+    await request.patch(`http://127.0.0.1:8100/api/v1/meetings/segments/${id}`, {
+      data: { speaker_id: current.id },
+    })
+  })
+
+  test('T25-F · undo puts the previous text back', async ({ page }) => {
+    await edit(page)
+
+    const editor = page.locator('[data-testid^="segment-editor-"]').first()
+    const id = (await editor.getAttribute('data-testid'))!.replace('segment-editor-', '')
+    const original = await editor.inputValue()
+
+    await editor.fill('A change that will be undone')
+    await expect(page.getByTestId('transcript-edit-status')).toHaveText('Saved', {
+      timeout: 10_000,
+    })
+
+    await page.getByTestId('transcript-undo').click()
+
+    /*
+     * Read from the EDITOR, not from the row.
+     *
+     * `innerText` does not include a `textarea`'s value — in edit mode the row
+     * reads as just the speaker's initials and name, and an assertion against
+     * it fails whatever the undo did.
+     */
+    await expect
+      .poll(() => page.getByTestId(`segment-editor-${id}`).inputValue(), { timeout: 15_000 })
+      .toBe(original)
   })
 })
