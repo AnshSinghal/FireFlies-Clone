@@ -112,11 +112,27 @@ Ours just overdoes it: their ratio of the two gaps is 1.7:1, ours is 3.9:1, so
 our heading reads as attached to the following card rather than floating between
 groups.
 
-At our 67px group gap the reference's split works out to roughly 28px above the
-heading (`group-gap`) and 18px below it (the section's `space-y-2`), against the
-36px and 8px we have. Queued rather than applied: it landed mid-verification and
-is a smaller effect than the two spacing fixes already made, so it belongs in the
-next batch with the settings card anatomy rather than as a fourth interruption.
+**Fixed** — `group-gap: 26px` and a new `heading-gap: 17px`, measured after:
+
+| | below card | heading | above next card |
+|---|---|---|---|
+| Fireflies | 0.520 | 0.180 | 0.310 |
+| Ours now | **0.500** | 0.212 | **0.303** |
+| Ours before | 0.640 | 0.210 | 0.160 |
+
+Both gaps land within 0.02 of the reference, and the gap-to-card ratio held at
+0.930 against their 0.94 — ADR-149's match survived, which was the constraint.
+
+The heading's own share stays at 0.212 against their 0.18, deliberately.
+Reaching 0.18 needs a 78px total, which puts gap ÷ card at 1.10 — a worse miss
+on the more visible property. Our heading band is proportionally taller relative
+to the gap than theirs, and that cannot be closed from the gap side.
+
+Worth recording that the first derivation was wrong: 28/18 looked right and
+would have pushed the total to 70px, taking gap ÷ card to 0.986 and quietly
+undoing half of ADR-149 while fixing the distribution. Fixing one ratio by
+breaking the one already matched is not a fix, and the only thing that caught it
+was re-deriving the arithmetic before typing the edit.
 
 **The row height is deliberately still 1.29 against their 1.51.** Matching it
 means 72px → ~85px, and that token is load-bearing in a way the gaps are not:

@@ -140,7 +140,7 @@ export function MeetingListSkeleton({
       className="space-y-group-gap"
     >
       {groups.map((size, groupIndex) => (
-        <div key={groupIndex} className="space-y-2">
+        <div key={groupIndex} className="space-y-heading-gap">
           {/* The date heading, at the same height as the real one. */}
           <div className="flex items-center gap-2.5 px-1">
             <Skeleton variant="rect" className="h-4 w-4 shrink-0" />

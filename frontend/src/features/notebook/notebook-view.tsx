@@ -634,7 +634,7 @@ function GroupedList({
         const someSelected = groupIds.some((id) => selection.isSelected(id))
 
         return (
-          <section key={group.key} className="space-y-2">
+          <section key={group.key} className="space-y-heading-gap">
             {group.label && (
               <div className="flex items-center gap-2.5 px-1">
                 <Checkbox

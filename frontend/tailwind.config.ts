@@ -265,7 +265,23 @@ const config: Config = {
         settings: '548px',
 
         'row-gap': '20px',
-        'group-gap': '36px',
+        /*
+         * 26/17, not 36/8. ADR-149 matched the group gap's TOTAL to the
+         * reference; this matches its DISTRIBUTION, which is a separate
+         * property and was still wrong. Fireflies splits the run between two
+         * cards straddling a date heading 0.52 / 0.18 / 0.31 (below card /
+         * heading / above next card); ours was 0.64 / 0.21 / 0.16, so the
+         * heading read as attached to the card beneath it rather than sitting
+         * between groups.
+         *
+         * Derived by holding the 67px total (that ratio is already correct at
+         * 0.944 against their 0.94) and the 14px glyph band (the type scale is
+         * already correct), then splitting the remaining 53px in their
+         * below:above ratio. A first attempt at 28/18 pushed the total to 70px
+         * and would have broken the ratio ADR-149 had just fixed.
+         */
+        'group-gap': '26px',
+        'heading-gap': '17px',
         'btn-sm': '32px',
         'btn-md': '36px',
         'btn-lg': '40px',
