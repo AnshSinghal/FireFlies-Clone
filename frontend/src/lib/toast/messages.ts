@@ -16,6 +16,7 @@ export const TOAST_MESSAGES = {
   meetingCreated: 'Meeting created',
   changesSaved: 'Changes saved',
   actionItemAdded: 'Action item added',
+  actionItemDeleted: 'Action item deleted',
   summaryRegenerated: 'Summary regenerated',
   linkCopied: 'Link copied to clipboard',
   segmentCopied: 'Segment copied to clipboard',

@@ -13,7 +13,7 @@
 
 import { ArrowUpRight, Lock, X } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -108,6 +108,13 @@ function DrawerBody({ meeting, onClose }: { meeting: MeetingDetail; onClose: () 
   const update = useUpdateMeeting(meeting.id)
   const { data: summary } = useSummary(meeting.id)
   const { data: actionItems } = useActionItems(meeting.id)
+
+  // See the note at the call site: the preview holds still while its rows are
+  // ticked, which the prioritised order the API returns would not.
+  const previewItems = useMemo(
+    () => [...(actionItems ?? [])].sort((a, b) => a.id - b.id).slice(0, 3),
+    [actionItems],
+  )
   const toggleItem = useToggleActionItem(meeting.id)
 
   const [expanded, setExpanded] = useState(false)
@@ -244,7 +251,18 @@ function DrawerBody({ meeting, onClose }: { meeting: MeetingDetail; onClose: () 
           <section className="space-y-2">
             <h3 className="text-label uppercase text-muted">Action items</h3>
             <ul className="space-y-2">
-              {actionItems.slice(0, 3).map((item) => (
+              {/*
+                A STABLE three, ordered by id.
+                
+                The API returns items prioritised — open first, then by due
+                date (T-24.1) — which is right for the Notepad's full list and
+                wrong for a three-item preview: ticking one moves it past the
+                cut and it vanishes from under the cursor, with no way to
+                untick it. Sorting the preview by id keeps the same three rows
+                on screen whatever their status, and the prioritised list is
+                one click away.
+              */}
+              {previewItems.map((item) => (
                 <li key={item.id} className="flex items-start gap-2.5">
                   <Checkbox
                     checked={item.status === 'completed'}

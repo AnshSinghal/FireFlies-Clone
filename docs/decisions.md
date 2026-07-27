@@ -1827,6 +1827,82 @@ is not.
 
 ---
 
+## ADR-077 — Action items are ordered in SQL, and the drawer's preview is not
+
+**Context.** T-24.1 wants open before completed, then by due date with nulls
+last, then by the moment the commitment was made. Two surfaces render the list:
+the Notepad's full section and the Notebook drawer's three-item preview.
+
+**Decision.** Order in the query, once. "Nulls last" is spelled out rather than
+left to the dialect — SQLite sorts NULL first ascending and Postgres sorts it
+last, and an item with no due date belongs at the bottom either way.
+
+The DRAWER then re-sorts its own copy by id before taking three. The prioritised
+order is right for a list and wrong for a preview: ticking a row moves it past
+the cut, and it vanishes from under the cursor with no way to untick it. That
+was not a hypothesis — it is what the existing T15-D started doing the moment
+the ordering changed.
+
+**Consequence.** Two orders, each justified: the full list is prioritised, the
+preview is stable. Both come from one query.
+
+---
+
+## ADR-078 — `null` and absent are different in a PATCH body
+
+**Context.** An action item edit can set the text, the assignee, the due date or
+the status, in any combination. Clearing an assignee is a real edit.
+
+**Decision.** `ActionItemUpdate` has all-optional fields, and the service reads
+`model_fields_set` rather than checking `is not None`. Sending `null` CLEARS the
+field; omitting it leaves it alone.
+
+The `is not None` shortcut is the obvious version and it makes unassigning
+impossible through the API — the request is well-formed, the server accepts it,
+and nothing happens.
+
+**Consequence.** Two tests pin the distinction, one for each direction. The
+generated client's `ActionItemPatch` marks the nullable fields `| null` for the
+same reason.
+
+---
+
+## ADR-079 — Deleting an action item is a hard delete with Undo
+
+**Context.** Meetings are soft-deleted: they have transcripts, summaries and
+action items hanging off them, and a 410 is meaningfully different from a 404.
+
+**Decision.** An action item is deleted outright, and the DELETE response
+RETURNS the item so the client can offer Undo by re-creating it.
+
+One line of text with no children does not need the soft-delete machinery, and
+adding it would leave rows nobody can reach for a restore path already covered
+by the toast. A confirm dialog was the other option, and a modal to remove a
+one-line task is heavy-handed — the Undo is cheaper for the user and safer than
+a dialog people learn to dismiss.
+
+**Consequence.** The Undo handler captures the item's values at delete time
+rather than reading them from a row, because it outlives the row it came from
+(ADR-026, again).
+
+---
+
+## ADR-080 — Positional locators break when a list can reorder
+
+Recorded because it has now cost two debugging sessions in two tasks.
+
+`nth(8)` and `.first()` are re-evaluated by Playwright at the moment of use.
+When the list underneath can move — a transcript following the playhead, an
+action item sliding to the bottom as it is ticked — the element clicked is not
+the element measured, and the failure reads as a product bug: the player seeking
+to the wrong time, a badge that will not go back to its original count.
+
+Pin to an id first, then act on that id. Where the movement is the problem
+rather than the locator, stop the movement the way a user would — a wheel event
+suspends the transcript's follow for five seconds.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

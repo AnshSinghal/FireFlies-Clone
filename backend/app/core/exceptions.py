@@ -100,6 +100,19 @@ class InvalidSortError(BadRequestError):
     code = "INVALID_SORT"
 
 
+class AssigneeNotInMeetingError(BadRequestError):
+    """An action item assigned to somebody who was not in the meeting.
+
+    The database cannot express this — it would need a composite FK against
+    `(meeting_id, id)` on participants, and a composite unique key there purely
+    to satisfy it (see the note on `ActionItem.assignee_participant_id`). So the
+    invariant lives in the service, and this is what it raises.
+    """
+
+    code = "ASSIGNEE_NOT_IN_MEETING"
+    message = "That person is not a participant in this meeting."
+
+
 class ValidationError(AppException):
     status_code = 422
     code = "VALIDATION_ERROR"

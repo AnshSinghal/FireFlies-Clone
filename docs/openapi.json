@@ -18,9 +18,70 @@
         "title": "ActionItemCounts",
         "type": "object"
       },
-      "ActionItemOut": {
-        "description": "One action item. T-24 owns the full CRUD; this is what a preview needs.",
+      "ActionItemCreate": {
+        "description": "A manually added item (T-24.5).",
         "properties": {
+          "assignee_participant_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Participant Id"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "start_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Ms"
+          },
+          "text": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ActionItemCreate",
+        "type": "object"
+      },
+      "ActionItemOut": {
+        "description": "One action item, with everything the Notepad's list draws (T-24).",
+        "properties": {
+          "assignee_avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Avatar Url"
+          },
           "assignee_name": {
             "anyOf": [
               {
@@ -31,6 +92,17 @@
               }
             ],
             "title": "Assignee Name"
+          },
+          "assignee_participant_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Participant Id"
           },
           "due_date": {
             "anyOf": [
@@ -48,6 +120,24 @@
             "title": "Id",
             "type": "integer"
           },
+          "meeting_id": {
+            "title": "Meeting Id",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ActionItemSource"
+          },
+          "start_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Ms"
+          },
           "status": {
             "$ref": "#/components/schemas/ActionItemStatus"
           },
@@ -58,11 +148,26 @@
         },
         "required": [
           "id",
+          "meeting_id",
           "text",
-          "status"
+          "status",
+          "due_date",
+          "assignee_name",
+          "assignee_participant_id",
+          "assignee_avatar_url",
+          "start_ms",
+          "source"
         ],
         "title": "ActionItemOut",
         "type": "object"
+      },
+      "ActionItemSource": {
+        "enum": [
+          "ai",
+          "manual"
+        ],
+        "title": "ActionItemSource",
+        "type": "string"
       },
       "ActionItemStatus": {
         "enum": [
@@ -73,15 +178,55 @@
         "type": "string"
       },
       "ActionItemUpdate": {
-        "description": "The only field the drawer's checkbox changes.",
+        "description": "A partial edit: text, assignee, due date, or the checkbox.\n\nEvery field is optional, and `None` is a MEANINGFUL value for the nullable\nones \u2014 clearing an assignee is a real edit. The two are told apart with\n`model_fields_set` rather than by treating `None` as \"absent\", which would\nmake unassigning impossible.",
         "properties": {
+          "assignee_participant_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Participant Id"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
           "status": {
-            "$ref": "#/components/schemas/ActionItemStatus"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActionItemStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
           }
         },
-        "required": [
-          "status"
-        ],
         "title": "ActionItemUpdate",
         "type": "object"
       },
@@ -2020,8 +2165,79 @@
       }
     },
     "/api/v1/meetings/action-items/{item_id}": {
+      "delete": {
+        "description": "Returns the deleted item, so the client can offer Undo by re-creating it. A hard delete: one line of text with no children does not need the soft-delete machinery meetings have.",
+        "operationId": "delete_action_item_api_v1_meetings_action_items__item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionItemOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Delete an action item",
+        "tags": [
+          "meetings"
+        ]
+      },
       "patch": {
-        "description": "`completed_at` is derived from the status rather than accepted from the client, so the two cannot disagree.",
+        "description": "A partial edit: text, assignee, due date or status. `completed_at` is derived from the status rather than accepted from the client, so the two cannot disagree. Sending `null` CLEARS a nullable field \u2014 absent and null are different requests.",
         "operationId": "update_action_item_api_v1_meetings_action_items__item_id__patch",
         "parameters": [
           {
@@ -2079,11 +2295,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Invalid payload; `details` is keyed by field path."
           },
           "500": {
             "content": {
@@ -2096,7 +2312,7 @@
             "description": "Unexpected error. `details.request_id` correlates to logs."
           }
         },
-        "summary": "Tick or untick an action item",
+        "summary": "Edit an action item",
         "tags": [
           "meetings"
         ]
@@ -2694,6 +2910,87 @@
           }
         },
         "summary": "List a meeting's action items",
+        "tags": [
+          "meetings"
+        ]
+      },
+      "post": {
+        "description": "Appended after the extracted items and marked `manual`, so a task somebody typed is distinguishable from one the model guessed.",
+        "operationId": "create_action_item_api_v1_meetings__meeting_id__action_items_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionItemCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionItemOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Add an action item",
         "tags": [
           "meetings"
         ]

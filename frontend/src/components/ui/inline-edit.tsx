@@ -31,6 +31,14 @@ interface InlineEditProps {
   testId?: string
   /** Hides the hover pencil, for places where the affordance would be noise. */
   hideIcon?: boolean
+  /**
+   * Wraps instead of truncating.
+   *
+   * A meeting title lives on one line of a header and truncating it is right.
+   * An action item is a sentence somebody has to read and then do — truncating
+   * that hides the half that says what to do.
+   */
+  multiline?: boolean
 }
 
 export function InlineEdit({
@@ -41,6 +49,7 @@ export function InlineEdit({
   emptyError = 'This cannot be empty',
   testId,
   hideIcon,
+  multiline,
 }: InlineEditProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -90,7 +99,11 @@ export function InlineEdit({
           type="button"
           onClick={start}
           data-testid={testId}
-          className={cn('min-w-0 truncate text-left hover:underline', className)}
+          className={cn(
+            'min-w-0 text-left hover:underline',
+            multiline ? 'whitespace-normal' : 'truncate',
+            className,
+          )}
         >
           {value}
         </button>

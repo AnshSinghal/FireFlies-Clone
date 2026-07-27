@@ -232,7 +232,19 @@ test.describe('details drawer', { tag: '@mutates' }, () => {
     const badge = page.getByTestId('meeting-row-1').getByTestId('meeting-row-actions')
     const before = await badge.textContent()
 
-    const item = page.locator('[data-testid^="details-action-item-"]').first()
+    /*
+     * Pinned to an ID, not to a position.
+     *
+     * T-24.1 orders the list open-first, so ticking an item MOVES it to the
+     * bottom — and `.first()` then refers to a different item, which made
+     * "put it back" tick a second item instead of unticking the first.
+     */
+    const id = (await page
+      .locator('[data-testid^="details-action-item-"]')
+      .first()
+      .getAttribute('data-testid'))!
+    const item = page.getByTestId(id)
+
     await item.click()
 
     // Optimistic: the strikethrough is immediate, not after a round-trip.
@@ -242,7 +254,8 @@ test.describe('details drawer', { tag: '@mutates' }, () => {
     await expect(badge).not.toHaveText(before!)
 
     // Put it back.
-    await item.click()
+    await page.getByTestId(id).click()
+    await expect(page.getByTestId(id)).toHaveAttribute('data-state', 'unchecked')
     await expect(badge).toHaveText(before!)
   })
 
@@ -322,5 +335,166 @@ test.describe('summary · regenerate', { tag: '@mutates' }, () => {
       `http://127.0.0.1:8100/api/v1/meetings/segments/${segment.id}`,
       { data: { text: segment.text } },
     )
+  })
+})
+
+test.describe('action items · editing', { tag: '@mutates' }, () => {
+  /** The QBR: seven items, a mix of overdue, due-today and no-date. */
+  const QBR = 6
+
+  const rows = (page: Page) => page.locator('[data-testid^="action-item-"][data-status]')
+
+  async function openActions(page: Page): Promise<void> {
+    await page.goto(`/meeting/${QBR}`)
+    await expect(page.getByTestId('action-items-section')).toBeVisible({ timeout: 20_000 })
+  }
+
+  test('T24-B/C · ticking an item is instant and survives a reload', async ({ page }) => {
+    await openActions(page)
+
+    const open = page.locator('[data-testid^="action-item-"][data-status="open"]').first()
+    const id = (await open.getAttribute('data-testid'))!.replace('action-item-', '')
+    const checkbox = page.getByTestId(`action-item-checkbox-${id}`)
+
+    /*
+     * Held OPEN by a delayed route, so "instant" is a claim with teeth: the row
+     * must show as completed while the request is still in flight, not after
+     * it settles.
+     */
+    await page.route('**/api/v1/meetings/action-items/*', async (route) => {
+      if (route.request().method() !== 'PATCH') return route.continue()
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      return route.continue()
+    })
+
+    await checkbox.click()
+    await expect(page.getByTestId(`action-item-${id}`)).toHaveAttribute(
+      'data-status',
+      'completed',
+      { timeout: 500 },
+    )
+
+    await page.unrouteAll({ behavior: 'ignoreErrors' })
+    await page.reload()
+    await expect(page.getByTestId(`action-item-${id}`)).toHaveAttribute(
+      'data-status',
+      'completed',
+      { timeout: 20_000 },
+    )
+
+    // Put it back, so the seeded counts hold for everything else.
+    await page.getByTestId(`action-item-checkbox-${id}`).click()
+    await expect(page.getByTestId(`action-item-${id}`)).toHaveAttribute('data-status', 'open')
+  })
+
+  test('T24-O · toggling here updates the Notebook row', async ({ page }) => {
+    await openActions(page)
+
+    const open = page.locator('[data-testid^="action-item-"][data-status="open"]').first()
+    const id = (await open.getAttribute('data-testid'))!.replace('action-item-', '')
+
+    await page.goto('/notebook')
+    const badge = page.getByTestId(`meeting-row-${QBR}`).getByTestId('meeting-row-actions')
+    await expect(badge).toBeVisible({ timeout: 15_000 })
+    const before = Number((await badge.innerText()).match(/\d+/)![0])
+
+    await page.goto(`/meeting/${QBR}`)
+    await page.getByTestId(`action-item-checkbox-${id}`).click()
+    await expect(page.getByTestId(`action-item-${id}`)).toHaveAttribute('data-status', 'completed')
+
+    await page.goto('/notebook')
+    // The cross-view invalidation: the row's "N open" is derived from the same
+    // counts, so it has to fall by one.
+    await expect
+      .poll(
+        async () =>
+          Number((await page.getByTestId(`meeting-row-${QBR}`).getByTestId('meeting-row-actions').innerText()).match(/\d+/)![0]),
+        { timeout: 15_000 },
+      )
+      .toBe(before - 1)
+
+    await page.goto(`/meeting/${QBR}`)
+    await page.getByTestId(`action-item-checkbox-${id}`).click()
+    await expect(page.getByTestId(`action-item-${id}`)).toHaveAttribute('data-status', 'open')
+  })
+
+  test('T24-F/J · adding an item, then deleting it with Undo', async ({ page }) => {
+    await openActions(page)
+    const before = await rows(page).count()
+
+    await page.getByTestId('action-item-add').click()
+    await page.getByTestId('action-item-composer-text').fill('Ship the pricing deck')
+    await page.getByTestId('action-item-composer-save').click()
+
+    await expect(rows(page)).toHaveCount(before + 1, { timeout: 15_000 })
+    const added = page.locator('[data-testid^="action-item-"][data-status]', {
+      hasText: 'Ship the pricing deck',
+    })
+    await expect(added).toHaveCount(1)
+
+    await page.reload()
+    await expect(page.getByTestId('action-items-section')).toBeVisible({ timeout: 20_000 })
+    await expect(rows(page)).toHaveCount(before + 1)
+
+    // Delete it, and take the Undo — the item comes back.
+    const id = (await added.first().getAttribute('data-testid'))!.replace('action-item-', '')
+    await page.getByTestId(`action-item-kebab-${id}`).click()
+    await page.getByTestId(`action-item-delete-${id}`).click()
+
+    await expect(rows(page)).toHaveCount(before)
+    await page.getByTestId('toast-action').first().click()
+    await expect(rows(page)).toHaveCount(before + 1, { timeout: 15_000 })
+
+    // Now really remove it, so the seeded count holds.
+    const restored = page.locator('[data-testid^="action-item-"][data-status]', {
+      hasText: 'Ship the pricing deck',
+    })
+    const restoredId = (await restored.first().getAttribute('data-testid'))!.replace(
+      'action-item-',
+      '',
+    )
+    await page.getByTestId(`action-item-kebab-${restoredId}`).click()
+    await page.getByTestId(`action-item-delete-${restoredId}`).click()
+    await expect(rows(page)).toHaveCount(before)
+  })
+
+  test('T24-H/I · inline editing saves on Enter and reverts on Escape', async ({ page }) => {
+    await openActions(page)
+
+    const first = rows(page).first()
+    const id = (await first.getAttribute('data-testid'))!.replace('action-item-', '')
+    const text = page.getByTestId(`action-item-text-${id}`)
+    const original = (await text.innerText()).trim()
+
+    // Escape reverts, and sends nothing.
+    let patched = 0
+    await page.route('**/api/v1/meetings/action-items/*', (route) => {
+      if (route.request().method() === 'PATCH') patched += 1
+      return route.continue()
+    })
+
+    await text.click()
+    await page.getByTestId(`action-item-text-${id}-input`).fill('Something else entirely')
+    await page.keyboard.press('Escape')
+
+    await expect(page.getByTestId(`action-item-text-${id}`)).toHaveText(original)
+    expect(patched).toBe(0)
+
+    // Enter saves, and it persists.
+    await page.getByTestId(`action-item-text-${id}`).click()
+    await page.getByTestId(`action-item-text-${id}-input`).fill('Edited by a test')
+    await page.keyboard.press('Enter')
+
+    await expect(page.getByTestId(`action-item-text-${id}`)).toHaveText('Edited by a test')
+    await page.reload()
+    await expect(page.getByTestId(`action-item-text-${id}`)).toHaveText('Edited by a test', {
+      timeout: 20_000,
+    })
+
+    // Restore the seeded text.
+    await page.getByTestId(`action-item-text-${id}`).click()
+    await page.getByTestId(`action-item-text-${id}-input`).fill(original)
+    await page.keyboard.press('Enter')
+    await expect(page.getByTestId(`action-item-text-${id}`)).toHaveText(original)
   })
 })
