@@ -2365,6 +2365,136 @@ Canvas surfaces got the same treatment for a different reason: the waveform
 reads its colours from CSS variables at draw time, so a theme switch now bumps
 an epoch (via a `data-theme` MutationObserver) to trigger a repaint — pixels
 do not restyle themselves.
+## ADR-104 — PDF via ReportLab/Platypus, not WeasyPrint
+
+**Context.** T-34.5 offers either. Both Docker images are `python:3.13-slim`
+with zero apt packages and the prod container runs non-root with a read-only
+`/app`; WeasyPrint needs the pango/cairo/gdk-pixbuf C stack in both images.
+
+**Decision.** ReportLab (plus python-docx for the fourth format) — manylinux
+and pure wheels for cp313/cp314, so export deploys with no image change. The
+T-34.6 page discipline maps onto Platypus directly: `KeepTogether` around every
+transcript turn and action item, `keepWithNext` on headings, and the two-pass
+canvas recipe for `Page N of M` (buffer page states in `showPage()`, stamp in
+`save()` once the total is known).
+
+**Consequence.** No HTML template — the PDF is drawn, which costs layout code
+but removes an entire native-dependency class from the deploy. Checkbox glyphs
+come from ZapfDingbats because Helvetica has no ballot boxes.
+
+---
+
+## ADR-105 — The document palette is a sanctioned copy of the token layer
+
+**Context.** PDFs and DOCX cannot read CSS custom properties, yet T-34.5 wants
+the export to look like the same product.
+
+**Decision.** `app/services/export/palette.py` mirrors the resolved light-theme
+values from `tokens.css`, each constant named after the semantic token it
+copies. This is the one sanctioned exception to "hex exists only in
+tokens.css" — a token change there must be mirrored here. The header draws the
+same two offset rounded rectangles as the Topbar mark, never a trademarked
+asset.
+
+**Consequence.** A grep for hex codes outside `tokens.css` now has exactly one
+allowed hit, documented at the top of the file.
+
+---
+
+## ADR-106 — `include=` names data sources; render order is fixed
+
+**Context.** T-34.1's `include=` lists five sections, two of which (comments,
+highlights) belong to tasks landing in parallel branches.
+
+**Decision.** A registry (`export/registry.py`) maps section keys to loaders
+that emit a small format-neutral block IR every renderer already draws.
+`summary` expands through `MeetingService.to_summary()` — ADR-015's composition
+point — so export can never disagree with the summary panel. `comments` and
+`highlights` are accepted in the vocabulary today and render the moment their
+task registers a loader (one line). Caller order in `include=` is ignored: two
+exports of the same meeting must read the same.
+
+**Consequence.** Unknown token → 422 (failed the vocabulary); `include=` that
+selects nothing → 400 `EMPTY_INCLUDE` (parsed but not allowed), matching the
+existing 422/400 split. T-31 registered its loader in this same change; T-32's
+is a one-liner when it merges.
+
+---
+
+## ADR-107 — Streaming and bulk-zip posture
+
+**Context.** T-34.7 requires a 1,200-segment export not to buffer whole in
+memory; T-34.9 zips a selection.
+
+**Decision.** All validation happens before the first chunk leaves — an error
+must never surface after headers are sent. md/txt render lazily; PDF/DOCX are
+container formats with no incremental mode, so they render once and re-chunk at
+64 KB. The zip builds in a `SpooledTemporaryFile` (spills past 32 MB) and is
+all-or-nothing: any missing or deleted id fails the whole request, listing
+`details.missing` and `details.deleted` — a zip that silently ships 7 of 9
+files looks complete and is not. The export router registers *before* the
+meetings router so static `GET /meetings/export` is never captured as
+`/{meeting_id}` (guarded by a test).
+
+**Consequence.** Measured: 0.6 s / 8 MB peak against the 5 s / 64 MB budget.
+
+---
+
+## ADR-108 — Filenames are whitelisted into existence, not blacklisted
+
+**Context.** T-34.11's test title contains `/`, `..` and emoji.
+
+**Decision.** NFKD-normalise, drop non-ASCII, lowercase, collapse every run of
+non-alphanumerics to one hyphen — traversal is impossible by construction
+rather than stripped by pattern. Whole name capped at 100 chars; an unusable
+title falls back to `meeting-<date>.<ext>`, never `download` or `export.pdf`.
+
+**Consequence.** The zip reuses the same rule per member with `-2`/`-3`
+suffixes on collisions, so bulk and single exports of one meeting share a name.
+
+---
+
+## ADR-109 — `features/export` is a shared feature module; the download is a raw fetch
+
+**Context.** Notebook (bulk bar, row kebab) and Notepad (header kebab) both
+open the export modal, and `apiFetch` unconditionally `.json()`s bodies.
+
+**Decision.** The modal lives in `features/export`, outside the eslint
+cross-feature fence — the `features/edit` precedent; lifting it to
+`components/ui` would put meetings knowledge into the primitive layer. The
+download path is a raw fetch (not `apiFetch`, not a mutation — it mutates no
+cache): 60 s timeout because a 1,200-segment PDF legitimately outlives an API
+read, a `role="status"` line flips to "Still working…" at 10 s, and the modal
+owns both its toasts since the global `MutationCache` handler never sees the
+request. `RadioCardGroup` is a new primitive because `RadioGroup` hardcodes
+`radio-<value>` testids and has no icon/description slot, while T-34.12 fixes
+the names as `export-format-<fmt>`.
+
+**Consequence.** One sanctioned exception to "never add onError toasts",
+documented at the call site. The server's `Content-Disposition` is authoritative
+for the filename (CORS already exposes it); a client-side slug is the
+cross-origin fallback.
+
+---
+
+## ADR-110 — One client-side section registry drives checkboxes, `include=`, the estimate, and clipboard Markdown
+
+**Context.** T34-H grades that unchecking Transcript visibly shrinks the
+estimate; T-31/T-32 add sections over time.
+
+**Decision.** `features/export/sections.ts` is the single list everything
+derives from. `include=` is always sent explicitly — relying on the server's
+default-all would silently grow exports the moment a parallel branch registers
+a new section server-side while the UI still shows three boxes. The word count
+is a stated heuristic over already-cached queries (whitespace tokens; pages =
+`ceil(words/450)`, shown only for paginated formats). "Copy as Markdown"
+mirrors the server's T-34.3 shape client-side from the same caches — zero
+requests — grouping the transcript by speaker turns via the same `markTurns`
+the transcript panel uses.
+
+**Consequence.** Ticked boxes stay exactly equal to the file's contents at all
+times; registering a section is one line plus optional estimate/clipboard
+extensions.
 
 ---
 
