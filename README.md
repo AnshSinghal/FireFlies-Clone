@@ -1,7 +1,7 @@
 # Fireflies.ai Clone
 
 [![CI](https://github.com/AnshSinghal/FireFlies-Clone/actions/workflows/ci.yml/badge.svg)](https://github.com/AnshSinghal/FireFlies-Clone/actions/workflows/ci.yml)
-![backend coverage](https://img.shields.io/badge/backend_coverage-95%25-brightgreen)
+![backend coverage](https://img.shields.io/badge/backend_coverage-96%25-brightgreen)
 ![tests](https://img.shields.io/badge/tests-988_passing-brightgreen)
 
 An AI meeting-notetaker: a searchable meetings library, an interactive transcript wired
@@ -444,7 +444,7 @@ out of time:
 | Playwright `visual` | 16 | ~20s | Screenshot comparison (`@visual`) |
 | Playwright `firefox` + `webkit` | 16 | ~17s | Platform seams only (`@crossbrowser`) |
 
-Backend coverage is **95%** over `services/`, `ai/` and `parsers/` — the plan's target is 80%.
+Backend coverage is **96%** over `services/`, `ai/` and `parsers/` — the plan's target is 80%.
 Regenerate with `make coverage`, which writes `backend/htmlcov/index.html`.
 
 The e2e total exceeds the number of `test()` declarations because the `@mobile`, `@visual` and
