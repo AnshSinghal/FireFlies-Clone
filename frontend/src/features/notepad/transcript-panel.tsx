@@ -18,17 +18,27 @@ import { IconButton } from '@/components/ui/icon-button'
 import { SkeletonText } from '@/components/ui/skeleton'
 import { StateView } from '@/components/ui/state-view'
 import { useToast } from '@/components/ui/toast'
+import {
+  useCreateHighlight,
+  useDeleteHighlight,
+  useHighlights,
+  useUpdateHighlight,
+} from '@/lib/api/highlights'
 import { useRenameSpeaker, useTranscript, useUpdateSegment } from '@/lib/api/transcript'
-import type { SegmentOut } from '@/lib/api/types'
+import type { HighlightOut, SegmentOut } from '@/lib/api/types'
 import { useNotepadCommands } from '@/lib/notepad/commands'
 import { usePlayer } from '@/lib/player/player-context'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { activeSegmentIndex, toPlainText } from '@/lib/transcript/grouping'
+import type { HighlightColorName } from '@/lib/transcript/highlight-colors'
 import { cn } from '@/lib/utils/cn'
 import { formatTimestamp, pluralize } from '@/lib/utils/format'
 
+import { useBookmarkSession } from './transcript/use-bookmarks'
+import { useHighlightColor } from './transcript/use-highlight-color'
 import { PlayerCard } from './player/player-card'
 import { FindBar } from './transcript/find-bar'
+import { HighlightPopover } from './transcript/highlight-popover'
 import { SelectionToolbar } from './transcript/selection-toolbar'
 import { SpeakerLegend } from './transcript/speaker-legend'
 import { TranscriptList } from './transcript/transcript-list'
@@ -172,6 +182,73 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
     if (currentMatchMs === undefined) return
     player.seek(currentMatchMs)
   }, [currentMatchMs, player])
+
+  // ── Highlights and bookmarks (T-32) ───────────────────────────────────────
+
+  const { data: highlightData } = useHighlights(meetingId)
+  const createHighlight = useCreateHighlight(meetingId)
+  const updateHighlight = useUpdateHighlight(meetingId)
+  const deleteHighlight = useDeleteHighlight(meetingId)
+  const [lastColor, setLastColor] = useHighlightColor()
+
+  /*
+   * Grouped ONCE, into a Map the rows index into.
+   *
+   * `SegmentRow` holds its slice by identity, so filtering per row would hand
+   * every row a fresh array on every render and defeat the memoisation that
+   * keeps the ten-times-a-second clock out of the transcript.
+   */
+  const highlightsBySegment = useMemo(() => {
+    const grouped = new Map<number, HighlightOut[]>()
+    for (const highlight of highlightData ?? []) {
+      const list = grouped.get(highlight.segment_id)
+      if (list) list.push(highlight)
+      else grouped.set(highlight.segment_id, [highlight])
+    }
+    return grouped
+  }, [highlightData])
+
+  const [openHighlight, setOpenHighlight] = useState<{ id: number; anchor: HTMLElement } | null>(
+    null,
+  )
+  /*
+   * DERIVED, not stored. A highlight removed elsewhere — or invalidated by an
+   * edit to its segment — simply stops resolving, and the popover stops
+   * rendering with it. Holding a copy in state would mean a panel anchored to
+   * markup that no longer exists, and an effect to clean it up.
+   */
+  const activeHighlight = openHighlight
+    ? (highlightData ?? []).find((highlight) => highlight.id === openHighlight.id)
+    : undefined
+
+  const onHighlightActivate = useCallback(
+    (id: number, anchor: HTMLElement) => setOpenHighlight({ id, anchor }),
+    [],
+  )
+
+  const addHighlight = useCallback(
+    (selection: { segmentId: number; start: number; end: number }, color: HighlightColorName) => {
+      setLastColor(color)
+      createHighlight.mutate(
+        {
+          segment_id: selection.segmentId,
+          start_offset: selection.start,
+          end_offset: selection.end,
+          color,
+        },
+        { onError: () => toast.error(TOAST_MESSAGES.highlightFailed) },
+      )
+    },
+    [createHighlight, setLastColor, toast],
+  )
+
+  const activeSegmentId = activeIndex >= 0 ? shown[activeIndex]?.id : undefined
+  const bookmarkSession = useBookmarkSession({
+    meetingId,
+    activeSegmentId,
+    // Off while editing: `B` has to type a B.
+    enabled: !edit.editing,
+  })
 
   const onCopyAll = useCallback(() => {
     const labels = new Map(speakers.map((speaker) => [speaker.id, speaker.label]))
@@ -346,6 +423,10 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
                   }
                 : null
             }
+            highlightsBySegment={highlightsBySegment}
+            onHighlightActivate={onHighlightActivate}
+            bookmarkedSegments={bookmarkSession.segmentIds}
+            onToggleBookmark={bookmarkSession.toggleSegment}
           />
         )}
       </div>
@@ -353,7 +434,32 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
       <SelectionToolbar
         containerRef={bodyRef}
         onCopy={(text) => void copy(text, TOAST_MESSAGES.selectionCopied)}
+        // Absent while editing: highlighting text you are about to retype is a
+        // highlight the next keystroke invalidates.
+        onHighlight={edit.editing ? undefined : addHighlight}
+        lastColor={lastColor}
       />
+
+      {activeHighlight && openHighlight && (
+        <HighlightPopover
+          // Keyed, so opening a different mark remounts the panel with that
+          // note rather than carrying the previous one across.
+          key={activeHighlight.id}
+          highlight={activeHighlight}
+          anchor={openHighlight.anchor}
+          onClose={() => setOpenHighlight(null)}
+          onChangeColor={(color) => {
+            setLastColor(color)
+            updateHighlight.mutate({ id: activeHighlight.id, color })
+          }}
+          onSaveNote={(note) => updateHighlight.mutate({ id: activeHighlight.id, note })}
+          onRemove={() => {
+            deleteHighlight.mutate(activeHighlight.id)
+            setOpenHighlight(null)
+            toast.success(TOAST_MESSAGES.highlightRemoved)
+          }}
+        />
+      )}
     </section>
   )
 }

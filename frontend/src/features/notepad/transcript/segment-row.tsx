@@ -9,21 +9,31 @@
  * which are stable, and compares only what the row draws.
  */
 
-import { Copy, Link2, MessageSquarePlus, MoreHorizontal, Quote, Undo2, UserCog } from 'lucide-react'
+import {
+  Copy,
+  Link2,
+  MessageSquarePlus,
+  MoreHorizontal,
+  Quote,
+  Star,
+  Undo2,
+  UserCog,
+} from 'lucide-react'
 import { memo } from 'react'
 
 import { Avatar } from '@/components/ui/avatar'
-import { Highlighter, type HighlightRange } from '@/components/ui/highlighter'
 import { Dropdown, DropdownItem, DropdownSeparator, DropdownSub } from '@/components/ui/dropdown'
 import { IconButton } from '@/components/ui/icon-button'
 import { TimestampButton } from '@/components/ui/media-controls'
-import type { SegmentOut, SpeakerRef } from '@/lib/api/types'
+import type { HighlightOut, SegmentOut, SpeakerRef } from '@/lib/api/types'
+import type { SearchRange } from '@/lib/transcript/segment-spans'
 import type { TurnAware } from '@/lib/transcript/grouping'
 import { cn } from '@/lib/utils/cn'
 import { formatTimestamp } from '@/lib/utils/format'
 import { getSpeakerColorByIndex } from '@/lib/utils/speaker-color'
 
 import { SegmentEditor } from './segment-editor'
+import { SegmentText } from './segment-text'
 
 export interface SegmentRowProps {
   segment: SegmentOut & TurnAware
@@ -34,9 +44,15 @@ export interface SegmentRowProps {
   onCopyText: (segment: SegmentOut) => void
   onCopyLink: (segment: SegmentOut) => void
   /** Offsets to highlight in this line (T-22.3). */
-  matchRanges?: HighlightRange[]
+  matchRanges?: SearchRange[]
   /** Which of those is the CURRENT match, or -1 for none. */
   activeMatch?: number
+  /** This line's stored highlights (T-32.4). */
+  highlights?: readonly HighlightOut[]
+  onHighlightActivate?: (highlightId: number, anchor: HTMLElement) => void
+  /** Bookmarks (T-32.6). */
+  bookmarked?: boolean
+  onToggleBookmark?: (segmentId: number) => void
   /** Edit mode (T-25). The row becomes editable and gains its own affordances. */
   editing?: boolean
   speakers?: SpeakerRef[]
@@ -45,6 +61,8 @@ export interface SegmentRowProps {
   onReassign?: (segmentId: number, speakerId: number) => void
   onRevert?: (segment: SegmentOut) => void
 }
+
+const NO_HIGHLIGHTS: readonly HighlightOut[] = []
 
 function SegmentRowImpl({
   segment,
@@ -55,6 +73,10 @@ function SegmentRowImpl({
   onCopyLink,
   matchRanges,
   activeMatch = -1,
+  highlights = NO_HIGHLIGHTS,
+  onHighlightActivate,
+  bookmarked = false,
+  onToggleBookmark,
   editing = false,
   speakers,
   onEditText,
@@ -77,10 +99,14 @@ function SegmentRowImpl({
        * selectable and a button's contents are not reliably selectable.
        *
        * The check below is what makes that safe: a click that landed on the
-       * timestamp, the menu, or inside a text selection is not a "seek here".
+       * timestamp, the menu, a highlight, or inside a text selection is not a
+       * "seek here".
        */
       onClick={(event) => {
-        if (event.target instanceof Element && event.target.closest('button, a, [role="menu"]')) {
+        if (
+          event.target instanceof Element &&
+          event.target.closest('button, a, [role="menu"], [data-highlight-id]')
+        ) {
           return
         }
         // Dragging out a selection ends in a click. Seeking then would move the
@@ -88,10 +114,13 @@ function SegmentRowImpl({
         if ((window.getSelection()?.toString().length ?? 0) > 0) return
         onSeek(segment.start_ms)
       }}
-      // `group` so the timestamp and the ⋯ can appear on hover without either
-      // of them needing hover state of its own.
+      // `group` so the timestamp, the star and the ⋯ can appear on hover
+      // without any of them needing hover state of its own.
       className={cn(
-        'group/segment relative cursor-pointer px-4 py-3 transition-colors duration-fast',
+        // `pl-8` rather than `px-4`: the extra 16px is the bookmark gutter, and
+        // reserving it unconditionally is what keeps a starred line exactly as
+        // wide as an unstarred one.
+        'group/segment relative cursor-pointer py-3 pl-8 pr-4 transition-colors duration-fast',
         isActive ? 'bg-accent-subtle' : 'hover:bg-surface-hover',
       )}
     >
@@ -102,6 +131,35 @@ function SegmentRowImpl({
       */}
       {isActive && (
         <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-accent" />
+      )}
+
+      {/*
+        The gutter star (T-32.6). It lives in the row's LEFT PADDING rather than
+        in the content flow, so a bookmarked line is exactly as tall and exactly
+        as wide as an unbookmarked one — a star that reflowed the text would
+        make scanning a transcript for stars impossible.
+      */}
+      {onToggleBookmark && (
+        <IconButton
+          size="sm"
+          label={bookmarked ? 'Remove bookmark' : 'Bookmark this moment'}
+          aria-pressed={bookmarked}
+          data-testid={`bookmark-toggle-${segment.id}`}
+          hideTooltip
+          icon={
+            <Star size={14} strokeWidth={1.75} fill={bookmarked ? 'currentColor' : 'none'} />
+          }
+          onClick={(event) => {
+            event.stopPropagation()
+            onToggleBookmark(segment.id)
+          }}
+          className={cn(
+            'absolute left-0 top-1.5 transition-opacity duration-fast',
+            bookmarked
+              ? 'text-brand-amber opacity-100 hover:text-brand-amber'
+              : 'opacity-0 focus-visible:opacity-100 group-hover/segment:opacity-100',
+          )}
+        />
       )}
 
       {segment.startsTurn && (
@@ -133,12 +191,7 @@ function SegmentRowImpl({
         what makes a turn read as one block.
       */}
       <div className="flex items-start gap-2 pl-9">
-        <p
-          className="min-w-0 flex-1 select-text whitespace-pre-wrap text-transcript text-primary"
-          // Explicit, because a reset that kills selection would quietly make
-          // the transcript uncopyable — the one thing people do with one.
-          style={{ userSelect: 'text' }}
-        >
+        <p className="min-w-0 flex-1 select-text text-transcript text-primary">
           {editing && onEditText && onCommitEdit ? (
             <SegmentEditor
               segmentId={segment.id}
@@ -146,17 +199,21 @@ function SegmentRowImpl({
               onChange={(previous, next) => onEditText(segment.id, previous, next)}
               onCommit={onCommitEdit}
             />
-          ) : matchRanges && matchRanges.length > 0 ? (
-            <Highlighter
-              text={segment.text}
-              ranges={matchRanges}
-              activeIndex={activeMatch}
-              // No radius here: the component already sets `rounded-none`, and a
-              // second radius utility would leave the winner to stylesheet order.
-              markClassName="bg-highlight text-primary"
-            />
           ) : (
-            segment.text
+            /*
+              ONE renderer for both channels (T-32.4). Marks and highlights are
+              flattened into a single disjoint span list rather than nested,
+              which is what keeps a search hit inside a highlight from producing
+              broken markup or dropping the characters at the seam.
+            */
+            <SegmentText
+              segmentId={segment.id}
+              text={segment.text}
+              highlights={highlights}
+              matchRanges={matchRanges}
+              activeMatch={activeMatch}
+              onHighlightActivate={onHighlightActivate}
+            />
           )}
         </p>
 
@@ -207,6 +264,23 @@ function SegmentRowImpl({
             >
               Copy link to this moment
             </DropdownItem>
+
+            {onToggleBookmark && (
+              <DropdownItem
+                icon={
+                  <Star
+                    size={16}
+                    strokeWidth={1.75}
+                    fill={bookmarked ? 'currentColor' : 'none'}
+                  />
+                }
+                onSelect={() => onToggleBookmark(segment.id)}
+                testId={`segment-bookmark-${segment.id}`}
+              >
+                {bookmarked ? 'Remove bookmark' : 'Bookmark this moment'}
+              </DropdownItem>
+            )}
+
             <DropdownSeparator />
             <DropdownItem icon={<MessageSquarePlus size={16} strokeWidth={1.75} />} soon>
               Add comment
@@ -273,6 +347,10 @@ export const SegmentRow = memo(SegmentRowImpl, (previous, next) => {
     // changes, and never mutated in place.
     previous.matchRanges === next.matchRanges &&
     previous.activeMatch === next.activeMatch &&
+    // Same contract — the per-segment slice is memoised by the panel, so a new
+    // array identity means a highlight on THIS line changed.
+    previous.highlights === next.highlights &&
+    previous.bookmarked === next.bookmarked &&
     previous.editing === next.editing &&
     previous.segment.is_edited === next.segment.is_edited &&
     previous.segment.original_text === next.segment.original_text &&

@@ -12,6 +12,7 @@
  * announcing a slider does not then offer the buttons inside it.
  */
 
+import { Star } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { TrackMarker } from '@/components/ui/media-controls'
@@ -38,6 +39,8 @@ interface SeekbarProps {
   onSeek: (ms: number) => void
   /** Chapter ticks seek AND reveal, which scrubbing does not (T-21.6). */
   onSeekChapter: (ms: number) => void
+  /** Bookmarked moments, in ms (T-32.9). */
+  bookmarks?: readonly { id: number; startMs: number; label: string }[]
 }
 
 /** Keyboard step, matching the `←`/`→` shortcut so both routes agree. */
@@ -67,6 +70,7 @@ export function Seekbar({
   cues,
   onSeek,
   onSeekChapter,
+  bookmarks,
 }: SeekbarProps) {
   const trackRef = useRef<HTMLDivElement | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -83,9 +87,13 @@ export function Seekbar({
 
   const hoverMs = hoverRatio === null ? null : hoverRatio * durationMs
   const hoverSpeaker = hoverMs === null ? null : speakerAt(cues, hoverMs)
+  const hasBookmarks = bookmarks !== undefined && bookmarks.length > 0
 
   return (
-    <div className="group/seek relative py-2">
+    // The extra bottom padding is only paid when there is a star row to hold:
+    // an unconditional gap would push the transport down in every meeting for
+    // the benefit of the ones with bookmarks.
+    <div className={cn('group/seek relative py-2', hasBookmarks && 'pb-5')}>
       {/* The hover preview (T-19.4). */}
       {hoverRatio !== null && hoverMs !== null && (
         <div
@@ -213,6 +221,45 @@ export function Seekbar({
               label={`${chapter.title} at ${formatTimestamp(chapter.startMs)}`}
               ratio={ratioOf(chapter.startMs, durationMs)}
               onClick={() => onSeekChapter(chapter.startMs)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/*
+        Bookmark stars (T-32.9), BELOW the track rather than on it.
+
+        A chapter tick and a bookmark tick at the same second would otherwise
+        be one indistinguishable mark, and the two mean different things: a
+        chapter is the meeting's own structure, a bookmark is the reader's.
+        Separating them by row keeps both readable when they coincide.
+      */}
+      {hasBookmarks && (
+        <div
+          data-testid="player-bookmark-marks"
+          className="pointer-events-none absolute inset-x-0 top-[19px] h-3"
+        >
+          {bookmarks.map((bookmark) => (
+            <TrackMarker
+              key={bookmark.id}
+              data-testid={`player-bookmark-${bookmark.id}`}
+              label={`Bookmark: ${bookmark.label} at ${formatTimestamp(bookmark.startMs)}`}
+              ratio={ratioOf(bookmark.startMs, durationMs)}
+              onClick={() => onSeekChapter(bookmark.startMs)}
+              // Inline, because `TrackMarker`'s own `-top-1` is a class and
+              // `cn` deliberately does not resolve conflicts between two of
+              // them — a style attribute is the one override that always wins.
+              style={{ top: 0 }}
+              className="text-brand-amber"
+              glyph={
+                <Star
+                  size={10}
+                  strokeWidth={1.75}
+                  fill="currentColor"
+                  aria-hidden="true"
+                  className="transition-transform duration-fast group-hover/marker:scale-125 group-focus-visible/marker:scale-125"
+                />
+              }
             />
           ))}
         </div>

@@ -29,7 +29,15 @@ const JL_STEP_MS = 10_000
 const OWNS_KEYBOARD =
   'input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="textbox"], [role="menu"], [role="menuitem"], [role="dialog"], [role="listbox"], [role="slider"]'
 
-function typingInto(target: EventTarget | null): boolean {
+/**
+ * Whether the keystroke belongs to something on screen already.
+ *
+ * Exported because every OTHER single-key binding in the Notepad needs the same
+ * answer — `B` for bookmark (T-32.6) included — and a second, subtly different
+ * copy of this predicate is how one of them ends up stealing a keystroke from a
+ * text field.
+ */
+export function typingInto(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
   return Boolean(target.closest(OWNS_KEYBOARD))
 }

@@ -45,6 +45,13 @@ export type TranscriptPage = Schemas['TranscriptPage']
 export type SegmentOut = Schemas['SegmentOut']
 export type SpeakerRef = Schemas['SpeakerRef']
 
+export type HighlightOut = Schemas['HighlightOut']
+export type HighlightCreate = Schemas['HighlightCreate']
+export type HighlightUpdate = Schemas['HighlightUpdate']
+export type HighlightColor = Schemas['HighlightColor']
+export type BookmarkOut = Schemas['BookmarkOut']
+export type BookmarkToggleOut = Schemas['BookmarkToggleOut']
+
 export type SearchResults = Schemas['SearchResults']
 export type MeetingHit = Schemas['MeetingHit']
 export type TranscriptHit = Schemas['TranscriptHit']

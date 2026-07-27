@@ -11,7 +11,7 @@
  * of icons costs a sixth of a phone's width for chrome.
  */
 
-import { Bookmark, MessageSquare, Quote, Search, Sparkles, X } from 'lucide-react'
+import { Bookmark, Highlighter, MessageSquare, Quote, Search, Sparkles, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { IconButton } from '@/components/ui/icon-button'
@@ -23,7 +23,11 @@ export const RAIL_ITEMS = [
   { id: 'index', label: 'Index', icon: Sparkles },
   { id: 'soundbites', label: 'Soundbites', icon: Quote },
   { id: 'comments', label: 'Comments', icon: MessageSquare },
+  // Bookmarks and highlights are adjacent because they are the two things a
+  // reader MAKES while reading, as opposed to the three above, which are things
+  // the meeting already contains.
   { id: 'bookmarks', label: 'Bookmarks', icon: Bookmark },
+  { id: 'highlights', label: 'Highlights', icon: Highlighter },
 ] as const
 
 export type RailItemId = (typeof RAIL_ITEMS)[number]['id']

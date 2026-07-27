@@ -23,8 +23,18 @@ export const TOAST_MESSAGES = {
   selectionCopied: 'Selection copied to clipboard',
   transcriptCopied: 'Transcript copied to clipboard',
   summaryCopied: 'Summary copied to clipboard',
+  highlightRemoved: 'Highlight removed',
+  bookmarkAdded: 'Bookmarked',
+  bookmarkRemoved: 'Bookmark removed',
 
   saveFailed: "Couldn't save changes. Please try again.",
+  /*
+   * T-32.11: a selection spanning two lines is refused rather than split.
+   * Splitting would create marks at both ends the user never drew, and the
+   * message has to say what to do instead — "not supported" alone is a wall.
+   */
+  highlightCrossSegment: 'Highlights stay within one line — select inside a single segment',
+  highlightFailed: "Couldn't save that highlight. Please try again.",
   // The clipboard API refuses on an insecure origin and when the user has
   // denied permission. Both leave a button that appears to do nothing.
   copyFailed: "Couldn't copy — your browser blocked clipboard access",

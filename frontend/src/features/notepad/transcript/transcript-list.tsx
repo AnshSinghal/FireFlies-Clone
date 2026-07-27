@@ -15,10 +15,10 @@ import { ArrowDown } from 'lucide-react'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import type { HighlightRange } from '@/components/ui/highlighter'
-import type { SegmentOut, SpeakerRef } from '@/lib/api/types'
+import type { HighlightOut, SegmentOut, SpeakerRef } from '@/lib/api/types'
 import { useNotepadCommands } from '@/lib/notepad/commands'
 import { markTurns } from '@/lib/transcript/grouping'
+import type { SearchRange } from '@/lib/transcript/segment-spans'
 import { getSpeakerColorByIndex } from '@/lib/utils/speaker-color'
 
 import { SegmentRow } from './segment-row'
@@ -36,10 +36,22 @@ interface TranscriptListProps {
    */
   activeIndex: number
   isPlaying: boolean
-  /** Highlight offsets per segment id (T-22.3). */
-  matchRanges?: Map<number, HighlightRange[]>
+  /** Search-match offsets per segment id (T-22.3). */
+  matchRanges?: Map<number, SearchRange[]>
   /** `{ segmentIndex, indexInSegment }` of the current match, or null. */
   currentMatch?: { segmentIndex: number; indexInSegment: number } | null
+  /**
+   * Stored highlights, grouped by segment id (T-32.4).
+   *
+   * A Map rather than a flat list because `SegmentRow`'s comparator holds its
+   * slice by identity — a flat list would mean filtering per row on every
+   * render, and a new array each time, which defeats the memo entirely.
+   */
+  highlightsBySegment?: Map<number, HighlightOut[]>
+  onHighlightActivate?: (highlightId: number, anchor: HTMLElement) => void
+  /** Segment ids the reader has starred (T-32.6). */
+  bookmarkedSegments?: ReadonlySet<number>
+  onToggleBookmark?: (segmentId: number) => void
   /** Edit mode (T-25), passed straight through to the rows. */
   editing?: boolean
   onEditText?: (segmentId: number, previous: string, next: string) => void
@@ -111,6 +123,10 @@ function TranscriptListImpl({
   isPlaying,
   matchRanges,
   currentMatch,
+  highlightsBySegment,
+  onHighlightActivate,
+  bookmarkedSegments,
+  onToggleBookmark,
   editing,
   onEditText,
   onCommitEdit,
@@ -475,6 +491,10 @@ function TranscriptListImpl({
                       ? currentMatch.indexInSegment
                       : -1
                   }
+                  highlights={highlightsBySegment?.get(row.id)}
+                  onHighlightActivate={onHighlightActivate}
+                  bookmarked={bookmarkedSegments?.has(row.id) ?? false}
+                  onToggleBookmark={onToggleBookmark}
                 />
               </li>
             )

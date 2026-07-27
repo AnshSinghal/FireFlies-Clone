@@ -13,7 +13,7 @@
  * complete class set, which is the convention that rule protects.
  */
 
-import type { ButtonHTMLAttributes, InputHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 
 import { cn } from '@/lib/utils/cn'
 
@@ -46,6 +46,14 @@ interface TrackMarkerProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>,
   label: string
   /** Position along the track, 0–1. */
   ratio: number
+  /**
+   * Drawn instead of the default 2px tick.
+   *
+   * Two kinds of mark share this timeline — the meeting's own chapters and the
+   * reader's bookmarks (T-32.9) — and two identical ticks at the same second
+   * would be one indistinguishable mark. The glyph is what tells them apart.
+   */
+  glyph?: ReactNode
 }
 
 /**
@@ -55,7 +63,7 @@ interface TrackMarkerProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>,
  * the hit area is 12px — a 2px target is a target nobody can hit, and padding
  * is the way to widen it without widening the mark.
  */
-export function TrackMarker({ label, ratio, className, style, ...rest }: TrackMarkerProps) {
+export function TrackMarker({ label, ratio, glyph, className, style, ...rest }: TrackMarkerProps) {
   return (
     <button
       type="button"
@@ -68,10 +76,12 @@ export function TrackMarker({ label, ratio, className, style, ...rest }: TrackMa
       style={{ left: `${Math.min(1, Math.max(0, ratio)) * 100}%`, ...style }}
       {...rest}
     >
-      <span
-        aria-hidden="true"
-        className="block h-full w-0.5 rounded-full bg-brand-amber transition-transform duration-fast group-hover/marker:scale-y-125 group-focus-visible/marker:ring-2 group-focus-visible/marker:ring-accent"
-      />
+      {glyph ?? (
+        <span
+          aria-hidden="true"
+          className="block h-full w-0.5 rounded-full bg-brand-amber transition-transform duration-fast group-hover/marker:scale-y-125 group-focus-visible/marker:ring-2 group-focus-visible/marker:ring-accent"
+        />
+      )}
     </button>
   )
 }

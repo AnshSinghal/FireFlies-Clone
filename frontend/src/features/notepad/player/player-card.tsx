@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useRef } from 'react'
 
+import { useBookmarks } from '@/lib/api/highlights'
 import { useSummary } from '@/lib/api/summaries'
 import { useTranscript } from '@/lib/api/transcript'
 import { useNotepadCommands } from '@/lib/notepad/commands'
@@ -73,6 +74,22 @@ export function PlayerCard({ meetingId, src, className }: PlayerCardProps) {
     }
   }, [transcript])
 
+  /*
+   * The seekbar's star ticks (T-32.9). Same cache the flyout reads, so
+   * bookmarking a line puts a star on the bar in the same commit — the two
+   * surfaces cannot disagree because there is only one list.
+   */
+  const { data: bookmarkRows } = useBookmarks(meetingId)
+  const bookmarks = useMemo(
+    () =>
+      (bookmarkRows ?? []).map((bookmark) => ({
+        id: bookmark.id,
+        startMs: bookmark.start_ms,
+        label: bookmark.speaker_label,
+      })),
+    [bookmarkRows],
+  )
+
   return (
     <div
       data-testid="player"
@@ -102,6 +119,7 @@ export function PlayerCard({ meetingId, src, className }: PlayerCardProps) {
         cues={cues}
         onSeek={player.seek}
         onSeekChapter={(ms) => seekTo(ms, { reveal: true })}
+        bookmarks={bookmarks}
       />
 
       <Transport

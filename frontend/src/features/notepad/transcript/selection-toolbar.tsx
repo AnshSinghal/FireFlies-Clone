@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * The floating toolbar over a text selection (T-20.8).
+ * The floating toolbar over a text selection (T-20.8, T-32.2).
  *
  * Positioned from the selection's own bounding rect rather than from the mouse:
  * a selection made with the keyboard, or extended by double-click-and-drag, has
@@ -9,31 +9,50 @@
  * wrong place for both.
  */
 
-import { Copy, Highlighter, MessageSquarePlus, Quote } from 'lucide-react'
+import { Check, Copy, Highlighter, MessageSquarePlus, Quote } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { IconButton } from '@/components/ui/icon-button'
 import { useToast } from '@/components/ui/toast'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
+import {
+  HIGHLIGHT_COLORS,
+  HIGHLIGHT_STYLES,
+  type HighlightColorName,
+} from '@/lib/transcript/highlight-colors'
+import { readSegmentSelection, type SegmentSelection } from '@/lib/transcript/selection'
+import { cn } from '@/lib/utils/cn'
 
 interface SelectionToolbarProps {
   /** Selections outside this element are ignored. */
   containerRef: React.RefObject<HTMLElement | null>
   onCopy: (text: string) => void
+  /** Applies a highlight. Absent while the transcript is in edit mode. */
+  onHighlight?: (selection: SegmentSelection, color: HighlightColorName) => void
+  /** The colour the plain `Highlight` button uses (T-32.2). */
+  lastColor?: HighlightColorName
 }
 
 interface Anchor {
   top: number
   left: number
   text: string
+  /** `null` when the selection spans more than one segment. */
+  segment: SegmentSelection | null
 }
 
 /** Below this many characters a "selection" is usually a stray click-drag. */
 const MIN_SELECTION = 2
 
-export function SelectionToolbar({ containerRef, onCopy }: SelectionToolbarProps) {
+export function SelectionToolbar({
+  containerRef,
+  onCopy,
+  onHighlight,
+  lastColor = 'amber',
+}: SelectionToolbarProps) {
   const toast = useToast()
   const [anchor, setAnchor] = useState<Anchor | null>(null)
+  const [pickingColor, setPickingColor] = useState(false)
 
   const update = useCallback(() => {
     const selection = window.getSelection()
@@ -64,7 +83,13 @@ export function SelectionToolbar({ containerRef, onCopy }: SelectionToolbarProps
       return
     }
 
-    setAnchor({ top: rect.top, left: rect.left + rect.width / 2, text })
+    const parsed = readSegmentSelection()
+    setAnchor({
+      top: rect.top,
+      left: rect.left + rect.width / 2,
+      text,
+      segment: parsed === null || parsed === 'cross-segment' ? null : parsed,
+    })
   }, [containerRef])
 
   useEffect(() => {
@@ -88,9 +113,44 @@ export function SelectionToolbar({ containerRef, onCopy }: SelectionToolbarProps
     }
   }, [update])
 
+  /*
+   * A new selection starts with the swatch row closed; leaving it open would
+   * mean the next selection's primary action is two clicks away.
+   *
+   * Adjusted DURING RENDER rather than in an effect. React re-runs this
+   * component immediately with the new state and paints once — an effect would
+   * paint the open swatch row over the new selection first, then close it,
+   * which is a visible flicker for state nobody has looked at yet.
+   */
+  const [lastSelection, setLastSelection] = useState(anchor?.text)
+  if (anchor?.text !== lastSelection) {
+    setLastSelection(anchor?.text)
+    setPickingColor(false)
+  }
+
   if (!anchor) return null
 
   const soon = () => toast.info(TOAST_MESSAGES.comingSoon)
+
+  const highlight = (color: HighlightColorName) => {
+    if (!onHighlight) return
+    if (!anchor.segment) {
+      /*
+       * T-32.11, decided rather than fudged: a selection crossing two lines is
+       * REFUSED with an explanation (ADR-097). Splitting it would create marks
+       * at both ends that the user did not draw — the first and last lines are
+       * almost always partially selected — with no way to remove one without
+       * removing all of them.
+       */
+      toast.info(TOAST_MESSAGES.highlightCrossSegment)
+      return
+    }
+    onHighlight(anchor.segment, color)
+    // The selection has become a highlight; leaving it selected leaves the
+    // toolbar floating over its own result.
+    window.getSelection()?.removeAllRanges()
+    setAnchor(null)
+  }
 
   return (
     <div
@@ -114,12 +174,71 @@ export function SelectionToolbar({ containerRef, onCopy }: SelectionToolbarProps
         data-testid="selection-copy"
         onClick={() => onCopy(anchor.text)}
       />
-      <IconButton
-        label="Highlight"
-        size="sm"
-        icon={<Highlighter size={16} strokeWidth={1.75} />}
-        onClick={soon}
-      />
+
+      {onHighlight && (
+        <>
+          {/*
+            One click highlights in the LAST-USED colour (T-32.2). Choosing a
+            colour is the exception, so it is behind the swatch toggle rather
+            than in front of the common case.
+          */}
+          <IconButton
+            label={`Highlight (${HIGHLIGHT_STYLES[lastColor].label})`}
+            size="sm"
+            icon={<Highlighter size={16} strokeWidth={1.75} />}
+            data-testid="selection-highlight"
+            onClick={() => highlight(lastColor)}
+          />
+          <IconButton
+            label="Pick a highlight colour"
+            size="sm"
+            icon={
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'block h-3.5 w-3.5 rounded-full border',
+                  HIGHLIGHT_STYLES[lastColor].swatch,
+                )}
+              />
+            }
+            aria-expanded={pickingColor}
+            data-testid="selection-highlight-colors"
+            onClick={() => setPickingColor((open) => !open)}
+          />
+        </>
+      )}
+
+      {pickingColor && onHighlight && (
+        <span
+          role="group"
+          aria-label="Highlight colours"
+          data-testid="highlight-toolbar"
+          className="flex items-center gap-0.5 border-l border-subtle pl-1"
+        >
+          {HIGHLIGHT_COLORS.map((color) => (
+            <IconButton
+              key={color}
+              size="sm"
+              label={`${HIGHLIGHT_STYLES[color].label} highlight`}
+              data-testid={`highlight-color-${color}`}
+              onClick={() => highlight(color)}
+              icon={
+                <span
+                  className={cn(
+                    'flex h-4 w-4 items-center justify-center rounded-full border',
+                    HIGHLIGHT_STYLES[color].swatch,
+                  )}
+                >
+                  {color === lastColor && (
+                    <Check size={10} strokeWidth={3} className="text-primary" />
+                  )}
+                </span>
+              }
+            />
+          ))}
+        </span>
+      )}
+
       <IconButton
         label="Comment"
         size="sm"
