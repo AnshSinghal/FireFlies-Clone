@@ -435,7 +435,11 @@ out of time:
 
 ## Testing
 
-**440 backend tests** across 27 files and **566 end-to-end tests** across 44 spec files, all green.
+**440 backend tests** across 27 files and **566 end-to-end tests** across 44 spec files. 548 of the
+566 run and pass on every invocation; the remaining 18 are `99-capture.spec.ts`, which writes
+`docs/screenshots/` and skips unless `CAPTURE=1` — a camera, not a test. Two of those 18 stay
+skipped even then: Fireflies' Meeting Status screen has no equivalent here, and the harness shows
+the reference badged rather than photographing something that does not exist.
 
 | Suite | Tests | Runs in | Covers |
 |---|---|---|---|
