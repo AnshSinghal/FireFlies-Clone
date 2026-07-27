@@ -93,6 +93,10 @@ const config: Config = {
         active: 'var(--ff-highlight-active)',
       },
 
+      /* Soundbite bands on the seekbar (T-33.7). The token carries its own
+         alpha, so it is used as `bg-soundbite-band` with no opacity modifier. */
+      'soundbite-band': 'var(--ff-soundbite-band)',
+
       /* Modal backdrop. Already carries its own alpha, so it is used as
          `bg-scrim` with no opacity modifier. */
       scrim: 'var(--ff-scrim)',
