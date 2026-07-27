@@ -264,6 +264,21 @@ const config: Config = {
       maxWidth: {
         content: '1440px',
         search: '560px',
+        /*
+         * The settings measure, taken from the reference (docs/ui-audit.md
+         * item 10).
+         *
+         * Fireflies constrains its settings block to 57.6% of the content
+         * column and centres it — gutters equal within 3% (336px vs 345px on
+         * a 1608px column). Ours was `max-w-sm`: 40.2%, flush left, 0px one
+         * side and 570px the other, which reads as a page that stopped
+         * rendering rather than as a designed measure.
+         *
+         * 548px is 57.5% of our 953px column, matching their ratio rather
+         * than their pixels — the columns are different widths, so the ratio
+         * is the transferable part.
+         */
+        settings: '548px',
         prose: '68ch',
         'modal-sm': '440px',
         'modal-md': '560px',

@@ -31,7 +31,10 @@ export function SoonPanel({ tab }: SoonPanelProps) {
   const Icon = tab.icon
 
   return (
-    <section className="space-y-4" data-testid={`settings-soon-${tab.id}`}>
+    <section
+      className="mx-auto w-full max-w-settings space-y-4"
+      data-testid={`settings-soon-${tab.id}`}
+    >
       <header className="flex items-center gap-2">
         <Icon size={18} strokeWidth={1.75} className="text-muted" />
         <h2 className="text-h3 text-primary">{tab.label}</h2>
@@ -42,7 +45,7 @@ export function SoonPanel({ tab }: SoonPanelProps) {
         {tab.label.toLowerCase()} for the whole workspace.
       </p>
 
-      <div className="max-w-sm space-y-3">
+      <div className="w-full space-y-3">
         {(SAMPLE_TOGGLES[tab.id] ?? []).map((label) => (
           <Switch
             key={label}
