@@ -85,6 +85,8 @@ _PAUSE_MS = 2000
 #: its midpoint — the "speaker-turn density" half of the heuristic.
 _MAX_CHUNK_SEGMENTS = 14
 _MIN_OUTLINE_ENTRIES = 3
+#: Ceiling on the O(n^2) centrality pool — see `generate_summary`.
+_MAX_CENTRALITY_CANDIDATES = 200
 
 # ── Action-item patterns ────────────────────────────────────────────────────
 
@@ -247,6 +249,14 @@ class MockProvider(AIProvider):
             # Empty-but-valid (T29-H): a summary of nothing says nothing,
             # rather than raising or inventing prose.
             return SummaryResult(overview=None, gist=None, notes=[], provider=self.name)
+
+        # Centrality is O(n^2) over candidate sentences, which is fine for a
+        # meeting and pathological for a 10,000-segment import (T29-I). Cap
+        # the pool at the most information-dense sentences — deterministically,
+        # then restore transcript order so ranking ties still break by index.
+        if len(candidates) > _MAX_CENTRALITY_CANDIDATES:
+            candidates = sorted(candidates, key=lambda c: (-len(c[2]), c[0]))
+            candidates = sorted(candidates[:_MAX_CENTRALITY_CANDIDATES], key=lambda c: c[0])
 
         # Degree centrality over token overlap — the sentence most similar to
         # everything else is the one that summarises the meeting.
