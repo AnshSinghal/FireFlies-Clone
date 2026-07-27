@@ -174,7 +174,12 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('e2e/package-lock.json') }}
 
-      - run: npx playwright install --with-deps chromium
+      # Firefox and WebKit too, because `npm test` runs every project and the
+      # `@crossbrowser` set (T-42.12) lives in two of them. Installing only
+      # chromium made the default invocation mean something different in CI
+      # from what it means locally — and the difference surfaced as a browser
+      # that would not launch, not as a skipped test.
+      - run: npx playwright install --with-deps chromium firefox webkit
         working-directory: e2e
 
       - run: npm test

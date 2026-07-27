@@ -240,17 +240,18 @@ be listening. Override with `E2E_FRONTEND_PORT` / `E2E_BACKEND_PORT`.
 First run needs the browser binaries:
 
 ```bash
-cd e2e && npm install && npx playwright install chromium
+cd e2e && npm install && npx playwright install chromium firefox webkit
 ```
 
-Firefox and WebKit run a small, deliberately-chosen `@crossbrowser` set (T-42.12) rather than the
-whole suite — the platform seams only: the autoplay policy WebKit enforces, sticky positioning
-inside a scroll container, DOM-range normalisation under the selection toolbar, a canvas painted
-from CSS custom properties, and the transcript↔player seek.
+All three engines, because `npm test` runs every project and the `@crossbrowser` set (T-42.12)
+lives in two of them. That set is deliberately small — the platform seams only: the autoplay policy
+WebKit enforces, sticky positioning inside a scroll container, DOM-range normalisation under the
+selection toolbar, a canvas painted from CSS custom properties, and the transcript↔player seek.
+Re-running four hundred assertions in three engines would buy almost nothing; the majority exercise
+our own React state, which does not vary by engine.
 
 ```bash
-npx playwright install firefox webkit
-make e2e-crossbrowser
+make e2e-crossbrowser   # just those, in Firefox and WebKit
 ```
 
 ---
