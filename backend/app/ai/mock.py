@@ -32,6 +32,7 @@ from app.ai.types import (
     KeywordResult,
     NoteGroupResult,
     OutlineEntryResult,
+    SoundbiteProposalResult,
     SummaryResult,
 )
 
@@ -87,6 +88,16 @@ _MAX_CHUNK_SEGMENTS = 14
 _MIN_OUTLINE_ENTRIES = 3
 #: Ceiling on the O(n^2) centrality pool — see `generate_summary`.
 _MAX_CENTRALITY_CANDIDATES = 200
+
+# ── Soundbite proposal bounds (T-33.8) ──────────────────────────────────────
+
+#: The same 3s minimum / 3min maximum the trimmer (T-33.3) and the soundbites
+#: table's check constraints enforce. Duplicated here on purpose: `app/ai`
+#: cannot import the ORM, and a proposal outside these bounds could never be
+#: saved anyway.
+_MIN_CLIP_MS = 3_000
+_MAX_CLIP_MS = 180_000
+_PROPOSAL_COUNT = 3
 
 # ── Action-item patterns ────────────────────────────────────────────────────
 
@@ -350,6 +361,77 @@ class MockProvider(AIProvider):
                     )
                 )
         return items
+
+    # ── Soundbite proposals (keyword-density windows, T-33.8) ───────────
+
+    def propose_soundbites(self, transcript: Transcript) -> list[SoundbiteProposalResult]:
+        """The 3 densest clip-sized windows, non-overlapping, in timeline order.
+
+        Reuses `extract_keywords` as the salience model: a segment scores the
+        summed TF-IDF weight of the keywords it mentions, and a window's score
+        is keyword weight per second — density, not raw sum, so a tight
+        exchange beats a rambling one. Windows snap to segment boundaries (a
+        clip that cuts mid-sentence sounds broken) and always satisfy the
+        3s-3min bounds, so every proposal is saveable as-is.
+        """
+        segments = transcript.segments
+        weights = {keyword.term: keyword.weight for keyword in self.extract_keywords(transcript)}
+        if not weights:
+            return []
+
+        segment_scores = [
+            sum(weights.get(token, 0.0) for token in _tokenize(segment.text))
+            for segment in segments
+        ]
+
+        # One candidate per starting segment: the densest window that opens
+        # there. Strict `>` keeps the earliest (shortest) window on a tie,
+        # which is what makes the choice deterministic.
+        candidates: list[tuple[float, int, int, int, int]] = []
+        for i, first in enumerate(segments):
+            best: tuple[float, int, int, int, int] | None = None
+            running = 0.0
+            for j in range(i, len(segments)):
+                duration = segments[j].end_ms - first.start_ms
+                if duration > _MAX_CLIP_MS:
+                    if j == i:
+                        # A single monologue longer than the cap: trim to the
+                        # cap rather than skip, so even a one-segment
+                        # transcript yields a clip.
+                        density = segment_scores[i] / (_MAX_CLIP_MS / 1000)
+                        best = (density, first.start_ms, first.start_ms + _MAX_CLIP_MS, i, i)
+                    break
+                running += segment_scores[j]
+                if duration < _MIN_CLIP_MS:
+                    continue
+                density = running / (duration / 1000)
+                if best is None or density > best[0]:
+                    best = (density, first.start_ms, segments[j].end_ms, i, j)
+            if best is not None:
+                candidates.append(best)
+
+        # Best-first with stable tie-breaks, then greedily keep the top
+        # non-overlapping three.
+        candidates.sort(key=lambda c: (-c[0], c[1], c[2]))
+        chosen: list[tuple[float, int, int, int, int]] = []
+        for candidate in candidates:
+            if len(chosen) == _PROPOSAL_COUNT:
+                break
+            _, start_ms, end_ms, _, _ = candidate
+            if all(end_ms <= s or e <= start_ms for _, s, e, _, _ in chosen):
+                chosen.append(candidate)
+
+        peak = chosen[0][0] if chosen and chosen[0][0] > 0 else 1.0
+        chosen.sort(key=lambda c: c[1])  # timeline order, matching the flyout
+        return [
+            SoundbiteProposalResult(
+                title=self._title_for(segments[i : j + 1]),
+                start_ms=start_ms,
+                end_ms=end_ms,
+                score=round(density / peak, 4),
+            )
+            for density, start_ms, end_ms, i, j in chosen
+        ]
 
     # ── Answers (term-overlap retrieval) ────────────────────────────────
 
