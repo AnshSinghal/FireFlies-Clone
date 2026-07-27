@@ -137,7 +137,7 @@ export function SelectionToolbar({
     if (!anchor.segment) {
       /*
        * T-32.11, decided rather than fudged: a selection crossing two lines is
-       * REFUSED with an explanation (ADR-097). Splitting it would create marks
+       * REFUSED with an explanation (ADR-102). Splitting it would create marks
        * at both ends that the user did not draw — the first and last lines are
        * almost always partially selected — with no way to remove one without
        * removing all of them.

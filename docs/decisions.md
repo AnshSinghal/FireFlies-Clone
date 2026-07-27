@@ -2314,6 +2314,118 @@ real option reachable with ↑/↓.
 
 ---
 
+## ADR-102 — A highlight stops at the end of its line
+
+**Context.** T-32.11 offers a choice: a selection crossing two segments either
+splits into one highlight per segment, or is refused with a clear message.
+
+**Decision.** REFUSE, and say why. `readSegmentSelection` returns
+`'cross-segment'` and the toolbar raises "Highlights stay within one line —
+select inside a single segment".
+
+**Consequence.** Splitting sounds more generous and is worse. A selection
+dragged across three lines is partial at both ends, so two of the three marks
+are text the user never chose; and once created they are three independent
+rows, so removing "the highlight" means finding and removing three. The refusal
+costs one gesture — release, re-select — and the message says which one.
+
+The storage model is the deeper reason. A highlight is `(segment_id, start,
+end)` because that is what survives an edit (ADR-103); a highlight spanning
+segments has no such address, so "one highlight" across two lines cannot be
+stored at all without a second, weaker representation alongside the first.
+
+---
+
+## ADR-103 — Highlights are relocated on an edit, or deleted, never left
+
+**Context.** Highlights are character offsets into text the user may also edit.
+An edit anywhere before the mark moves every offset after it, and the mark then
+paints the wrong characters — the "garbled range" T-32.11 forbids.
+
+**Decision.** `HighlightService.remap_after_edit`, called from the transcript
+service while BOTH strings are still in hand: relocate the highlight when its
+quoted substring occurs EXACTLY ONCE in the new text; delete it otherwise.
+
+**Consequence.** The common edit — fixing a typo elsewhere in the line — is
+lossless. Ambiguity ("we" now appears four times) and disappearance both delete,
+because any surviving offset pair would be a guess, and a highlight over the
+wrong words is worse than one the user can see is gone.
+
+A diff-based remap preserves more and preserves the wrong thing precisely when
+the edit rewrote the highlighted words, which is the case that matters. The
+call site is load-bearing: after the UPDATE commits, the old text is gone and
+the relocation is no longer computable anywhere.
+
+---
+
+## ADR-104 — Search marks and highlights are flattened, never nested
+
+**Context.** T-32.4 calls this the hard part of the task, and it is: a segment
+can carry several stored highlights and several live search marks, overlapping
+each other arbitrarily.
+
+**Decision.** One function, `buildSegmentSpans(text, highlights, searchRanges)`,
+cuts the line at every range boundary and emits a single ordered list of
+DISJOINT spans, each annotated with the highlight and the match covering it.
+The renderer emits one element per span.
+
+**Consequence.** The invariant the tests assert is that concatenating the spans
+reproduces the input exactly — no character duplicated, none dropped. Nesting
+one renderer inside the other fails that as soon as two ranges partially
+overlap, because each renderer only knows its own ranges, and it produces the
+`<mark><mark>` T-32 lists as a failure.
+
+Two consequences fall out of the flattening. The two channels cannot share a
+background, so a marker owns a wash plus a saturated underline and search owns
+the background (ADR-105). And one highlight can become several elements, so
+only the leading fragment carries `data-testid="highlight-<id>"` — a duplicated
+test id is a locator that throws in strict mode.
+
+Search indices are assigned AFTER merging overlapping search ranges, so they
+keep meaning what the find bar's "3 of 17" means.
+
+---
+
+## ADR-105 — Every marker colour is two tokens, a wash and an underline
+
+**Context.** T-32.3 asks for four colours "each with a matching light background
+and a saturated underline". The obvious reading is decoration; it is not.
+
+**Decision.** `--ff-hl-<name>` (wash) and `--ff-hl-<name>-line` (underline) per
+colour, in both themes.
+
+**Consequence.** The underline is what survives a collision. A search hit and a
+user highlight can land on the same characters and two backgrounds cannot
+coexist, so on a shared span the marker keeps its wash and the search hit is
+carried by weight and — for the current match — an inset ring. Losing either
+signal there is exactly the T32-C failure.
+
+The dark theme inverts the washes to deep tints and lifts the underlines: a
+pastel wash on a near-black surface is either invisible or blinding.
+
+---
+
+## ADR-106 — An interactive control never nests inside a row's link
+
+**Context.** The topbar's search-history ✕ was a `<button>` inside the row's
+`<a>`, with `preventDefault` and `stopPropagation` on mousedown. T35-K failed
+intermittently with the URL on `/search?q=pricing` after removing "onboarding".
+
+**Decision.** The ✕ is a SIBLING of the link, absolutely positioned in the row.
+
+**Consequence.** `preventDefault` on mousedown does not stop the `click` that
+follows it, so the click bubbled to the anchor and Next navigated. It only
+misfired once React had already re-rendered the shortened list — so the button
+usually removed an entry and occasionally ran the search that had just moved
+into its place, which is why the test flaked rather than failed.
+
+`<button>` inside `<a>` is also invalid content, and the two facts are the same
+fact: the nesting the parser rejects is the nesting whose event path cannot be
+made safe. The general rule now applies to the transcript's own row actions,
+which sit outside the segment's click target for the same reason.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

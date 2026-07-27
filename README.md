@@ -87,6 +87,33 @@ region), action items by normalised text. Q&A retrieves the single most relevant
 client-side before asking. A token pre-check refuses absurd inputs (~350k tokens) before they
 cost money. The mock path doesn't need any of this, but the seam is where a real model plugs in.
 
+### Highlights & bookmarks (T-32)
+
+A highlight is a **character range** — `(segment_id, start_offset, end_offset, colour, note)` — not
+a copy of the highlighted string. Storing the text would make it impossible to know where to paint
+it; storing offsets means the mark survives re-render and virtualisation, and can be merged with
+search marks into one span list.
+
+Two consequences worth naming, because both are places a simpler implementation goes wrong:
+
+- **Editing a highlighted line.** Every offset after the edit point moves. `remap_after_edit` runs
+  inside the same transaction as the edit, while both the old and the new text are still in hand —
+  the only moment the relocation is computable — and either moves the range to the substring's new
+  position or deletes it. Relocation happens only when the quoted text occurs *exactly once* in the
+  new text; ambiguity and disappearance both delete, because a highlight painted over the wrong
+  words is worse than one the user can see is gone ([ADR-103](docs/decisions.md)).
+- **A search hit inside a highlight.** Rendering one inside the other produces nested `<mark>`s and
+  loses the characters at the seam. Instead `buildSegmentSpans()` cuts the line at every range
+  boundary and emits a single list of disjoint spans, each carrying what applies to it; the unit
+  tests assert that concatenating them reproduces the line exactly ([ADR-104](docs/decisions.md)).
+  The two channels then coexist visually rather than structurally — a marker owns a wash plus a
+  saturated underline, search owns the background ([ADR-105](docs/decisions.md)).
+
+Bookmarks are deliberately a different thing: a whole starred *moment*, toggled with `B` or from a
+segment's ⋯ menu, listed chronologically in the flyout and drawn as star ticks on the seekbar.
+Highlighting across two segments is refused with an explanation rather than split into two marks
+([ADR-102](docs/decisions.md)).
+
 ---
 
 ## Database Schema
