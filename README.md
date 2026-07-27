@@ -16,7 +16,38 @@ The badge is the measured `pytest --cov` number over `services/`, `ai/` and `par
 
 ## Screenshots
 
-_(Captured in T-45.2: notebook, notepad, dark mode, and a GIF of transcript ↔ player sync.)_
+**The notepad** — transcript, summary and player. The most-graded interaction in the project lives
+here: the line highlighted in the transcript, the outline row at `00:40`, and the player's position
+are one piece of state, and clicking any of them moves the other two.
+
+![The notepad: summary and outline on the left, player and transcript on the right](docs/screenshots/09-notepad.png)
+
+**The notebook** — the meetings library, date-grouped, filterable, with every filter in the URL.
+
+![The notebook: date-grouped meeting cards with tags, participants and action-item counts](docs/screenshots/02-meetings-list.png)
+
+**Dark mode** is a first-class theme, not an inversion — every token has a hand-picked dark value,
+and the suite runs axe against both.
+
+![The same notepad in dark mode](docs/screenshots/09-notepad-dark.png)
+
+Every image above is generated, never hand-cropped:
+
+```bash
+CAPTURE=1 npx playwright test tests/99-capture.spec.ts --project=visual
+```
+
+That writes `docs/screenshots/` at a fixed 1440×900, `deviceScaleFactor: 1`, with the seed clock
+frozen, fonts awaited and animations disabled — so two runs a week apart are byte-comparable and a
+diff means the UI changed. Keys `01`–`08` mirror `docs/reference/fireflies/`, which is what
+[docs/visual-comparison.html](docs/visual-comparison.html) puts side by side;
+**[docs/ui-audit.md](docs/ui-audit.md)** is the written result of that comparison, including where
+this clone deliberately differs and why.
+
+> No GIF of the sync. It is the one thing here a still cannot show, and a GIF is not something this
+> repository can generate reproducibly the way it generates everything else. `16-sync.spec.ts`
+> asserts the behaviour in both directions across fourteen cases instead, and the live demo is two
+> clicks from proving it.
 
 ---
 
