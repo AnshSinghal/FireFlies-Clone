@@ -81,6 +81,45 @@ few seconds per push did not justify it. It is written down rather than fixed
 because an evaluator loading the page mid-push would see something broken and
 deserve an explanation that exists.
 
+## Found by probing the deployment, not the code
+
+Three things that are only visible against the running site. All were measured
+with `curl` against `http://8.231.115.48:8600` on 2026-07-28; none is a leak or
+an outage, and all are open.
+
+**The `/dev/*` routes answer 200 instead of 404.** `/dev/components`,
+`/dev/toasts` and `/dev/tokens` all return **200** with the branded not-found
+page as the body, while a genuinely unknown route returns a correct 404. The
+gate works — `DEV_SURFACES_ENABLED` is false and every one of those pages calls
+`notFound()`, so no dev content is served. The status is wrong because all three
+appear in `.next/prerender-manifest.json`: they are statically generated, so
+`notFound()` runs at build time and its output is served as a static page like
+any other. Fix is `export const dynamic = 'force-dynamic'` per page, moving the
+gate to request time. It matters because anyone checking whether dev surfaces
+shipped will read the status, not the body.
+
+**Audio is gzipped, which `nginx-fireflies.conf` deliberately prevents.** That
+file leaves audio out of `gzip_types` because nginx cannot serve byte ranges
+from a compressed stream — correct, and it still is. But `app/main.py` adds
+`GZipMiddleware(minimum_size=1000)`, which compresses every response over 1KB
+before nginx sees it. Measured: a 1024-byte range comes back as **1047 bytes**,
+and a 100KB range saves 1.2%. Compressing AAC gains nothing, and at the small
+range sizes a seeking player issues, it makes responses larger. Seeking works —
+the middleware compresses each already-range-selected response, where nginx
+would have compressed the whole upstream one — so this is waste, not breakage.
+Do **not** "fix the inconsistency" by adding audio to `gzip_types`; that is the
+change the existing comment exists to prevent.
+
+**No security headers on any response.** No `X-Content-Type-Options`, no
+`X-Frame-Options`, no `Referrer-Policy`; `X-Powered-By: Next.js` is present. The
+README attributes Lighthouse Best Practices 79 entirely to `is-on-https` on a
+bare-IP host, which is true, but "nothing else to fix" had been inferred rather
+than checked. Three `add_header ... always` lines in the server block cover it —
+`always` because without it nginx omits them on error responses, which are the
+ones most worth hardening. CSP is deliberately not in that list: Next injects
+inline scripts, a naive `default-src 'self'` breaks the app, and doing it
+properly needs a nonce.
+
 ## First-time install (already done; recorded for reproducibility)
 
 ```bash
