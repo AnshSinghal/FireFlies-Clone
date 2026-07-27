@@ -33,6 +33,7 @@ import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
 import { NotepadHeader } from './notepad-header'
 import { ShortcutsModal } from './player/shortcuts-modal'
+import { SmartSearchPanel } from './transcript/smart-search-panel'
 import { SummaryPanel } from './summary-panel'
 import { TranscriptPanel } from './transcript-panel'
 
@@ -137,7 +138,13 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
                 onToggle={(id) => setOpenPanel((current) => (current === id ? null : id))}
               />
 
-              {openPanel && <RailFlyout item={openPanel} onClose={() => setOpenPanel(null)} />}
+              {openPanel && (
+                <RailFlyout item={openPanel} onClose={() => setOpenPanel(null)}>
+                  {/* Smart Search is real (T-22.10); the other four rail items
+                    are still placeholders, and the flyout says so itself. */}
+                  {openPanel === 'search' ? <SmartSearchPanel meetingId={meetingId} /> : undefined}
+                </RailFlyout>
+              )}
 
               {isNarrow ? (
                 <div className="flex min-h-0 flex-1 flex-col" data-testid="notepad-tabs">

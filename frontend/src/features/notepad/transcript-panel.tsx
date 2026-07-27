@@ -10,8 +10,8 @@
  * and then fail silently.
  */
 
-import { Copy } from 'lucide-react'
-import { useCallback, useMemo, useRef } from 'react'
+import { Copy, Search } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
@@ -27,8 +27,10 @@ import { activeSegmentIndex, toPlainText } from '@/lib/transcript/grouping'
 import { formatTimestamp, pluralize } from '@/lib/utils/format'
 
 import { PlayerCard } from './player/player-card'
+import { FindBar } from './transcript/find-bar'
 import { SelectionToolbar } from './transcript/selection-toolbar'
 import { TranscriptList } from './transcript/transcript-list'
+import { useTranscriptSearch } from './transcript/use-transcript-search'
 
 interface TranscriptPanelProps {
   meetingId: number
@@ -92,6 +94,39 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
    */
   const activeIndex = activeSegmentIndex(segments, player.currentMs)
 
+  const search = useTranscriptSearch(segments)
+
+  /*
+   * ⌘F opens THIS bar, not the browser's (T-22.1).
+   *
+   * Overriding a browser shortcut needs a reason, and there is one: native find
+   * only sees the DOM, and the transcript is virtualised — it would report
+   * three matches in a transcript containing thirty. `Escape` closes this and
+   * gives the keystroke back, which is the deal.
+   */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'f' || !(event.metaKey || event.ctrlKey)) return
+      event.preventDefault()
+      search.openBar()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [search])
+
+  /*
+   * Stepping to a match SEEKS as well (T-22.6), so search doubles as
+   * navigation. The current match is a position in the recording, and the
+   * player following it is what makes "find the bit about pricing" one action
+   * rather than two.
+   */
+  const currentMatch = search.current >= 0 ? search.matches[search.current] : undefined
+  const currentMatchMs = currentMatch?.startMs
+  useEffect(() => {
+    if (currentMatchMs === undefined) return
+    player.seek(currentMatchMs)
+  }, [currentMatchMs, player])
+
   const onCopyAll = useCallback(() => {
     const labels = new Map(speakers.map((speaker) => [speaker.id, speaker.label]))
     void copy(
@@ -117,7 +152,15 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
             {pluralize(segments.length, 'segment')}
           </span>
         )}
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-1">
+          <IconButton
+            label="Find in transcript"
+            size="sm"
+            icon={<Search size={16} strokeWidth={1.75} />}
+            onClick={search.openBar}
+            disabled={segments.length === 0}
+            data-testid="transcript-find-open"
+          />
           <IconButton
             label="Copy transcript"
             size="sm"
@@ -128,6 +171,20 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
           />
         </span>
       </div>
+
+      {search.open && (
+        <FindBar
+          query={search.query}
+          onQueryChange={search.setQuery}
+          position={search.position}
+          total={search.matches.length}
+          onStep={search.step}
+          onClose={search.closeBar}
+          speakers={speakers}
+          speakerId={search.speakerId}
+          onSpeakerChange={search.setSpeakerId}
+        />
+      )}
 
       <div ref={bodyRef} className="flex min-h-0 flex-1 flex-col">
         {isPending && <SkeletonText lines={14} className="p-5" />}
@@ -166,6 +223,15 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
             onSeek={seekTo}
             onCopyText={onCopyText}
             onCopyLink={onCopyLink}
+            matchRanges={search.ranges}
+            currentMatch={
+              currentMatch
+                ? {
+                    segmentIndex: currentMatch.segmentIndex,
+                    indexInSegment: currentMatch.indexInSegment,
+                  }
+                : null
+            }
           />
         )}
       </div>

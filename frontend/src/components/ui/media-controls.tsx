@@ -150,3 +150,31 @@ export function TimestampButton({ time, label, className, ...rest }: TimestampBu
     </button>
   )
 }
+
+interface ResultRowProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+  children: React.ReactNode
+}
+
+/**
+ * A clickable result row (T-22.10, and the T-30..T-34 rail panels after it).
+ *
+ * Not `Button`: that primitive declares `whitespace-nowrap` and a fixed height,
+ * because it is for actions with a label. A result is two lines of wrapped
+ * text, and stretching a Button around it means overriding half its base — the
+ * conflict `cn` deliberately does not resolve.
+ */
+export function ResultRow({ children, className, ...rest }: ResultRowProps) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'w-full rounded-md px-2 py-1.5 text-left transition-colors duration-fast',
+        'hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+        className,
+      )}
+      {...rest}
+    >
+      {children}
+    </button>
+  )
+}

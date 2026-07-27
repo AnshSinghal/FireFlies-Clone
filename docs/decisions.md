@@ -1645,6 +1645,79 @@ this measurement at all, which is what said the diagnosis was wrong.
 
 ---
 
+## ADR-068 — Find-in-transcript overrides ⌘F
+
+**Context.** Overriding a browser shortcut is a strong move and usually the
+wrong one.
+
+**Decision.** Override it here, because native find only sees the DOM and the
+transcript is virtualised: it would report three matches in a transcript
+containing thirty, with no way to reach the rest — which is worse than useless,
+because it looks like an answer. `Escape` closes the bar and hands the
+keystroke back, which is the deal.
+
+**Consequence.** The bar owns match navigation, the counter, the speaker filter
+and the density map, none of which native find could offer. The shortcuts modal
+names `Escape` so the way back is discoverable.
+
+---
+
+## ADR-069 — Match navigation scrolls through the VIRTUALISER
+
+**Context.** T-22.5 calls this the trap in the task, and it is: a match is very
+often in a row that is not mounted, and `scrollIntoView` on a node that does not
+exist silently does nothing. The counter advances, the highlight moves, and the
+view stays exactly where it was.
+
+**Decision.** Stepping to a match calls `virtualizer.scrollToIndex(segmentIndex)`.
+Only the virtualiser knows where an unrendered row would be.
+
+**Consequence.** The match index is carried as `{ segmentIndex, indexInSegment }`
+rather than as a DOM reference — the first says where to scroll, the second
+tells the highlighter which of that line's marks is current.
+
+---
+
+## ADR-070 — The find cursor is derived, not reset by an effect
+
+**Context.** "A new search starts at its first match; refining an existing one
+keeps the reader where they are." The obvious implementation is a `current`
+number plus an effect that resets it when the query changes.
+
+**Decision.** Store the cursor WITH the query it belongs to and derive the
+current match from the pair.
+
+The effect version renders once with the old index against the new matches
+before the effect corrects it — a highlight in the wrong place on every
+keystroke — and the lint rule against synchronous `setState` in an effect was
+pointing at exactly that. Deriving it means there is never a render where the
+two disagree, and it collapses two effects into one expression that also clamps
+when the speaker filter narrows the results out from under the cursor.
+
+---
+
+## ADR-071 — Smart Search says it is pattern matching
+
+**Context.** The four presets — Questions, Tasks, Metrics, Dates — are regexes.
+The feature they echo in the reference product is called "Smart Search".
+
+**Decision.** Ship the regexes, and have the panel say "Matched by pattern, not
+by a model" above the results. Every preset also shows its count before it is
+selected, so a preset with nothing behind it says so rather than being clicked
+into an empty list.
+
+The `Tasks` pattern is deliberately narrow. Widening it to every verb that
+could imply an action turns the preset into "most of the transcript", and a
+filter that matches everything is worth less than no filter at all — it costs a
+click to learn nothing.
+
+**Consequence.** An honest small feature rather than a dishonest large-sounding
+one. The seeded transcript returns 18 questions, 12 tasks, 13 dates and 1 metric
+— that last number is low because this meeting talks in words rather than
+figures, which is the correct answer rather than a bug to tune away.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
