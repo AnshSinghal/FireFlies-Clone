@@ -42,37 +42,80 @@ Branch on `code`. It is stable and machine-readable; `message` is for humans and
 
 ## Endpoints
 
-Legend: ✅ implemented · 🚧 contract frozen, implementation in a later task.
+All 38 paths below are implemented and serving. This table was stale until
+2026-07-28: it split them into "Core ✅" and **"Frozen contract, later
+tasks 🚧"**, with transcript, summary, action-items, search and the whole of
+Phase 6 sitting in the second group. Every one of those had shipped. A reader
+would have concluded the project was roughly a third built.
 
-### Core
+Generated from the deployment's own `/openapi.json`, not written by hand, so it
+cannot drift the same way again — and `tests/test_openapi_drift.py` already
+fails the build if the committed schema falls behind the code.
 
-| Method | Path | Status | Notes |
-|---|---|---|---|
-| `GET` | `/api/health` | ✅ | Runs a real `SELECT 1`; **503** when the database is unreachable |
-| `GET` | `/api/v1/me` | ✅ | The seeded default user — auth is out of scope |
-| `GET` | `/api/v1/meetings` | ✅ | `?q&sort&page&page_size`. Full filter set in T-11 |
-| `POST` | `/api/v1/meetings` | ✅ | 201 with the detail shape |
-| `GET` | `/api/v1/meetings/{id}` | ✅ | 404 unknown · 410 deleted |
-| `PATCH` | `/api/v1/meetings/{id}` | ✅ | Partial — omitted fields untouched |
-| `DELETE` | `/api/v1/meetings/{id}` | ✅ | Soft delete, 204 |
-| `POST` | `/api/v1/meetings/{id}/restore` | ✅ | Undoes a soft delete |
-| `POST` | `/api/v1/meetings/bulk-delete` | ✅ | Reports per-id failures |
-| `POST` | `/api/v1/meetings/{id}/summary/regenerate` | ✅ | Rate limited; generation lands in T-29 |
+### Meetings
 
-### Frozen contract, later tasks
+| Method | Path |
+|---|---|
+| `GET` `POST` | `/api/v1/meetings` |
+| `GET` `PATCH` `DELETE` | `/api/v1/meetings/{id}` |
+| `POST` | `/api/v1/meetings/{id}/restore` |
+| `POST` | `/api/v1/meetings/bulk-delete` · `/api/v1/meetings/bulk-restore` |
+| `GET` | `/api/v1/meetings/facets` |
+| `POST` | `/api/v1/meetings/parse` · `/api/v1/meetings/import` |
+| `GET` | `/api/v1/meetings/export` · `/api/v1/meetings/{id}/export` |
 
-| Method | Path | Task |
-|---|---|---|
-| `GET` | `/api/v1/meetings/facets` | T-11.8 |
-| `GET` | `/api/v1/meetings/{id}/transcript?cursor&limit&q` | T-17.2 |
-| `PATCH` | `/api/v1/meetings/{id}/segments/{segId}` | T-17.5 |
-| `PATCH` | `/api/v1/meetings/{id}/speakers/{spkId}` | T-17.6 |
-| `GET` | `/api/v1/meetings/{id}/summary` | T-17.7 |
-| `GET` `POST` | `/api/v1/meetings/{id}/action-items` | T-24.1 |
-| `PATCH` `DELETE` | `/api/v1/action-items/{id}` | T-24 |
-| `GET` | `/api/v1/meetings/{id}/media` (HTTP Range) | T-17.9 |
-| `GET` | `/api/v1/search?q&limit` | T-35.1 |
-| — | tags · comments · soundbites · export · ask | Phase 6 |
+### Transcript, speakers, media
+
+| Method | Path |
+|---|---|
+| `GET` | `/api/v1/meetings/{id}/transcript` (cursor-paged) |
+| `PATCH` | `/api/v1/meetings/segments/{segment_id}` |
+| `GET` `POST` | `/api/v1/meetings/{id}/speakers` |
+| `PATCH` | `/api/v1/meetings/speakers/{speaker_id}` |
+| `GET` | `/api/v1/meetings/{id}/media` (HTTP Range) |
+
+### Summary, action items, AI
+
+| Method | Path |
+|---|---|
+| `GET` | `/api/v1/meetings/{id}/summary` |
+| `POST` | `/api/v1/meetings/{id}/summary/regenerate` |
+| `GET` `POST` | `/api/v1/meetings/{id}/action-items` |
+| `PATCH` `DELETE` | `/api/v1/meetings/action-items/{item_id}` |
+| `POST` | `/api/v1/meetings/{id}/ask` |
+
+### Annotation (Phase 6)
+
+| Method | Path |
+|---|---|
+| `GET` `POST` | `/api/v1/meetings/{id}/comments` |
+| `PATCH` `DELETE` | `/api/v1/comments/{comment_id}` |
+| `GET` `POST` | `/api/v1/meetings/{id}/highlights` |
+| `PATCH` `DELETE` | `/api/v1/highlights/{highlight_id}` |
+| `GET` | `/api/v1/meetings/{id}/bookmarks` |
+| `PUT` `DELETE` | `/api/v1/meetings/{id}/bookmarks/{segment_id}` |
+| `GET` `POST` | `/api/v1/meetings/{id}/soundbites` |
+| `GET` | `/api/v1/meetings/{id}/soundbites/proposals` |
+| `DELETE` | `/api/v1/soundbites/{soundbite_id}` |
+
+### Organisation and search
+
+| Method | Path |
+|---|---|
+| `GET` `POST` | `/api/v1/tags` |
+| `PATCH` `DELETE` | `/api/v1/tags/{tag_id}` |
+| `PUT` | `/api/v1/meetings/{id}/tags` |
+| `GET` | `/api/v1/meetings/{id}/tags/proposals` |
+| `GET` | `/api/v1/channels` |
+| `GET` | `/api/v1/search` |
+
+### Identity and health
+
+| Method | Path |
+|---|---|
+| `GET` | `/api/health` — runs a real `SELECT 1`; **503** when the DB is unreachable |
+| `GET` | `/api/v1/me` — the seeded default user; auth is out of scope |
+| `GET` | `/api/v1/users` |
 
 ---
 
