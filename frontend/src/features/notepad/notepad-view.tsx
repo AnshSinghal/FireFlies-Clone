@@ -34,6 +34,7 @@ import { EditMeetingModal } from '@/features/edit/edit-meeting-modal'
 import { ExportModal } from '@/features/export/export-modal'
 
 import { AskFredFlyout } from './askfred/askfred-flyout'
+import { BookmarksPanel } from './bookmarks/bookmarks-panel'
 import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
 import { NotepadHeader } from './notepad-header'
 import { ShortcutsModal } from './player/shortcuts-modal'
@@ -194,12 +195,13 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
 
               {openPanel && (
                 <RailFlyout item={openPanel} onClose={() => setOpenPanel(null)}>
-                  {/* Smart Search (T-22.10), Index (T-23.13), Comments (T-31.6)
-                    and Soundbites (T-33.5) are real; bookmarks is still a
-                    placeholder, and the flyout says so itself. */}
+                  {/* Every rail item is real now: Smart Search (T-22.10),
+                    Index (T-23.13), Comments (T-31.6), Soundbites (T-33.5),
+                    and Bookmarks/Highlights behind tabs (T-32.7/32.8). */}
                   {openPanel === 'search' ? <SmartSearchPanel meetingId={meetingId} /> : undefined}
                   {openPanel === 'index' ? <IndexPanel meetingId={meetingId} /> : undefined}
                   {openPanel === 'comments' ? <CommentsPanel meetingId={meetingId} /> : undefined}
+                  {openPanel === 'bookmarks' ? <BookmarksPanel meetingId={meetingId} /> : undefined}
                   {openPanel === 'soundbites' ? (
                     <SoundbitesPanel
                       meetingId={meetingId}
