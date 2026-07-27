@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.v1.routers import (
+    ask,
     channels,
     comments,
     me,
@@ -27,6 +28,7 @@ api_router.include_router(search.router)
 api_router.include_router(transcript.router)
 api_router.include_router(meetings.router)
 api_router.include_router(summaries.router)
+api_router.include_router(ask.router)
 api_router.include_router(users.router)
 api_router.include_router(comments.router)
 
