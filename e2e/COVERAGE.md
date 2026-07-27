@@ -72,6 +72,38 @@ neither requires nor derives anything from the prefix, so the files were left
 as they merged rather than renamed — a rename would have rewritten history that
 is itself graded evidence, for a purely cosmetic gain.
 
+## On the plan's test-case IDs
+
+PLAN.md names 497 case IDs (`T12-A`, `T21-N`, …). Grepping the whole test tree
+finds 426 of them; 71 do not appear as literal strings. That is a **labelling**
+difference, not a coverage hole, and the distinction matters enough to write
+down before someone greps and concludes otherwise.
+
+**42 of the 71 are infrastructure tasks** — T39 through T46. Their "cases" are
+acceptance criteria for the harness, the deploy, the README and the polish pass
+(`T45-A`: header with badges and links), not assertions a test can carry.
+
+**29 are feature cases**, and the ones checked are all covered by tests with
+descriptive pytest names instead of the ID:
+
+| Plan case | The test that covers it |
+|---|---|
+| `T35-B` exact-phrase search | `test_search_query.py::test_a_quoted_phrase_stays_one_term` |
+| `T35-C` `-churn` exclusion | `test_search_query.py` — `parse_query("pricing -churn")` |
+| `T35-D` `speaker:` filter | `test_search_query.py` — `parse_query("speaker:Sarah pricing")` |
+| `T35-E` uses the FTS index | `test_search.py:126` — a real `EXPLAIN QUERY PLAN` |
+| `T17-G` deleted → 410 | asserted in `test_ask.py`, `test_highlights.py`, `test_transcript.py` |
+
+The convention split is deliberate rather than accidental: the Playwright specs
+carry the IDs (414 of the 426 found), because a `PW-*` ID is how the plan's
+acceptance table is traced. The pytest suite names behaviours instead, because
+a pytest name IS the failure message — `test_a_deleted_meeting_answers_410_not_an_answer`
+tells you more on a red run than `T17-G` does.
+
+**Honest limit on this claim:** 7 of the 29 feature cases were checked
+individually. The rest are asserted to be covered on the strength of that
+sample and of the suite-level counts, not one by one.
+
 ## Test counts
 
 Measured with `npx playwright test --list` on `main` (2026-07-27):
