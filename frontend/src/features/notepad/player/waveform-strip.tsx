@@ -49,6 +49,24 @@ export function WaveformStrip({ meetingId, src, progress, onSeekRatio }: Wavefor
   )
   const [width, setWidth] = useState(0)
 
+  /*
+   * Repaint on THEME switch (T-38.8).
+   *
+   * The paint reads its colours from CSS variables at draw time, which makes
+   * it theme-correct on mount — but a canvas is pixels, not styles, so nothing
+   * re-runs when `data-theme` changes and the strip would stay light on a dark
+   * page. Observing the attribute closes that gap.
+   */
+  const [themeEpoch, setThemeEpoch] = useState(0)
+  useEffect(() => {
+    const observer = new MutationObserver(() => setThemeEpoch((epoch) => epoch + 1))
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    })
+    return () => observer.disconnect()
+  }, [])
+
   // ── Peaks ─────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -169,7 +187,10 @@ export function WaveformStrip({ meetingId, src, progress, onSeekRatio }: Wavefor
       context.fillStyle = x + barWidth / 2 <= playedUntil ? played : unplayed
       context.fillRect(x, y, barWidth, height)
     })
-  }, [peaks, width, progress])
+    // `themeEpoch` has no reader inside — it exists to re-run this paint when
+    // `data-theme` flips, because the colours are read from CSS variables at
+    // draw time and a canvas does not restyle itself.
+  }, [peaks, width, progress, themeEpoch])
 
   return (
     <div

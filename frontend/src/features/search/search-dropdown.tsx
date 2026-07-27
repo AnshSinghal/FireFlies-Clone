@@ -161,6 +161,18 @@ function Row({
                   event.stopPropagation()
                   onRemoveRecent(row.label)
                 }}
+                /*
+                 * `click` is intercepted TOO. The button sits inside the row's
+                 * anchor, and an anchor navigates on click regardless of what
+                 * mousedown did — on a fast machine React unmounts the row
+                 * before the click lands, which made this look correct until
+                 * suite load slowed the re-render enough for the navigation
+                 * to win the race.
+                 */
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                }}
                 className="shrink-0 opacity-0 transition-opacity duration-fast group-hover/row:opacity-100"
               />
             )}

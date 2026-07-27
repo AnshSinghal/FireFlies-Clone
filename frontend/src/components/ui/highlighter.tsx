@@ -133,7 +133,10 @@ export function Highlighter({
             className={
               part.matchIndex === activeIndex
                 ? 'rounded-none bg-highlight-active font-semibold text-primary'
-                : `rounded-none bg-transparent ${markClassName}`
+                : // No `bg-transparent` here: the base layer neutralises the
+                  // UA's yellow, so `markClassName` owns the background
+                  // without a same-property conflict for order to decide.
+                  `rounded-none ${markClassName}`
             }
           >
             {part.text}
