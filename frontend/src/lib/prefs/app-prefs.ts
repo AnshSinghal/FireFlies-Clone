@@ -34,9 +34,11 @@ export const APP_PREF_KEYS = {
 
 export const THEMES = ['light', 'dark', 'system'] as const
 export type Theme = (typeof THEMES)[number]
-//: Light until T-38 signs off dark mode — an OS-dark visitor should not get a
-//: half-finished theme by default; they can opt in from two places.
-export const DEFAULT_THEME: Theme = 'light'
+//: `system` (T-38.1). This was pinned to light until dark mode was signed
+//: off, so an OS-dark visitor never saw a half-finished theme; T-38's axe
+//: sweep now holds dark to zero contrast violations, and following the OS is
+//: the default every native app has taught people to expect.
+export const DEFAULT_THEME: Theme = 'system'
 
 /** What actually lands on `<html data-theme>` — `system` resolves at read time. */
 export function resolveTheme(theme: Theme): 'light' | 'dark' {

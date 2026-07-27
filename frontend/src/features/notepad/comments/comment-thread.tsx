@@ -83,9 +83,7 @@ export function CommentThread({ meetingId, thread, participants }: CommentThread
             participants={participants}
             placeholder="Reply…"
             testId={`comment-reply-composer-${thread.id}`}
-            onSubmit={(payload) =>
-              create.mutateAsync({ ...payload, parent_id: thread.id })
-            }
+            onSubmit={(payload) => create.mutateAsync({ ...payload, parent_id: thread.id })}
             onCancel={() => setReplying(false)}
           />
         ) : (

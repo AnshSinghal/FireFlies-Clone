@@ -16,7 +16,30 @@ import { useEffect } from 'react'
 import { resolveTheme, useThemePref } from '@/lib/prefs/app-prefs'
 
 export function ThemeApplier() {
-  const [theme] = useThemePref()
+  const [theme, setTheme] = useThemePref()
+
+  /*
+   * ⌘⇧L cycles light → dark → system (T-38.9).
+   *
+   * A CYCLE rather than a light/dark flip, because `system` is a real state —
+   * a toggle that can only reach two of the three settings strands keyboard
+   * users on whichever third they started in.
+   */
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || !event.shiftKey) return
+      // `code`, not `key`: with Shift held, `key` is "L" but keeps layout
+      // quirks; the physical key is the contract the shortcut names.
+      if (event.code !== 'KeyL') return
+
+      event.preventDefault()
+      const order = ['light', 'dark', 'system'] as const
+      setTheme(order[(order.indexOf(theme as (typeof order)[number]) + 1) % order.length]!)
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [theme, setTheme])
 
   useEffect(() => {
     document.documentElement.dataset.theme = resolveTheme(theme)

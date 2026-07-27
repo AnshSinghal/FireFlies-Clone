@@ -2314,6 +2314,60 @@ real option reachable with ↑/↓.
 
 ---
 
+## ADR-102 — Dark ships at zero axe violations, and light got fixed on the way
+
+**Context.** T-38.5 orders a contrast recheck of every token pair. The sweep
+held both themes on both key pages to ZERO `wcag2aa` violations — and the
+failures it found were almost all in the LIGHT theme, which had shipped first
+and been eyeballed rather than measured.
+
+**Decision.** Fix everything at the token layer, per the hard rule:
+
+- `--ff-grey-500` (muted text) lifted from the sampled `#8992a2` (3.14:1) to
+  `#667085` in light and `#7b8497` → `#8b93a5` in dark — settling pending
+  decision #7, which had tracked this since T-19's first axe sweep.
+- New `--ff-warning-strong` / `--ff-danger-strong` for TEXT on the subtle
+  badge backgrounds; the base hues stay for icons and fills, where 3:1
+  suffices and the brighter colour is the point. In dark, strong == base,
+  because on dark the bright hue IS the readable one.
+- The light speaker palette was re-derived against its STRICTEST background —
+  the active row's violet tint — because every hue is used three ways at once
+  (text on white, text on the tint, fill under white initials) and clearing
+  the tint implies the rest. Four hues darkened; the family reads the same.
+
+**Consequence.** Fidelity to the sampled screenshots lost a few per-cent of
+lightness on timestamps and speaker names; every timestamp in the app became
+legible by measurement rather than by luck. The default theme flipped from the
+placeholder `light` to `system`, which the pref module had documented as
+waiting on exactly this sign-off.
+
+---
+
+## ADR-103 — The mark conflict that flipped between builds
+
+**Context.** T38-H found resting search highlights painting TRANSPARENT in one
+build after painting amber in every previous one. Nothing relevant had been
+edited.
+
+**Cause.** The Highlighter stacked `bg-transparent` (to neutralise the UA's
+yellow `<mark>`) under a caller-supplied `bg-highlight`. Two same-property
+utilities on one element resolve by STYLESHEET ORDER, which Tailwind derives
+from its internal class ordering — a build-dependent coin toss `cn()`
+deliberately refuses to hide (see `lib/utils/cn.ts`).
+
+**Decision.** Neutralise `<mark>` in the BASE layer (`mark { background:
+none }`), where the cascade guarantees utilities beat it, and drop
+`bg-transparent` from the component. One background utility per element, which
+is the convention the no-merge `cn` exists to enforce.
+
+**Consequence.** The latent conflict is gone rather than currently-winning.
+Canvas surfaces got the same treatment for a different reason: the waveform
+reads its colours from CSS variables at draw time, so a theme switch now bumps
+an epoch (via a `data-theme` MutationObserver) to trigger a repaint — pixels
+do not restyle themselves.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
@@ -2327,4 +2381,4 @@ Tracked so they are not silently defaulted. Each becomes an ADR when settled.
 | ~~5~~ | ~~Filters panel: draft-then-Apply vs live-apply~~ | ✅ ADR-039 — draft-then-Apply |
 | ~~6~~ | ~~Notebook layout: cards vs column table~~ | ✅ ADR-036 — cards, with the plan's testids and behaviour kept |
 | 8 | With any dropdown open, axe reports `aria-hidden-focus`: Radix marks the rest of the page `aria-hidden`, and the skip link stays focusable inside it. Identical for the T-18 kebab and the T-19 rate menu, so it belongs to the Dropdown primitive rather than to either caller. | T-42 |
-| 7 | `text-muted` fails AA contrast on `surface-0`. Found by an axe sweep during T-19: 20 serious violations on the Notepad, every one of them muted text or a speaker colour, none introduced by that task — sidebar headings, transcript timestamps and the metadata line have carried it since T-04. The fix is a token change, not a component change. | T-38.5, which owns re-checking every token pair, with T-42 verifying |
+| ~~7~~ | ~~`text-muted` fails AA contrast on `surface-0`~~ | ✅ ADR-102 — fixed at the token layer; both themes axe-clean on both key pages |
