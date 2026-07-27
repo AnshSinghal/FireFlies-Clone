@@ -209,6 +209,14 @@ It is the first thing to pick up next.
 
 ## Verified equivalent
 
+**Structurally** equivalent — same elements, same arrangement, same order. Not a
+claim about spacing: the ratio table at the top measures the notebook's density
+against the reference and it is 15–54% tighter. Both statements are true of the
+same screen, and this section has now overstated itself three times in one day
+(the profile menu, Settings, and the duration format it filed as a difference
+worth keeping), so the distinction is worth spelling out rather than trusting a
+heading to carry it.
+
 - Date-grouped rows with a group header and per-group checkbox (reference 02).
 - Channels sub-sidebar with live counts, built-ins above user channels.
 - Row anatomy: icon, title, `date · time · duration · host` meta line, tag
