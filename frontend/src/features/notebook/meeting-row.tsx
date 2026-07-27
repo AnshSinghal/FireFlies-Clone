@@ -19,10 +19,12 @@ import {
   Pencil,
   Play,
   SlidersHorizontal,
+  Tag,
   Trash2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { AvatarGroup } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -32,7 +34,13 @@ import { Dropdown, DropdownItem, DropdownSeparator, DropdownSub } from '@/compon
 import { Highlighter } from '@/components/ui/highlighter'
 import { IconButton } from '@/components/ui/icon-button'
 import { Tooltip } from '@/components/ui/tooltip'
+import { useToast } from '@/components/ui/toast'
+import { MeetingTagEditor } from '@/features/tags/tag-editor'
+import { TagChipList } from '@/features/tags/tag-chip'
+import { useTagFilter } from '@/features/tags/use-tag-filter'
 
+import { useChannels } from '@/lib/api/channels'
+import { useUpdateMeeting } from '@/lib/api/meetings'
 import type { MeetingListItem } from '@/lib/api/types'
 import { rememberNotebookUrl } from '@/lib/notebook-return'
 import { cn } from '@/lib/utils/cn'
@@ -76,7 +84,28 @@ export function MeetingRow({
   onFocus,
 }: MeetingRowProps) {
   const [hovered, setHovered] = useState(false)
+  const [tagsOpen, setTagsOpen] = useState(false)
   const showCheckbox = hovered || anySelected || selected
+
+  const toast = useToast()
+  const client = useQueryClient()
+  const applyTagFilter = useTagFilter()
+  const { data: channels } = useChannels()
+  const update = useUpdateMeeting(meeting.id)
+
+  /** T-36.7: a meeting belongs to exactly ONE channel — moving is one PATCH. */
+  const moveToChannel = (channel: { id: number; slug: string }) => {
+    update.mutate(
+      { channel_id: channel.id },
+      {
+        onSuccess: () => {
+          // The sidebar's per-channel counts just changed.
+          void client.invalidateQueries({ queryKey: ['channels'] })
+          toast.success(`Moved to #${channel.slug}`)
+        },
+      },
+    )
+  }
 
   const { open, completed } = meeting.action_item_counts
   const href = `/meeting/${meeting.id}`
@@ -216,6 +245,32 @@ export function MeetingRow({
             </span>
             <Separator />
             <span className="truncate">{meeting.host.name}</span>
+
+            {/*
+              Tag chips join the METADATA LINE (T-36.2): the card's height is a
+              token (`h-row`), so a second row of chips would blow it and drift
+              from the skeleton. Max 2 + `+N`, sized to the line.
+
+              Inside the Link, so the wrapper eats the click the same way the
+              checkbox does — a chip must FILTER, not navigate (T36-C).
+            */}
+            {(meeting.tags?.length ?? 0) > 0 && (
+              <span
+                data-testid="meeting-row-tags"
+                className="hidden shrink-0 items-center gap-1 sm:flex"
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                }}
+              >
+                <TagChipList
+                  tags={meeting.tags ?? []}
+                  max={2}
+                  size="sm"
+                  onFilter={applyTagFilter}
+                />
+              </span>
+            )}
           </span>
 
           {/* Why a meeting with an unrelated title matched (T-11.3). */}
@@ -335,13 +390,31 @@ export function MeetingRow({
           >
             Edit details
           </DropdownItem>
+          <DropdownItem
+            icon={<Tag size={16} strokeWidth={1.75} />}
+            onSelect={() => setTagsOpen(true)}
+            testId="meeting-row-tags-menu"
+          >
+            Tags
+          </DropdownItem>
           <DropdownSub label="Export" icon={<Download size={16} strokeWidth={1.75} />}>
             <DropdownItem soon>PDF</DropdownItem>
             <DropdownItem soon>Markdown</DropdownItem>
             <DropdownItem soon>Plain text</DropdownItem>
           </DropdownSub>
           <DropdownSub label="Move to channel" icon={<FolderInput size={16} strokeWidth={1.75} />}>
-            <DropdownItem soon>Choose a channel</DropdownItem>
+            {(channels?.channels ?? []).map((channel) => (
+              <DropdownItem
+                key={channel.id}
+                onSelect={() => moveToChannel({ id: channel.id, slug: channel.slug })}
+                testId={`meeting-row-move-${channel.slug}`}
+              >
+                #{channel.slug}
+              </DropdownItem>
+            ))}
+            {(channels?.channels ?? []).length === 0 && (
+              <DropdownItem disabled>No channels yet</DropdownItem>
+            )}
           </DropdownSub>
           <DropdownSeparator />
           <DropdownItem
@@ -353,6 +426,21 @@ export function MeetingRow({
             Delete
           </DropdownItem>
         </Dropdown>
+
+        {/*
+          The tag editor the kebab's `Tags` item opens (T-36.3). Its trigger is
+          an invisible zero-size anchor beside the kebab — the menu closes
+          itself on select, so the popover cannot share the kebab's trigger —
+          and the panel portals out, so the row's hover-opacity does not apply.
+        */}
+        <MeetingTagEditor
+          meetingId={meeting.id}
+          tags={meeting.tags ?? []}
+          open={tagsOpen}
+          onOpenChange={setTagsOpen}
+          align="end"
+          trigger={<span aria-hidden="true" className="h-0 w-0" />}
+        />
       </span>
     </li>
   )

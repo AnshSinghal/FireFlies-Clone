@@ -20,10 +20,11 @@ import { MeetingListSkeleton } from '@/components/ui/skeleton'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { useToast } from '@/components/ui/toast'
-import { useBulkDelete, useBulkRestore } from '@/lib/api/bulk'
+import { useBulkDelete, useBulkMove, useBulkRestore } from '@/lib/api/bulk'
 import { ApiError, api } from '@/lib/api/client'
-import { toApiParams, useMeetingFacets, useMeetings } from '@/lib/api/meetings'
+import { useMeetingFacets, useMeetingListRequest, useMeetings } from '@/lib/api/meetings'
 import { qk } from '@/lib/api/query-keys'
+import { useBulkTagMeetings } from '@/lib/api/tags'
 import type { MeetingListItem } from '@/lib/api/types'
 import { isTypingTarget } from '@/lib/hooks/use-command-palette'
 import { UNDO_WINDOW_MS, useDeleteWithUndo } from '@/lib/hooks/use-delete-with-undo'
@@ -66,6 +67,7 @@ function clearedFilters(): Record<string, null> {
     min_duration: null,
     max_duration: null,
     tags: null,
+    tags_mode: null,
     channel: null,
     has_action_items: null,
   }
@@ -88,6 +90,9 @@ function removeChip(
       const tag = key.slice('tags:'.length)
       const remaining = filters.tags.filter((t) => t !== tag)
       updates.tags = remaining.length > 0 ? remaining : null
+      // The AND/OR mode rides with the tags: with none left it means nothing,
+      // and leaving `?tags_mode=and` behind would be a phantom URL state.
+      if (remaining.length === 0) updates.tags_mode = null
     } else {
       updates[key] = null
     }
@@ -101,6 +106,9 @@ const ROW_EXIT_MS = 200
 export function NotebookView() {
   const { filters, setFilter, setPage, setParams } = useNotebookParams()
   const { data, isPending, isFetching, isError, error, refetch } = useMeetings(filters)
+  // The SAME name→id resolution `useMeetings` fetches with, so the prefetch
+  // and select-all below cannot warm a cache key with differently-shaped data.
+  const listRequest = useMeetingListRequest(filters)
   const { data: facets } = useMeetingFacets()
   const deleteWithUndo = useDeleteWithUndo()
 
@@ -190,6 +198,8 @@ export function NotebookView() {
   const selection = useSelection(pageIds)
   const bulkDelete = useBulkDelete()
   const bulkRestore = useBulkRestore()
+  const bulkMove = useBulkMove()
+  const bulkTag = useBulkTagMeetings()
   const toast = useToast()
   const client = useQueryClient()
 
@@ -253,6 +263,48 @@ export function NotebookView() {
       },
     })
   }, [selection, bulkDelete, bulkRestore, toast])
+
+  /** T-36.7's bulk half: one channel picked, every selected meeting moved. */
+  const moveSelected = useCallback(
+    async (channel: { id: number; slug: string }) => {
+      const ids = [...selection.selected]
+      const result = await bulkMove.mutateAsync({ ids, channelId: channel.id })
+      selection.clear()
+
+      if (result.failed > 0) {
+        toast.warning(`${result.moved} of ${ids.length} moved to #${channel.slug}`)
+        return
+      }
+      toast.success(`${pluralize(result.moved, 'meeting')} moved to #${channel.slug}`)
+    },
+    [selection, bulkMove, toast],
+  )
+
+  /**
+   * Bulk tagging (T-36.9): one picker, one summary toast. Runs to completion
+   * BEFORE any filter change — a filter change clears the selection.
+   */
+  const tagSelected = useCallback(
+    async (tagIds: number[]) => {
+      if (tagIds.length === 0) return
+      const ids = [...selection.selected]
+      const { tagged, skipped } = await bulkTag.mutateAsync({ meetingIds: ids, tagIds })
+
+      if (skipped > 0) {
+        // Named, not silent: the 10-tag cap left some meetings untouched.
+        toast.warning(
+          `Tags added to ${tagged} of ${ids.length} — ${pluralize(skipped, 'meeting')} at the 10-tag limit`,
+        )
+        return
+      }
+      if (tagged === 0) {
+        toast.info('The selected meetings already have those tags')
+        return
+      }
+      toast.success(`Tags added to ${pluralize(tagged, 'meeting')}`)
+    },
+    [selection, bulkTag, toast],
+  )
 
   const toggleQuickFilter = useCallback(
     (id: QuickFilterId) => {
@@ -390,7 +442,7 @@ export function NotebookView() {
               queryFn: ({ signal }) =>
                 api.get('/api/v1/meetings', {
                   signal,
-                  params: { ...toApiParams(filters), page: data.page + 1 },
+                  params: { ...listRequest.params, page: data.page + 1 },
                 }),
             })
           }
@@ -458,13 +510,15 @@ export function NotebookView() {
         }
         onClear={selection.clear}
         onDelete={removeSelected}
+        onMove={moveSelected}
+        onAddTags={tagSelected}
       />
     </div>
   )
 
   async function selectEveryMatch() {
     const all = await api.get<{ items: Array<{ id: number }> }>('/api/v1/meetings', {
-      params: { ...toApiParams(filters), page: 1, page_size: 100 },
+      params: { ...listRequest.params, page: 1, page_size: 100 },
     })
     selection.setMany(
       all.items.map((m) => m.id),

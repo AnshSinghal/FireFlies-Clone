@@ -23,6 +23,7 @@ const EMPTY_DRAFT: FilterDraft = {
   datePreset: 'any-time',
   durationPreset: 'any',
   tags: [],
+  tagsMode: 'or',
   hasActionItems: false,
 }
 
@@ -152,6 +153,7 @@ describe('draft ↔ filters round trip', () => {
       datePreset: 'last-7-days',
       durationPreset: '30-60',
       tags: ['q3', 'urgent'],
+      tagsMode: 'and',
       channel: 'product',
       hasActionItems: true,
     }
@@ -165,6 +167,7 @@ describe('draft ↔ filters round trip', () => {
       minDuration: Number(params.min_duration),
       maxDuration: Number(params.max_duration),
       tags: params.tags as string[],
+      tagsMode: params.tags_mode === 'and' ? 'and' : undefined,
       channel: params.channel as string,
       hasActionItems: params.has_action_items === 'true',
     }
@@ -175,9 +178,19 @@ describe('draft ↔ filters round trip', () => {
       datePreset: 'last-7-days',
       durationPreset: '30-60',
       tags: ['q3', 'urgent'],
+      tagsMode: 'and',
       channel: 'product',
       hasActionItems: true,
     })
+  })
+
+  it('keeps AND out of the URL when it has nothing to combine (T-36.8)', () => {
+    // OR is the default and never serialises; AND without tags means nothing.
+    expect(filtersFromDraft({ ...EMPTY_DRAFT, tagsMode: 'and' }, NOW).tags_mode).toBeNull()
+    expect(
+      filtersFromDraft({ ...EMPTY_DRAFT, tags: ['q3'], tagsMode: 'and' }, NOW).tags_mode,
+    ).toBe('and')
+    expect(filtersFromDraft({ ...EMPTY_DRAFT, tags: ['q3'] }, NOW).tags_mode).toBeNull()
   })
 })
 
@@ -195,7 +208,8 @@ describe('activeFilterChips', () => {
   })
 
   it('gives each tag its own chip', () => {
-    // Tags are independent ANDs: removing one must not clear the others.
+    // However tags combine (OR default, AND toggled), removing one chip must
+    // not clear the others.
     const chips = activeFilterChips({ tags: ['q3', 'urgent'] }, NOW)
     expect(chips).toHaveLength(2)
     expect(chips.map((c) => c.keys)).toEqual([['tags:q3'], ['tags:urgent']])

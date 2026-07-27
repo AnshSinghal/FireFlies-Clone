@@ -11,7 +11,7 @@
  * survives a refresh.
  */
 
-import { ArrowUpRight, Lock, X } from 'lucide-react'
+import { ArrowUpRight, Lock, Tag, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
@@ -22,6 +22,10 @@ import { IconButton } from '@/components/ui/icon-button'
 import { Select } from '@/components/ui/select'
 import { Skeleton, SkeletonText } from '@/components/ui/skeleton'
 import { useToast } from '@/components/ui/toast'
+import { SuggestedTags } from '@/features/tags/suggested-tags'
+import { MeetingTagEditor } from '@/features/tags/tag-editor'
+import { TagChipList } from '@/features/tags/tag-chip'
+import { useTagFilter } from '@/features/tags/use-tag-filter'
 import { useActionItems, useToggleActionItem } from '@/lib/api/action-items'
 import { useMeeting, useUpdateMeeting } from '@/lib/api/meetings'
 import { useSummary } from '@/lib/api/summaries'
@@ -179,6 +183,8 @@ function DrawerBody({ meeting, onClose }: { meeting: MeetingDetail; onClose: () 
           )}
         </section>
 
+        <TagsSection meeting={meeting} />
+
         <section className="space-y-1.5" data-testid="details-meta-privacy">
           <div className="flex items-center gap-1.5 text-label uppercase text-muted">
             <Lock size={12} strokeWidth={2} aria-hidden="true" />
@@ -306,6 +312,44 @@ function DrawerBody({ meeting, onClose }: { meeting: MeetingDetail; onClose: () 
         )}
       </div>
     </>
+  )
+}
+
+/**
+ * The drawer's tags (T-36.2): the FULL list — the row truncates to two, this
+ * is where the rest live — plus the editor and any AI suggestions (T-36.4).
+ * Chips filter the notebook on click; the drawer already sits on that page.
+ */
+function TagsSection({ meeting }: { meeting: MeetingDetail }) {
+  const [editing, setEditing] = useState(false)
+  const applyTagFilter = useTagFilter()
+  const tags = meeting.tags ?? []
+
+  return (
+    <section className="space-y-1.5" data-testid="details-meta-tags">
+      <div className="flex items-center gap-1.5 text-label uppercase text-muted">
+        <Tag size={12} strokeWidth={2} aria-hidden="true" />
+        Tags
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <TagChipList tags={tags} onFilter={applyTagFilter} />
+        <MeetingTagEditor
+          meetingId={meeting.id}
+          tags={tags}
+          open={editing}
+          onOpenChange={setEditing}
+          align="start"
+          trigger={
+            <Button variant="ghost" size="sm" data-testid="details-edit-tags">
+              {tags.length > 0 ? 'Edit' : 'Add tags'}
+            </Button>
+          }
+        />
+      </div>
+
+      <SuggestedTags meetingId={meeting.id} currentTags={tags} />
+    </section>
   )
 }
 

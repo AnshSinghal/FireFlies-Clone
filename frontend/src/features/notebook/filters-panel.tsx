@@ -12,16 +12,17 @@ import { ChevronDown } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { ToggleChip } from '@/components/ui/chip'
 import { Checkbox, RadioGroup, Switch } from '@/components/ui/controls'
 import { DateInput } from '@/components/ui/input'
 import { Popover } from '@/components/ui/popover'
 import { SearchInput } from '@/components/ui/search-input'
 import { Select } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast'
+import { TagFilterOptions, type TagsMode } from '@/features/tags/tag-filter-options'
 import type { Facets } from '@/lib/api/types'
 import { useLocalStorage } from '@/lib/hooks/use-local-storage'
 import { cn } from '@/lib/utils/cn'
+import { slug } from '@/lib/utils/slug'
 
 import { DATE_PRESET_IDS, DURATION_PRESETS, type DatePresetId } from './filter-presets'
 
@@ -34,6 +35,8 @@ export interface FilterDraft {
   to?: string
   durationPreset: string
   tags: string[]
+  /** How multiple tags combine (T-36.8). `or` is the default. */
+  tagsMode: TagsMode
   channel?: string
   hasActionItems: boolean
 }
@@ -166,29 +169,13 @@ export function FiltersPanel({
           </Section>
 
           <Section name="tags" title="Tags">
-            {facets && facets.tags.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {facets.tags.map((tag) => (
-                  <ToggleChip
-                    key={tag}
-                    selected={draft.tags.includes(tag)}
-                    onToggle={() =>
-                      setDraft({
-                        ...draft,
-                        tags: draft.tags.includes(tag)
-                          ? draft.tags.filter((t) => t !== tag)
-                          : [...draft.tags, tag],
-                      })
-                    }
-                    testId={`filter-option-${tag}`}
-                  >
-                    #{tag}
-                  </ToggleChip>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted">No tags yet.</p>
-            )}
+            <TagFilterOptions
+              facets={facets}
+              selected={draft.tags}
+              onChange={(tags) => setDraft({ ...draft, tags })}
+              mode={draft.tagsMode}
+              onModeChange={(tagsMode) => setDraft({ ...draft, tagsMode })}
+            />
           </Section>
 
           <Section name="channel" title="Channel">
@@ -353,11 +340,4 @@ function MultiSelectSection({
       </div>
     </Section>
   )
-}
-
-export function slug(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
 }
