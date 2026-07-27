@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import shutil
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager, contextmanager
 from pathlib import Path
 
 import pytest
@@ -122,6 +123,38 @@ def query_counter(db_engine: Engine) -> Iterator[list[str]]:
         yield statements
     finally:
         event.remove(db_engine, "after_cursor_execute", record)
+
+
+@pytest.fixture
+def assert_max_queries(db_engine: Engine) -> Callable[[int], AbstractContextManager[list[str]]]:
+    """`with assert_max_queries(8): client.get(...)` — the N+1 guard (T-43.10).
+
+    Counts SELECTs only: inserts scale with what the test seeds, but reads
+    scale with the endpoint's loading strategy, and that is the thing being
+    guarded. On violation the failure lists every statement, so the offending
+    lazy load is in the log rather than needing a rerun under echo.
+    """
+
+    @contextmanager
+    def guard(budget: int) -> Iterator[list[str]]:
+        statements: list[str] = []
+
+        def record(conn, cursor, statement, parameters, context, executemany):  # type: ignore[no-untyped-def]
+            if statement.lstrip().upper().startswith("SELECT"):
+                statements.append(statement)
+
+        event.listen(db_engine, "after_cursor_execute", record)
+        try:
+            yield statements
+        finally:
+            event.remove(db_engine, "after_cursor_execute", record)
+
+        rendered = "\n".join(f"  {i + 1}. {s.splitlines()[0]}" for i, s in enumerate(statements))
+        assert len(statements) <= budget, (
+            f"{len(statements)} SELECTs, budget {budget}:\n{rendered}"
+        )
+
+    return guard
 
 
 @pytest.fixture(autouse=True)
