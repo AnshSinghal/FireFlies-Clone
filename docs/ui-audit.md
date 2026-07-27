@@ -227,6 +227,11 @@ rather than by re-reading the code:
 - **Item 10 is a spacing defect** — the Settings form leaves 60% of its column
   empty. Open, with the fix identified.
 
+- **The list is 15–54% denser than the reference** — measured, not eyeballed;
+  see the ratio table at the top. Queued with item 10: both are token-layer
+  spacing changes that re-baseline the same 165 visual snapshots, so they
+  should land together, in one review, with the baselines regenerated once.
+
 Items 2–8 remain scope or convention decisions with reasons. Item 9 is a
 deliberate behaviour with a missing affordance. If an evaluator disagrees with
 any of them the reasoning is written down, and in every case the change is
