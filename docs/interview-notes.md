@@ -253,6 +253,50 @@ the change was live and the tolerance really did absorb it. Stopping at the
 plausible explanation would have had me "fix" a caching problem that did not
 exist and ship the real weakness intact.
 
+## 10 · Your tests were green all day. What did they miss?
+
+Everything that mattered on 2026-07-28, and the pattern is one I would want to
+be asked about because it is not a testing gap — it is a gap between the code
+and the documents describing it, which no test in this repo was ever going to
+close.
+
+**What was wrong while the suite was green:**
+
+- `design.md` — the file `CLAUDE.md` calls the token authority — specified
+  **ten** colours the app does not use. The accent still read `#2A6EF4` blue
+  eight weeks after ADR-011 sampled the reference and moved it to `#6A39EF`
+  violet. The whole dark palette was the pre-violet blue-grey scale.
+- **ADR-012's decision had been reversed in code and never written down.** It
+  says ship `--ff-text-muted` at `#8992A2`, 3.14:1, "knowingly not AA, expect
+  this to be the one axe exception". The app ships `#667085` at **4.97:1** —
+  full AA. An interviewer reading that ADR would be told the product knowingly
+  fails a contrast threshold it actually passes.
+- `docs/visual-comparison.html` — the page an evaluator opens to compare
+  screenshots — told them to **expect a hue difference** that no longer exists,
+  apologising for a match the project had earned.
+
+**Why green tests could not catch any of it.** Layout tokens are pinned by
+exact assertions: `08-notebook` asserts `toBe(72)` on the row height, so moving
+it fails the same afternoon. Colour tokens are only ever property-tested —
+`tokens.test.ts` has eleven `toBeGreaterThanOrEqual` contrast assertions and
+**zero** assertions on any specific hex. A property test protects the property
+and abandons the value. Every one of these drifts *improved* its property, so
+the suite went greener while the prose became fiction.
+
+**What I did about it.** `scripts/check_design_tokens.py`, in `make lint`: it
+resolves every hex in `design.md` through the token cascade — following
+`var()` chains, dark scoped against the dark block — and fails when the two
+disagree. Twenty lines. It found the last eight of the ten immediately, in the
+dark table my hand-check had missed.
+
+**The part I would volunteer.** I did the same thing myself, in the same day. I
+justified deferring a change four times with "the virtualiser sizes its items
+from that token" — the virtualiser is on a different list and uses its own
+constant. Written once, repeated into three documents, believed because it
+sounded like a reason. A wrong reason is more expensive than no reason: it
+stops anyone re-examining, including its author. That is why the correction is
+recorded in place in all four documents rather than quietly deleted.
+
 ## Things I would rather be asked
 
 - Why the mutations project runs one worker (three "feature bugs" that were
