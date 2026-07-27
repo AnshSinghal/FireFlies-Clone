@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/AnshSinghal/FireFlies-Clone/actions/workflows/ci.yml/badge.svg)](https://github.com/AnshSinghal/FireFlies-Clone/actions/workflows/ci.yml)
 ![backend coverage](https://img.shields.io/badge/backend_coverage-95%25-brightgreen)
-![tests](https://img.shields.io/badge/tests-440_pytest_·_548_e2e-brightgreen)
+![tests](https://img.shields.io/badge/tests-988_passing-brightgreen)
 
 An AI meeting-notetaker: a searchable meetings library, an interactive transcript wired
 bidirectionally to a media player, AI-generated summaries and extracted action items.
