@@ -20,7 +20,7 @@ from sqlalchemy import select
 
 from app.core.exceptions import BadRequestError, ValidationError
 from app.models import Speaker, TranscriptSegment
-from app.models.enums import ActionItemStatus
+from app.models.enums import ActionItemStatus, HighlightColor
 from app.services.comments import CommentService
 from app.services.export.blocks import (
     Block,
@@ -36,7 +36,9 @@ from app.services.export.blocks import (
     Task,
     Transcript,
     Turn,
+    clock,
 )
+from app.services.highlights import HighlightService
 from app.services.meetings import MeetingService
 
 if TYPE_CHECKING:
@@ -228,7 +230,50 @@ def _note(comment: CommentOut, *, depth: int) -> Note:
     )
 
 
+def _highlight_blocks(db: Session, meeting: Meeting) -> tuple[Block, ...] | None:
+    """Highlights grouped by colour, then bookmarked moments (T-32.10).
+
+    Goes through `HighlightService` so the excerpt text is sliced from the
+    segment at read time — the export can never quote characters the offsets
+    no longer cover. Pure reuse of existing block types: one Subheading per
+    colour, entries as bullets, no renderer changes.
+    """
+    service = HighlightService(db)
+    highlights = service.list_highlights(meeting)
+    bookmarks = service.list_bookmarks(meeting)
+    if not highlights and not bookmarks:
+        return None
+
+    blocks: list[Block] = [Heading("Highlights")]
+    for color in HighlightColor:
+        entries = [h for h in highlights if h.color == color]
+        if not entries:
+            continue
+        blocks.append(Subheading(color.value.capitalize()))
+        blocks.append(
+            Bullets(
+                tuple(
+                    f"{clock(entry.start_ms)} · {entry.speaker}: “{entry.text}”"
+                    + (f" — {entry.note}" if entry.note else "")
+                    for entry in entries
+                )
+            )
+        )
+
+    if bookmarks:
+        blocks.append(Subheading("Bookmarked moments"))
+        blocks.append(
+            Bullets(
+                tuple(
+                    f"{clock(mark.start_ms)} · {mark.speaker}: {mark.snippet}" for mark in bookmarks
+                )
+            )
+        )
+    return tuple(blocks)
+
+
 register_section("summary", _summary_blocks)
 register_section("actions", _action_blocks)
 register_section("transcript", _transcript_blocks)
 register_section("comments", _comment_blocks)
+register_section("highlights", _highlight_blocks)

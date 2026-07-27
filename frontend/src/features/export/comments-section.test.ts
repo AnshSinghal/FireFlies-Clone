@@ -63,12 +63,14 @@ const MEETING = {
 const ALL: ReadonlySet<ExportSectionId> = new Set(EXPORT_SECTIONS.map((section) => section.id))
 
 describe('the Comments checkbox', () => {
-  it('is registered alongside the other three sections', () => {
+  it('is registered alongside the other sections', () => {
     expect(EXPORT_SECTIONS.map((section) => section.id)).toEqual([
       'summary',
       'transcript',
       'actions',
       'comments',
+      // T-32 landed exactly as this file's header predicted: one line.
+      'highlights',
     ])
   })
 })

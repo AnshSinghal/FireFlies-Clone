@@ -223,3 +223,24 @@ class TestBookmarks:
 
         response = client.put(f"/api/v1/meetings/{meeting_with_lines.id}/bookmarks/{foreign.id}")
         assert response.status_code == 422
+
+
+class TestExportIntegration:
+    def test_markdown_export_carries_the_highlights_section(
+        self, client: TestClient, db: Session, meeting_with_lines
+    ) -> None:
+        """T32-K: the export quotes exactly the highlighted characters."""
+        segment = _segments(db, meeting_with_lines)[0]
+        _create(client, meeting_with_lines.id, segment.id, note="The load-bearing number.")
+        client.put(f"/api/v1/meetings/{meeting_with_lines.id}/bookmarks/{segment.id}")
+
+        response = client.get(
+            f"/api/v1/meetings/{meeting_with_lines.id}/export",
+            params={"format": "md", "include": "highlights"},
+        )
+        assert response.status_code == 200
+        body = response.text
+        assert "## Highlights" in body
+        assert "“four times the API volume”" in body
+        assert "The load-bearing number." in body
+        assert "Bookmarked moments" in body
