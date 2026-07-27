@@ -93,6 +93,23 @@ const config: Config = {
         active: 'var(--ff-highlight-active)',
       },
 
+      /*
+       * The four marker colours (T-32.3). `hl-<name>` is the wash and
+       * `hl-<name>-line` the saturated underline of the same hue — used as
+       * `bg-hl-amber` with `decoration-hl-amber-line`, so a search <mark> and a
+       * user highlight on the same characters remain separately visible.
+       */
+      hl: {
+        amber: 'var(--ff-hl-amber)',
+        'amber-line': 'var(--ff-hl-amber-line)',
+        green: 'var(--ff-hl-green)',
+        'green-line': 'var(--ff-hl-green-line)',
+        blue: 'var(--ff-hl-blue)',
+        'blue-line': 'var(--ff-hl-blue-line)',
+        pink: 'var(--ff-hl-pink)',
+        'pink-line': 'var(--ff-hl-pink-line)',
+      },
+
       /* Modal backdrop. Already carries its own alpha, so it is used as
          `bg-scrim` with no opacity modifier. */
       scrim: 'var(--ff-scrim)',
