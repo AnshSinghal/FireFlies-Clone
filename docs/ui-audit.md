@@ -8,6 +8,40 @@ Read this with the harness open. It is deliberately a list of *differences*,
 including the ones we are keeping — an audit that only records defects is a
 sales document.
 
+## Where it landed
+
+Every geometric property that could be measured against the reference now
+matches, or was changed to match:
+
+| | Fireflies | Ours |
+|---|---|---|
+| Row title type ÷ topbar | 0.268 | 0.255 |
+| Card height ÷ topbar | 1.514 | 1.446 |
+| Card height ÷ title glyph | 5.658 | 5.786 |
+| Gap between cards in a group ÷ card | 0.274 | 0.296 |
+| Gap across a date heading ÷ card | 0.94 | 0.930 |
+| Title inset ÷ card height | 1.01 | 0.94 |
+| Leading tile ÷ card height | 0.509 | 0.563 |
+| Settings block ÷ content column | 57.6% | 57.4% |
+| Settings gutters | 336 / 345 | 202 / 204 |
+
+Ratios, not pixels, because the reference was captured at a different width and
+an unknown device pixel ratio — solving for that scale gives three different
+answers (1.268 via the topbar, 1.357 via the type, 1.493 via the card), which is
+itself the finding that their proportions differ rather than their zoom.
+
+**Three of those rows started 12–54% off** and were closed by ADR-148, -149 and
+-150. **Two differences remain and neither is geometric:** Settings cards carry
+no product icon (ours would be invented), and muted text is darker than theirs —
+4.97:1 against 2.60:1, the one place this clone knowingly trades likeness for
+legibility.
+
+**How much of this was visible by looking:** none of it. Several careful
+side-by-side passes in one day found the duration format and the settings
+asymmetry, and missed every ratio above. The rest came from edge-detecting both
+images and comparing numbers. That is the single most useful thing in this
+document.
+
 ## Measured, not eyeballed
 
 Taken from the deployed origin at 1440px with `getComputedStyle` /
