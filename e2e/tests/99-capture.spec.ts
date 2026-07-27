@@ -45,6 +45,20 @@ function fileFor(key: string, theme: Theme): string {
 }
 
 async function capture(page: Page, key: string, theme: Theme): Promise<void> {
+  /*
+   * The rail's channel list is fetched, not static. `design-team` is a seeded
+   * channel rather than one of the client-resolved built-ins, so it only
+   * appears once that request has landed — which makes it the cheapest proof
+   * the sidebar is fully populated.
+   *
+   * Without this, `05-analytics` was photographed showing two channels while
+   * `02-meetings-list` showed five. Two screenshots of one app disagreeing
+   * about how many channels exist is the kind of thing a side-by-side
+   * comparison is *designed* to surface, and it would have been our own
+   * capture harness that put it there.
+   */
+  await page.getByTestId('sidebar-channel-design-team').waitFor()
+
   // A font swap mid-screenshot is the classic phantom diff; wait it out, then
   // wait for every image so no avatar is caught half-painted.
   await page.evaluate(() => document.fonts.ready.then(() => true))
@@ -149,6 +163,16 @@ for (const theme of THEMES) {
       await page.goto('/analytics')
       await expect(page.getByTestId('coming-soon-analytics')).toBeVisible()
       await expect(page.getByTestId('analytics-charts')).toBeVisible()
+
+      /*
+       * `analytics-charts` is visible while "Meetings per week" is still a
+       * skeleton — that card is the one chart built from real seeded data, so
+       * it waits on `useMeetings`. The previous capture caught the skeleton and
+       * published a screenshot with an empty grey box where the only real chart
+       * on the page should be. Wait for the bars themselves.
+       */
+      await expect(page.getByRole('img', { name: 'Meetings per week' })).toBeVisible()
+
       await capture(page, '05-analytics', theme)
     })
 

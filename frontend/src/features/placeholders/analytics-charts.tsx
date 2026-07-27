@@ -75,14 +75,28 @@ function MeetingsPerWeek() {
 
   return (
     <ChartCard title="Meetings per week" testId="analytics-meetings-per-week">
-      <div className="flex h-32 items-end gap-2" role="img" aria-label="Meetings per week">
+      {/*
+        `items-stretch` (the default) rather than `items-end`, and the bar sits
+        in its own `flex-1` track.
+
+        The previous markup drew every bar 4px tall whatever the count — a bar
+        chart with no bars. `items-end` sizes each column to its content, so the
+        bar's `height: 20%` resolved against a parent with no definite height,
+        which CSS treats as `auto`; `minHeight: 4` then became the only rule in
+        play. Stretching the column gives the percentage something real to
+        resolve against, and putting the bar in a `flex-1` track means the two
+        labels take their space first instead of competing with it.
+      */}
+      <div className="flex h-32 gap-2" role="img" aria-label="Meetings per week">
         {weeks.map(([week, count]) => (
           <div key={week} className="flex flex-1 flex-col items-center gap-1">
             <span className="tnum text-xs text-secondary">{count}</span>
-            <div
-              className="w-full rounded-t-sm bg-accent"
-              style={{ height: `${(count / peak) * 100}%`, minHeight: 4 }}
-            />
+            <div className="flex w-full flex-1 items-end">
+              <div
+                className="w-full rounded-t-sm bg-accent"
+                style={{ height: `${(count / peak) * 100}%`, minHeight: 4 }}
+              />
+            </div>
             <span className="tnum text-[10px] text-muted">{week.slice(5)}</span>
           </div>
         ))}
