@@ -118,7 +118,8 @@ function buildUrl(path: string, params: RequestOptions['params']): string {
   return url.toString()
 }
 
-async function toApiError(response: Response): Promise<ApiError> {
+/** Exported for the one non-JSON caller — the export download (lib/api/export.ts). */
+export async function toApiError(response: Response): Promise<ApiError> {
   let code = 'UNKNOWN'
   let message = response.statusText || 'Request failed'
   let details: Record<string, unknown> = {}
