@@ -23,6 +23,12 @@ import {
 import { readSegmentSelection, type SegmentSelection } from '@/lib/transcript/selection'
 import { cn } from '@/lib/utils/cn'
 
+export interface SoundbiteSelection {
+  startSegmentId: number
+  endSegmentId: number
+  text: string
+}
+
 interface SelectionToolbarProps {
   /** Selections outside this element are ignored. */
   containerRef: React.RefObject<HTMLElement | null>
@@ -33,6 +39,8 @@ interface SelectionToolbarProps {
   onHighlight?: (selection: SegmentSelection, color: HighlightColorName) => void
   /** The colour the plain `Highlight` button uses (T-32.2). */
   lastColor?: HighlightColorName
+  /** Opens the create-soundbite modal for the selection's range (T-33.2). */
+  onSoundbite?: (selection: SoundbiteSelection) => void
 }
 
 interface Anchor {
@@ -52,9 +60,11 @@ interface Anchor {
    *
    * A HIGHLIGHT needs more than the comment path does — offsets, not just a
    * line — and cannot fall back to the starting segment, because the offsets
-   * past that line's end do not exist (ADR-119).
+   * past that line's end do not exist (ADR-124).
    */
   segment: SegmentSelection | null
+  /** …and the one it ENDS in — a soundbite spans both (T-33.2). */
+  endSegmentId: number | null
 }
 
 /** Below this many characters a "selection" is usually a stray click-drag. */
@@ -66,6 +76,7 @@ export function SelectionToolbar({
   onComment,
   onHighlight,
   lastColor = 'amber',
+  onSoundbite,
 }: SelectionToolbarProps) {
   const toast = useToast()
   const [anchor, setAnchor] = useState<Anchor | null>(null)
@@ -109,6 +120,11 @@ export function SelectionToolbar({
     const segmentId = startElement?.closest<HTMLElement>('[data-segment-id]')?.dataset.segmentId
 
     const parsed = readSegmentSelection()
+    // A soundbite needs the whole span, so the END matters too. DOM ranges are
+    // normalised to document order, so end is never before start.
+    const endElement =
+      range.endContainer instanceof Element ? range.endContainer : range.endContainer.parentElement
+    const endSegmentId = endElement?.closest<HTMLElement>('[data-segment-id]')?.dataset.segmentId
 
     setAnchor({
       top: rect.top,
@@ -116,6 +132,7 @@ export function SelectionToolbar({
       text,
       segmentId: segmentId != null ? Number(segmentId) : null,
       segment: parsed === null || parsed === 'cross-segment' ? null : parsed,
+      endSegmentId: endSegmentId != null ? Number(endSegmentId) : null,
     })
   }, [containerRef])
 
@@ -164,7 +181,7 @@ export function SelectionToolbar({
     if (!anchor.segment) {
       /*
        * T-32.11, decided rather than fudged: a selection crossing two lines is
-       * REFUSED with an explanation (ADR-119). Splitting it would create marks
+       * REFUSED with an explanation (ADR-124). Splitting it would create marks
        * at both ends that the user did not draw — the first and last lines are
        * almost always partially selected — with no way to remove one without
        * removing all of them.
@@ -285,7 +302,22 @@ export function SelectionToolbar({
         label="Soundbite"
         size="sm"
         icon={<Quote size={16} strokeWidth={1.75} />}
-        onClick={soon}
+        data-testid="selection-soundbite"
+        onClick={
+          onSoundbite && anchor.segmentId != null
+            ? () => {
+                onSoundbite({
+                  startSegmentId: anchor.segmentId as number,
+                  // A selection can END outside any segment row — in a speaker
+                  // header, say — in which case the start segment IS the range.
+                  endSegmentId: anchor.endSegmentId ?? (anchor.segmentId as number),
+                  text: anchor.text,
+                })
+                window.getSelection()?.removeAllRanges()
+                setAnchor(null)
+              }
+            : soon
+        }
       />
     </div>
   )

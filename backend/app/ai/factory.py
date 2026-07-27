@@ -39,6 +39,7 @@ if TYPE_CHECKING:
         ChatTurn,
         KeywordResult,
         OutlineEntryResult,
+        SoundbiteProposalResult,
         SummaryResult,
         Transcript,
     )
@@ -118,6 +119,15 @@ class FallbackProvider(AIProvider):
             lambda: self.backup.answer_question(transcript, question, history),
         )[0]
 
+    def propose_soundbites(self, transcript: Transcript) -> list[SoundbiteProposalResult]:
+        # LLMProvider raises unconditionally here (see its docstring), so in
+        # practice this is always the backup heuristic — via the same
+        # degradation path as every other method, rather than a special case.
+        return self._run(
+            lambda: self.primary.propose_soundbites(transcript),
+            lambda: self.backup.propose_soundbites(transcript),
+        )[0]
+
 
 class CachingProvider(AIProvider):
     """Memoises any provider (T-29.10).
@@ -186,6 +196,11 @@ class CachingProvider(AIProvider):
             lambda: self._inner.answer_question(transcript, question, history),
             question,
             history_key,
+        )
+
+    def propose_soundbites(self, transcript: Transcript) -> list[SoundbiteProposalResult]:
+        return self._through(
+            "soundbites", transcript, lambda: self._inner.propose_soundbites(transcript)
         )
 
 

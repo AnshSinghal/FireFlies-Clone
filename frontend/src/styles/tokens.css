@@ -168,6 +168,13 @@
   --ff-hl-pink: #fbe1f0;
   --ff-hl-pink-line: #c43990;
 
+  /* ── Soundbites (T-33.7) ────────────────────────────────────────────────── */
+  /* The amber band over the seekbar. Carries its own alpha (precedent:
+     --ff-scrim), because it overlays the played fill and Tailwind's token
+     colours are plain var() refs that silently ignore /alpha modifiers.
+     Amber-600's RGB at a wash opacity. [D] */
+  --ff-soundbite-band: rgba(247, 144, 9, 0.32);
+
   /* ── Typography ─────────────────────────────────────────────────────────── */
   --ff-font-sans: Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
@@ -261,6 +268,11 @@
   --ff-hl-blue-line: #38bdf8;
   --ff-hl-pink: #3d1430;
   --ff-hl-pink-line: #e879b8;
+
+  /* The band LIFTS on dark rather than inverting: it sits over a near-black
+     track, where the light theme's deep amber wash would vanish. Same hue as
+     the lifted dark amber (speaker-2's #fbbf4a). */
+  --ff-soundbite-band: rgba(251, 191, 74, 0.35);
 
   /* Speaker hues lift ~15% and desaturate ~10% so names stay legible. */
   --ff-speaker-0: #9b7bff;

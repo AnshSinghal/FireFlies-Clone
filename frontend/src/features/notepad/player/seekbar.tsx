@@ -29,6 +29,14 @@ export interface SpeakerCue {
   label: string
 }
 
+/** A saved soundbite's span, drawn as a translucent amber band (T-33.7). */
+export interface SoundbiteBand {
+  id: number
+  startMs: number
+  endMs: number
+  title: string
+}
+
 interface SeekbarProps {
   currentMs: number
   durationMs: number
@@ -36,6 +44,7 @@ interface SeekbarProps {
   chapters: Chapter[]
   /** Sorted by `startMs`; used for the hover preview's speaker name. */
   cues: SpeakerCue[]
+  soundbites?: SoundbiteBand[]
   onSeek: (ms: number) => void
   /** Chapter ticks seek AND reveal, which scrubbing does not (T-21.6). */
   onSeekChapter: (ms: number) => void
@@ -68,6 +77,7 @@ export function Seekbar({
   bufferedMs,
   chapters,
   cues,
+  soundbites = [],
   onSeek,
   onSeekChapter,
   bookmarks,
@@ -194,6 +204,26 @@ export function Seekbar({
           )}
           style={{ width: `${progress * 100}%` }}
         />
+
+        {/*
+          Soundbite bands (T-33.7): DECORATIVE, so they live inside the slider
+          like the buffered fill — an interactive band would have to be a
+          sibling, the chapter-tick rule. Drawn over the progress fill because
+          the token is translucent; the fill reads through it.
+        */}
+        {soundbites.map((clip) => (
+          <div
+            key={clip.id}
+            data-testid={`soundbite-band-${clip.id}`}
+            aria-hidden="true"
+            title={clip.title}
+            className="absolute inset-y-0 rounded-full bg-soundbite-band"
+            style={{
+              left: `${ratioOf(clip.startMs, durationMs) * 100}%`,
+              width: `${(ratioOf(clip.endMs, durationMs) - ratioOf(clip.startMs, durationMs)) * 100}%`,
+            }}
+          />
+        ))}
 
         <div
           data-testid="player-thumb"

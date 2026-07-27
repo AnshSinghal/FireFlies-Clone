@@ -17,6 +17,8 @@ export const TOAST_MESSAGES = {
   changesSaved: 'Changes saved',
   actionItemAdded: 'Action item added',
   actionItemDeleted: 'Action item deleted',
+  soundbiteCreated: 'Soundbite created',
+  soundbiteDeleted: 'Soundbite deleted',
   summaryRegenerated: 'Summary regenerated',
   linkCopied: 'Link copied to clipboard',
   segmentCopied: 'Segment copied to clipboard',

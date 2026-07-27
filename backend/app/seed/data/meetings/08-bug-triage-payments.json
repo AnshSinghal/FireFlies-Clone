@@ -137,5 +137,8 @@
     { "text": "Audit every job that retries against an external service for the same flaw", "assignee": "Marcus Patel", "due_in_days": -60, "at_segment": 57 },
     { "text": "Restart the renewal job once the fix is deployed and verified", "assignee": "Marcus Patel", "status": "completed", "due_in_days": -74, "at_segment": 63 },
     { "text": "Write a template for billing incident customer communications", "assignee": null, "due_in_days": -30, "at_segment": 60 }
+  ],
+  "soundbites": [
+    { "title": "Root cause: a fresh idempotency key on every retry", "from_segment": 35, "to_segment": 37 }
   ]
 }

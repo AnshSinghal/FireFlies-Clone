@@ -2634,7 +2634,100 @@ otherwise.
 
 ---
 
-## ADR-119 — A highlight stops at the end of its line
+## ADR-119 — Soundbite lists are `{items}`, not the six-key page envelope
+
+**Context.** T-33.1. A meeting owns a handful of hand-picked clips, and the
+seekbar overlay needs every one on load; the proposals endpoint returns
+exactly three by definition.
+
+**Decision.** Plain `{items: [...]}` — the `speakers` precedent for
+non-pageable collections, with the wrapper kept so client unwrapping stays
+uniform. The page envelope remains the rule for anything that can grow.
+
+**Consequence.** No pagination affordance for a state that cannot occur.
+
+---
+
+## ADR-120 — Magic Soundbite proposals are computed, never persisted; dismissal is client-side
+
+**Context.** T-33.8 wants three auto-proposed clips that can be saved or
+dismissed.
+
+**Decision.** `GET …/soundbites/proposals` computes through the provider each
+call (memoised under the T-29.10 cache key `soundbites`; determinism is the
+provider contract). Saving is an ordinary `POST` with `auto_generated=true` —
+one write path, the Auto badge is a flag. Dismissing is localStorage keyed by
+meeting + range: a dismissed *suggestion* is UI preference, not domain data,
+and persisting it would cost a migration plus a second tombstone concept for a
+bonus feature.
+
+**Consequence.** Dismissals don't roam across browsers — accepted. Saved and
+dismissed ranges are filtered client-side, or the deterministic endpoint would
+re-propose the same clips forever.
+
+---
+
+## ADR-121 — The proposal heuristic lives in MockProvider; LLMProvider declines it
+
+**Context.** Clip proposal is constraint satisfaction — snap to segment
+boundaries, hard 3 s–3 min bounds — which a heuristic does exactly and a model
+does approximately.
+
+**Decision.** Segment score = summed TF-IDF weight of the meeting's top-6
+keywords; window score = weight per second, so a tight exchange beats a
+ramble; greedy top-3 non-overlapping with deterministic tie-breaks.
+`LLMProvider.propose_soundbites` raises `ProviderError` unconditionally, so
+the T-29.7 degradation path serves the heuristic — silently delegating inside
+LLMProvider would lie about provenance.
+
+**Consequence.** Byte-identical proposals per meeting, asserted in tests and
+usable by visual regression. Revisit only if a prompt demonstrably beats it.
+
+---
+
+## ADR-122 — Soundbites hard-delete, and validate against the transcript's milliseconds
+
+**Context.** Comments needed tombstones because replies hang off parents. A
+clip is a pointer into the transcript: nothing references it, and two integers
+recreate it.
+
+**Decision.** No SoftDeleteMixin, `DELETE` is final. Range validation caps at
+`MAX(segment.end_ms)`, not `duration_seconds * 1000` — the duration column is
+a floored display denormalisation, and validating against the floor would make
+the provider's own boundary-snapped proposals unsaveable. Service-boundary
+ValidationErrors are the error path; the table's CheckConstraints are the
+backstop for non-API writers.
+
+**Consequence.** A deliberate contrast with ADR-… comments-tombstones, ready
+for the interview question. Seeded clips resolve segment *indices* against the
+built timeline (the T05-D argument), so the 3 s–3 min invariants hold by
+construction.
+
+---
+
+## ADR-123 — Range-constrained playback lives in the player's clock tick
+
+**Context.** T-33.6 explicitly bans `setTimeout` for the auto-pause.
+
+**Decision.** `playRange(start, end)` arms a ref the existing 100 ms tick
+checks exactly like the track-end auto-stop. `seek()` cancels the constraint
+only when the target leaves the range — scrubbing away is the user leaving the
+clip; nudging inside it isn't. `pause()` keeps it armed so resume finishes the
+clip. Adjacent decisions: the seekbar bands carry their own alpha in
+`--ff-soundbite-band` (Tailwind can't apply modifiers to `var()` colours — the
+scrim precedent) and stay decorative because interactive children of a
+`role=slider` are invalid; the download button ships `aria-disabled`, not
+`disabled`, because the ffmpeg-absent tooltip IS the feature and a natively
+disabled button swallows the pointer events it needs; `&clip=` is read once in
+state initializers and explicitly deleted on deselect, or the player's 5 s
+`?t=` writeback would carry a stale clip forever.
+
+**Consequence.** Auto-pause is exact at any rate and survives stalls; nine
+unit tests tick the clock through every path.
+
+---
+
+## ADR-124 — A highlight stops at the end of its line
 
 **Context.** T-32.11 offers a choice: a selection crossing two segments either
 splits into one highlight per segment, or is refused with a clear message.
@@ -2650,13 +2743,13 @@ rows, so removing "the highlight" means finding and removing three. The refusal
 costs one gesture — release, re-select — and the message says which one.
 
 The storage model is the deeper reason. A highlight is `(segment_id, start,
-end)` because that is what survives an edit (ADR-120); a highlight spanning
+end)` because that is what survives an edit (ADR-125); a highlight spanning
 segments has no such address, so "one highlight" across two lines cannot be
 stored at all without a second, weaker representation alongside the first.
 
 ---
 
-## ADR-120 — Highlights are relocated on an edit, or deleted, never left
+## ADR-125 — Highlights are relocated on an edit, or deleted, never left
 
 **Context.** Highlights are character offsets into text the user may also edit.
 An edit anywhere before the mark moves every offset after it, and the mark then
@@ -2678,7 +2771,7 @@ the relocation is no longer computable anywhere.
 
 ---
 
-## ADR-121 — Search marks and highlights are flattened, never nested
+## ADR-126 — Search marks and highlights are flattened, never nested
 
 **Context.** T-32.4 calls this the hard part of the task, and it is: a segment
 can carry several stored highlights and several live search marks, overlapping
@@ -2697,7 +2790,7 @@ overlap, because each renderer only knows its own ranges, and it produces the
 
 Two consequences fall out of the flattening. The two channels cannot share a
 background, so a marker owns a wash plus a saturated underline and search owns
-the background (ADR-122). And one highlight can become several elements, so
+the background (ADR-127). And one highlight can become several elements, so
 only the leading fragment carries `data-testid="highlight-<id>"` — a duplicated
 test id is a locator that throws in strict mode.
 
@@ -2706,7 +2799,7 @@ keep meaning what the find bar's "3 of 17" means.
 
 ---
 
-## ADR-122 — Every marker colour is two tokens, a wash and an underline
+## ADR-127 — Every marker colour is two tokens, a wash and an underline
 
 **Context.** T-32.3 asks for four colours "each with a matching light background
 and a saturated underline". The obvious reading is decoration; it is not.
@@ -2725,7 +2818,7 @@ pastel wash on a near-black surface is either invisible or blinding.
 
 ---
 
-## ADR-123 — An interactive control never nests inside a row's link
+## ADR-128 — An interactive control never nests inside a row's link
 
 **Context.** The topbar's search-history ✕ was a `<button>` inside the row's
 `<a>`, with `preventDefault` and `stopPropagation` on mousedown. T35-K failed

@@ -9,7 +9,7 @@
  * T-18.10 is written to prevent.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
@@ -38,6 +38,7 @@ import { HighlightsFlyout } from './highlights/highlights-flyout'
 import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
 import { NotepadHeader } from './notepad-header'
 import { ShortcutsModal } from './player/shortcuts-modal'
+import { SoundbitesPanel } from './soundbites/soundbites-panel'
 import { IndexPanel } from './summary/index-panel'
 import { CommentsPanel } from './comments/comments-panel'
 import { SmartSearchPanel } from './transcript/smart-search-panel'
@@ -46,17 +47,53 @@ import { TranscriptPanel } from './transcript-panel'
 
 export const SPLIT_STORAGE_KEY = 'ff.notepad.split'
 
+/** The `&clip=` deep-link target (T-33.9), or null when absent or malformed. */
+function readClipParam(): number | null {
+  // The server has no URL bar; it renders the loading skeleton either way.
+  if (typeof window === 'undefined') return null
+  const raw = new URLSearchParams(window.location.search).get('clip')
+  const id = raw === null ? Number.NaN : Number(raw)
+  return Number.isInteger(id) && id > 0 ? id : null
+}
+
 export function NotepadView({ meetingId }: { meetingId: number }) {
   const { data: meeting, isPending, isError, error } = useMeeting(meetingId)
   const toast = useToast()
   const regenerate = useRegenerateSummary(meetingId)
   const remove = useDeleteMeeting()
 
-  const [openPanel, setOpenPanel] = useState<RailItemId | null>(null)
+  /*
+   * `&clip=` is read ONCE, at mount — the same one-shot contract `?t=` has in
+   * useTimeLink: a pasted link is an instruction, not a subscription. Read in
+   * the INITIALISERS rather than an effect because the URL is already there on
+   * the first render; there is nothing to wait for. The server snapshot is
+   * null, but nothing observable diverges — the flyout only renders once the
+   * meeting has loaded, which never happens during hydration. The SEEK comes
+   * from the link's own `t` param; this only opens the flyout on the clip.
+   */
+  const [openPanel, setOpenPanel] = useState<RailItemId | null>(() =>
+    readClipParam() !== null ? 'soundbites' : null,
+  )
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [editing, setEditing] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [tab, setTab] = useState('summary')
+
+  //: The soundbite a `&clip=` link or a card interaction selected (T-33.9).
+  const [selectedSoundbiteId, setSelectedSoundbiteId] = useState<number | null>(readClipParam)
+
+  const selectSoundbite = useCallback((id: number | null) => {
+    setSelectedSoundbiteId(id)
+    /*
+     * The URL mirrors the selection, and DESELECTING must delete the param
+     * explicitly: the player's 5s writeback rebuilds the URL from
+     * `location.href`, so a stale `clip` would otherwise survive forever.
+     */
+    const url = new URL(window.location.href)
+    if (id === null) url.searchParams.delete('clip')
+    else url.searchParams.set('clip', String(id))
+    window.history.replaceState(window.history.state, '', url)
+  }, [])
 
   // Below 1024px the split becomes tabs (T-18.9): two 300px panels side by side
   // are two unusable panels.
@@ -155,13 +192,21 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
 
               {openPanel && (
                 <RailFlyout item={openPanel} onClose={() => setOpenPanel(null)}>
-                  {/* Smart Search (T-22.10), Index (T-23.13), Comments
-                    (T-31.6), Bookmarks and Highlights (T-32.7, T-32.8) are
-                    real; only Soundbites is still a placeholder, and the
-                    flyout says so itself. */}
+                  {/* Every rail item now opens something real: Smart Search
+                    (T-22.10), Index (T-23.13), Comments (T-31.6), Soundbites
+                    (T-33.5), Bookmarks and Highlights (T-32.7, T-32.8). The
+                    placeholder branch in `RailFlyout` is unreachable and stays
+                    only as the shape a future item would fall back to. */}
                   {openPanel === 'search' ? <SmartSearchPanel meetingId={meetingId} /> : undefined}
                   {openPanel === 'index' ? <IndexPanel meetingId={meetingId} /> : undefined}
                   {openPanel === 'comments' ? <CommentsPanel meetingId={meetingId} /> : undefined}
+                  {openPanel === 'soundbites' ? (
+                    <SoundbitesPanel
+                      meetingId={meetingId}
+                      selectedId={selectedSoundbiteId}
+                      onSelect={selectSoundbite}
+                    />
+                  ) : undefined}
                   {openPanel === 'bookmarks' ? <BookmarksFlyout meetingId={meetingId} /> : undefined}
                   {openPanel === 'highlights' ? (
                     <HighlightsFlyout meetingId={meetingId} />

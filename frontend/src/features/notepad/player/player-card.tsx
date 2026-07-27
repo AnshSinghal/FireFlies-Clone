@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 
 import { useBookmarks } from '@/lib/api/highlights'
+import { useSoundbites } from '@/lib/api/soundbites'
 import { useSummary } from '@/lib/api/summaries'
 import { useTranscript } from '@/lib/api/transcript'
 import { useNotepadCommands } from '@/lib/notepad/commands'
@@ -19,7 +20,7 @@ import { usePlayer } from '@/lib/player/player-context'
 import { useAutoplayPref } from '@/lib/prefs/app-prefs'
 import { cn } from '@/lib/utils/cn'
 
-import { Seekbar, type Chapter, type SpeakerCue } from './seekbar'
+import { Seekbar, type Chapter, type SoundbiteBand, type SpeakerCue } from './seekbar'
 import { Transport } from './transport'
 import { WaveformStrip } from './waveform-strip'
 
@@ -51,6 +52,20 @@ export function PlayerCard({ meetingId, src, className }: PlayerCardProps) {
   // returns them without a second request.
   const { data: summary } = useSummary(meetingId)
   const { data: transcript } = useTranscript(meetingId)
+  // Saved clips become amber bands on the seekbar (T-33.7). Shared with the
+  // flyout through the query cache, so a delete there removes the band here.
+  const { data: soundbiteData } = useSoundbites(meetingId)
+
+  const soundbites = useMemo<SoundbiteBand[]>(
+    () =>
+      (soundbiteData?.items ?? []).map((clip) => ({
+        id: clip.id,
+        startMs: clip.start_ms,
+        endMs: clip.end_ms,
+        title: clip.title,
+      })),
+    [soundbiteData],
+  )
 
   const chapters = useMemo<Chapter[]>(
     () =>
@@ -117,6 +132,7 @@ export function PlayerCard({ meetingId, src, className }: PlayerCardProps) {
         bufferedMs={player.bufferedMs}
         chapters={chapters}
         cues={cues}
+        soundbites={soundbites}
         onSeek={player.seek}
         onSeekChapter={(ms) => seekTo(ms, { reveal: true })}
         bookmarks={bookmarks}
