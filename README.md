@@ -207,7 +207,8 @@ cd frontend && npm install && npm run dev
 _(Expanded in T-45.9.)_ Known scope boundaries, all deliberate:
 
 - **Authentication is out of scope** per the assignment. A single seeded default user is returned by
-  a `get_current_user` dependency — the one place real auth would be wired in.
+  a `get_current_user` dependency — the one place real auth would be wired in. The profile menu
+  shows that user, and `Sign out` says so via the coming-soon toast instead of pretending (T-30.8).
 - **Speech-to-text is out of scope.** Transcripts are uploaded or pasted, not generated from audio.
 - **Summaries default to a deterministic offline provider**, not a live LLM, so the demo cannot fail
   on a missing API key or a rate limit. Switching to a real model is a one-variable change.
