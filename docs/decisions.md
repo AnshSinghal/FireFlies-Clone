@@ -1983,6 +1983,69 @@ clicking straight at it.
 
 ---
 
+## ADR-085 — Transcripts are parsed on the SERVER, and previewed from a dry run
+
+**Context.** T-26 needs a preview the user confirms before anything is created,
+and T-26.13 needs validation a client cannot bypass. Parsing in the browser
+gives an instant preview; parsing on the server gives a check that means
+something.
+
+**Decision.** One parser, in Python, behind `POST /meetings/parse` — a DRY RUN
+that writes nothing and answers "what would we create". The confirmed segments
+are then sent to `POST /meetings/import`.
+
+Parsing in both places was the alternative, and the two would drift: the
+preview is a contract, and a second implementation is a second opinion about
+what the file said.
+
+**Consequence.** The paste tab's live preview is a debounced request rather
+than a local computation — 500ms, which is the same debounce it would have
+needed anyway. The extension chooses the PARSER; it does not certify the
+content, so a `.exe` renamed to `.txt` reaches the text parser and is refused
+on what it actually contains.
+
+Extension and size are ALSO checked in the browser, because a round-trip to be
+told a `.pdf` is a `.pdf` is a round-trip nobody needed. That is an
+optimisation, not the guard.
+
+---
+
+## ADR-086 — Invented timings say they were invented
+
+**Context.** Four heuristics read a `.txt`: bracketed timestamps, leading
+timestamps, `Name: text` prefixes, and plain paragraphs. The last two have no
+timings, so they are synthesised at 150 words per minute.
+
+**Decision.** The preview reports WHICH rule matched, in words —
+"Speaker names — timings estimated from reading speed" rather than
+"speaker-prefixes". A transcript whose timestamps were guessed looks exactly
+like one whose timestamps were read, and the difference matters the moment
+somebody clicks a line to hear it.
+
+**Consequence.** Synthesised segments are strictly increasing and never
+zero-length: the player resolves the active line from these, and a
+zero-length segment breaks that and the chapter positions at once. A segment
+that arrives ending before it starts is given a floor rather than rejected —
+the timings came from a file we did not write.
+
+---
+
+## ADR-087 — Speakers are corrected in the preview, before the meeting exists
+
+**Context.** A diariser labels voices "Speaker 1" and "Speaker 2". Fixing that
+after import means editing a transcript; fixing it in the preview means typing
+two names.
+
+**Decision.** The preview's speaker list is editable, and the rename is applied
+to every line that speaker has as the meeting is created.
+
+**Consequence.** The import payload carries the corrected names, so there is no
+second pass and no window where the meeting exists with the wrong ones. The
+rename map is keyed on what the PARSER found, so re-parsing (typing more into
+the paste box) does not lose corrections that still apply.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

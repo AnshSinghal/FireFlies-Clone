@@ -239,3 +239,42 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
     </div>
   )
 })
+
+interface FileInputProps extends Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  'type' | 'onChange' | 'value' | 'accept'
+> {
+  label: string
+  /** Extensions, e.g. `['.txt', '.vtt']`. Joined for the `accept` attribute. */
+  accept: readonly string[]
+  onFile: (file: File) => void
+}
+
+/**
+ * A visually hidden file input (T-26.2).
+ *
+ * Hidden rather than styled: a file input's button is drawn by the operating
+ * system and cannot be restyled, so every design that wants its own dropzone
+ * hides the real control and labels it. `sr-only` rather than `display: none`,
+ * because a hidden-by-display input is not focusable and the keyboard route to
+ * choosing a file disappears with it.
+ *
+ * The value is cleared after every pick, so choosing the SAME file twice fires
+ * again — which is exactly what a retry after a parse error is.
+ */
+export function FileInput({ label, accept, onFile, className, ...rest }: FileInputProps) {
+  return (
+    <input
+      type="file"
+      accept={accept.join(',')}
+      aria-label={label}
+      className={cn('sr-only', className)}
+      onChange={(event) => {
+        const file = event.target.files?.[0]
+        if (file) onFile(file)
+        event.target.value = ''
+      }}
+      {...rest}
+    />
+  )
+}

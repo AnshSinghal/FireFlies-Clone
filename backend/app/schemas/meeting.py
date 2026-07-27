@@ -195,6 +195,12 @@ class TagRef(BaseModel):
 # ── Input ───────────────────────────────────────────────────────────────────
 
 
+#: Mirrors `transcript_import.MAX_SEGMENTS`. Duplicated as a literal rather
+#: than imported, because a schema module importing a service inverts the
+#: layering the project enforces (ADR-017); the parser's test pins the number.
+MAX_IMPORT_SEGMENTS = 10_000
+
+
 class MeetingCreate(BaseModel):
     """Creating a meeting from the form, a paste, or an upload."""
 
@@ -216,6 +222,41 @@ class MeetingCreate(BaseModel):
         if not title:
             raise ValueError("Title cannot be blank.")
         return title
+
+
+class ImportedSegment(BaseModel):
+    """One line of a transcript being imported (T-26.7)."""
+
+    speaker: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    start_ms: int = Field(ge=0)
+    end_ms: int = Field(ge=0)
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=5000)]
+
+
+class MeetingImport(MeetingCreate):
+    """A meeting created WITH a transcript (T-26.7).
+
+    The segments are the ones the user confirmed in the preview, sent back
+    rather than re-parsed: the preview is a contract, and re-reading the file
+    would let a second parse disagree with what was on screen. They are
+    re-validated here, because the client is still the client.
+    """
+
+    segments: list[ImportedSegment] = Field(max_length=MAX_IMPORT_SEGMENTS)
+
+
+class TranscriptPreview(BaseModel):
+    """What the parser found, before anything is created (T-26.7)."""
+
+    #: Which heuristic matched. Shown, because a transcript whose timings were
+    #: INVENTED should say so rather than presenting guesses as facts.
+    strategy: str
+    segments: list[ImportedSegment]
+    speakers: list[str]
+    duration_ms: int
+    #: From the file's own metadata, where the format carries any.
+    title: str | None
+    participants: list[str]
 
 
 class MeetingUpdate(BaseModel):

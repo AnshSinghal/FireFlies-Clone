@@ -168,6 +168,10 @@ test.describe('player', () => {
     await expect(page.getByTestId('player-rate')).toHaveText('1.5×')
 
     await page.goto(`/meeting/${WITHOUT_AUDIO}`)
+    // Waited for the card, then asserted: `/meeting/[id]` is rendered on
+    // demand, so under a loaded suite the assertion can otherwise run before
+    // the player exists at all.
+    await expect(page.getByTestId('player')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('player-rate')).toHaveText('1.5×')
 
     // Back to the default, so the rest of the suite starts where it expects.

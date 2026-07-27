@@ -1,0 +1,30 @@
+{
+  "title": "Q3 Product Roadmap Sync",
+  "participants": ["Sarah Chen", "Marcus Patel", "Aisha Khan"],
+  "segments": [
+    {
+      "speaker": "Sarah Chen",
+      "start_ms": 0,
+      "end_ms": 11000,
+      "text": "Morning everyone. Short agenda today — pricing, the incident review, and where we are on mobile onboarding."
+    },
+    {
+      "speaker": "Marcus Patel",
+      "start_ms": 11000,
+      "end_ms": 18000,
+      "text": "Before we start, do we want to cover the hiring req as well, or is that separate?"
+    },
+    {
+      "speaker": "Sarah Chen",
+      "start": 18,
+      "end": 25,
+      "text": "Separate. Let's keep this one to the roadmap, otherwise we run over like last time."
+    },
+    {
+      "speaker": "Aisha Khan",
+      "start": 25,
+      "end": 37,
+      "text": "On pricing — the top decile of enterprise accounts use about four times the API volume of the median and pay the same per seat."
+    }
+  ]
+}
