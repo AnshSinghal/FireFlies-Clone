@@ -92,7 +92,7 @@ test.describe('details drawer', () => {
     // is server-assigned (ADR-013).
     const colours = await page
       .getByTestId('details-attended-list')
-      .locator('span[style*="background-color"]')
+      .getByTestId('details-talktime-bar')
       .evaluateAll((nodes) => nodes.map((n) => getComputedStyle(n).backgroundColor))
 
     expect(colours.length).toBeGreaterThan(1)
@@ -147,6 +147,8 @@ test.describe('details drawer · narrow viewports', () => {
     expect(box!.width).toBeCloseTo(500, 0)
 
     // And the backdrop appears, because there is nothing left behind it to use.
-    await expect(page.locator('.bg-scrim')).toBeVisible()
+    // By testid, not `.bg-scrim` — a class selector broke the moment the token
+    // layer renamed anything (T-39.10).
+    await expect(page.getByTestId('details-drawer-scrim')).toBeVisible()
   })
 })

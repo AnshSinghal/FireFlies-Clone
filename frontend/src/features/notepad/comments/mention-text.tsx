@@ -35,7 +35,11 @@ export function MentionText({ body, mentions }: Pick<CommentOut, 'body' | 'menti
     }
     if (hit.at > 0) nodes.push(rest.slice(0, hit.at))
     nodes.push(
-      <span key={key++} className="rounded-sm bg-accent-subtle px-1 text-accent-strong">
+      <span
+        key={key++}
+        data-testid="comment-mention-token"
+        className="rounded-sm bg-accent-subtle px-1 text-accent-strong"
+      >
         {hit.name}
       </span>,
     )

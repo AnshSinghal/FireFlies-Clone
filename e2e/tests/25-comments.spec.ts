@@ -76,13 +76,16 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
 
     await expect(page.getByTestId('comment-mention-list')).toBeVisible()
     const first = page.getByTestId(/^comment-mention-\d+$/).first()
-    const mentionedName = (await first.locator('span.truncate').textContent())?.trim() ?? ''
+    const mentionedName =
+      (await first.getByTestId('comment-mention-name').textContent())?.trim() ?? ''
     await first.click()
 
     await page.getByTestId('comment-submit').click()
 
     // The saved comment renders the mention as an accent-tinted token.
-    const token = page.locator('span.bg-accent-subtle', { hasText: `@${mentionedName}` })
+    const token = page
+      .getByTestId('comment-mention-token')
+      .filter({ hasText: `@${mentionedName}` })
     await expect(token.first()).toBeVisible()
   })
 

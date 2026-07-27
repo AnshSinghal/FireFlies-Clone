@@ -32,6 +32,22 @@ jobs:
       - run: npm run format:check
         working-directory: frontend
 
+  lint-e2e:
+    name: Lint e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - run: npm ci
+        working-directory: e2e
+      # Fragile raw locators (class/XPath selectors) fail here — see T-39.10.
+      - run: npm run lint
+        working-directory: e2e
+
   typecheck-frontend:
     name: Typecheck frontend
     runs-on: ubuntu-latest
