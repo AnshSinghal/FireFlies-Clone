@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-07-27T14:54:57.294Z",
+  "projectRoot": "/home/contact_cyberultron_com/FireFlies-Clone",
+  "structure": {
+    "hasPackageJson": true,
+    "hasTsConfig": false,
+    "hasClaudeConfig": true,
+    "hasClaudeFlow": true
+  },
+  "scannedAt": 1785164097294
+}

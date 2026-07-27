@@ -243,6 +243,52 @@ First run needs the browser binaries:
 cd e2e && npm install && npx playwright install chromium
 ```
 
+Firefox and WebKit run a small, deliberately-chosen `@crossbrowser` set (T-42.12) rather than the
+whole suite — the platform seams only: the autoplay policy WebKit enforces, sticky positioning
+inside a scroll container, DOM-range normalisation under the selection toolbar, a canvas painted
+from CSS custom properties, and the transcript↔player seek.
+
+```bash
+npx playwright install firefox webkit
+make e2e-crossbrowser
+```
+
+---
+
+## Performance
+
+Measured on the merged tree, gzipped at nginx's compression level. **The plan's 250KB route-JS
+budget (T-42.9) is not met**, and the suite asserts a regression guard at the measured level rather
+than a green tick over an unmet target — the gap is printed in the failure message and stated in
+`e2e/tests/32-bundle.spec.ts`.
+
+| Route | JS (gzipped) | Plan target | CLS |
+|---|---|---|---|
+| `/notebook` | 288KB | 250KB | < 0.1 ✅ |
+| `/meeting/[id]` | 349KB | 250KB | < 0.1 ✅ |
+| `/search` | 301KB | 250KB | — |
+| `/settings` | 301KB | 250KB | — |
+
+Where it goes: `react-dom` is 69KB and the Next runtime 54KB, so **123KB is framework floor** before
+a line of this app is counted. The remainder is roughly even between Radix primitives (~48KB across
+a dozen packages), TanStack Query and Virtual (~60KB), and application code (~57KB).
+
+The reductions actually available were taken — the export modal and the AskFred panel are
+`next/dynamic`, and the notepad-only leaves (virtualiser, waveform decoder, date picker) were
+verified absent from the notebook's payload rather than assumed to be. Closing the remaining gap
+means dropping Radix or TanStack Query, which is a product decision rather than a build-config one.
+
+Compression itself was a real find: nothing in the deployed chain was gzipping. `next start`
+compresses its HTML and RSC responses but serves `/_next/static` untouched, and the nginx entry
+point had no `gzip` block — so every visitor was downloading ~2.7× these numbers. Fixed in
+`deploy/nginx-fireflies.conf`.
+
+Backend latency budgets (T-42.10) and the 5,000-segment stress case (T-42.11) are asserted in
+`backend/tests/test_performance.py`. Two of those assert a *ratio* rather than a stopwatch reading,
+because the ratio is what stays true on someone else's hardware: a page of 20 must not slow down as
+the corpus triples, and the last page of a 5,000-segment transcript must cost what the first one
+does — the property cursor pagination exists for.
+
 ---
 
 ## Project Structure

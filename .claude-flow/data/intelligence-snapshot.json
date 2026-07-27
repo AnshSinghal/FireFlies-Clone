@@ -1,0 +1,80 @@
+[
+  {
+    "timestamp": 1785145727937,
+    "nodes": 3,
+    "edges": 0,
+    "pageRankSum": 1,
+    "confidences": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "accessCounts": [
+      0,
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-MEMORY-memory-index-0",
+        "summary": "Memory Index",
+        "confidence": 0.5,
+        "pageRank": 0.3333333333333333,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-fireflies-reference-screens-----0",
+        "summary": "---",
+        "confidence": 0.5,
+        "pageRank": 0.3333333333333333,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-ralph-parallel-coordination-----0",
+        "summary": "---",
+        "confidence": 0.5,
+        "pageRank": 0.3333333333333333,
+        "accessCount": 0
+      }
+    ]
+  },
+  {
+    "timestamp": 1785145745805,
+    "nodes": 3,
+    "edges": 0,
+    "pageRankSum": 1,
+    "confidences": [
+      0.5,
+      0.5,
+      0.5
+    ],
+    "accessCounts": [
+      0,
+      0,
+      0
+    ],
+    "topPatterns": [
+      {
+        "id": "mem-MEMORY-memory-index-0",
+        "summary": "Memory Index",
+        "confidence": 0.5,
+        "pageRank": 0.3333333333333333,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-fireflies-reference-screens-----0",
+        "summary": "---",
+        "confidence": 0.5,
+        "pageRank": 0.3333333333333333,
+        "accessCount": 0
+      },
+      {
+        "id": "mem-ralph-parallel-coordination-----0",
+        "summary": "---",
+        "confidence": 0.5,
+        "pageRank": 0.3333333333333333,
+        "accessCount": 0
+      }
+    ]
+  }
+]

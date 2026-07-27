@@ -1,0 +1,22 @@
+{
+  "id": "session-1785145727966",
+  "startedAt": "2026-07-27T09:48:47.966Z",
+  "cwd": "/home/contact_cyberultron_com/FireFlies-Clone",
+  "context": {
+    "lastMatchedPatterns": [
+      "mem-ralph-parallel-coordination-----0",
+      "mem-MEMORY-memory-index-0",
+      "mem-fireflies-reference-screens-----0"
+    ]
+  },
+  "metrics": {
+    "edits": 0,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "updatedAt": "2026-07-27T09:48:48.262Z",
+  "restoredAt": "2026-07-27T09:48:57.682Z",
+  "endedAt": "2026-07-27T09:49:05.806Z",
+  "duration": 17840
+}
