@@ -944,6 +944,13 @@ the kebab with its submenus, the avatar group with counted overflow, the action-
 badge rather than a bare number, every `data-testid`, and — as it turned out — the 72px height,
 which the card is pinned to via the `row` token.
 
+> **Superseded on the height by ADR-150 (2026-07-28).** "As it turned out" was
+> doing a lot of work in that sentence: nobody had measured it. Their card is
+> 1.514 x their topbar where 72px gave 1.286, and 5.658 x their row-title glyph
+> where 72px gave 5.143 — short against both anchors. The token is now **82px**.
+> Everything else this ADR kept from the plan still stands; only the height
+> moved.
+
 The reference's cards carry less information than the plan's rows. Where the API has more to show,
 it is shown: participants and action items sit at the trailing edge of the card, and a
 transcript-only search hit adds a `match_context` line (T-11.3). Matching the reference's *layout*
@@ -2259,9 +2266,15 @@ blanket substitution. Rename by call site, not by pattern.
 `height: auto` is famously not animatable.
 
 **Decision.** Animate `height` to zero directly — legal here only because a
-Notebook row is a FIXED 72px (`h-row`), a token the skeleton shares. The margin
-goes with it, because the list is `space-y-2` and a collapsed row would
-otherwise leave its gap behind.
+Notebook row is a FIXED height (`h-row`), a token the skeleton shares. The margin
+goes with it, because a collapsed row would otherwise leave its gap behind.
+
+> **Two values in this entry have since moved and the reasoning has not.** The
+> row was 72px and is now **82px** (ADR-150); the list gap was `space-y-2` and is
+> now the named `row-gap` token at 20px (ADR-149). The decision holds for the
+> reason it always did — the height is *fixed*, whatever the number, which is
+> what makes it animatable. Amended rather than rewritten, because "72px" here
+> was never the argument.
 
 The row plays out BEFORE the cache changes: the list is query-driven, so a row
 disappears the instant the data does, and there is no unmount transition to
@@ -3403,7 +3416,8 @@ seen it by looking, including me, across several side-by-side passes in one day.
 - `group-gap: 36px`, which with the heading and its own 8px gap totals 67px
   across a group boundary — measured 0.944 after, against the reference's 0.94.
 
-Both are named tokens in `tailwind.config.ts` beside `row: 72px`, with the
+Both are named tokens in `tailwind.config.ts` beside `row` (72px when this was
+written; 82px since ADR-150), with the
 derivation in a comment, because the config already establishes that layout
 sizes are named rather than inlined — and because the skeleton has to mirror
 them exactly.
