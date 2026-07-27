@@ -12,9 +12,7 @@ import {
   Blocks,
   CircleHelp,
   Globe,
-  Hash,
   LayoutGrid,
-  Lock,
   Settings,
   Upload,
   Users,
@@ -79,8 +77,6 @@ export const FOOTER_NAV: NavItem[] = [
   { id: 'settings', label: 'Settings', href: '/settings', icon: Settings },
   { id: 'help', label: 'Help & Support', href: '/help', icon: CircleHelp, soon: true },
 ]
-
-export const CHANNEL_ICONS = { public: Hash, private: Lock } as const
 
 /**
  * Whether an item is the current page (T-07.5).

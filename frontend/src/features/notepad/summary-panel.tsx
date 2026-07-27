@@ -232,7 +232,7 @@ export function SummaryPanel({ meetingId, title, participants }: SummaryPanelPro
             variant="empty"
             testId="summary-empty"
             title="No summary yet"
-            body="This meeting has not been summarised."
+            body="This meeting has not been summarized."
             action={
               <Button
                 variant="primary"

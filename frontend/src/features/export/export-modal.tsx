@@ -141,7 +141,7 @@ export function ExportModal({ open, onOpenChange, target }: ExportModalProps) {
 
   const estimate = useMemo(
     () => estimateExportSize({ include, summary, transcript, actionItems, comments, highlights }),
-    [include, summary, transcript, actionItems, comments],
+    [include, summary, transcript, actionItems, comments, highlights],
   )
 
   const includeList = EXPORT_SECTIONS.filter((section) => include.has(section.id)).map(

@@ -92,14 +92,3 @@ export function usePlayer(): PlayerApi {
   if (!player) throw new Error('usePlayer must be used inside a <PlayerProvider>')
   return player
 }
-
-/**
- * The playhead for components that only WATCH it.
- *
- * Same context today, but a distinct call site: when the transcript's re-render
- * cost forces the value to be split off, every consumer that only reads the
- * time is already marked.
- */
-export function usePlayhead(): number {
-  return usePlayer().currentMs
-}

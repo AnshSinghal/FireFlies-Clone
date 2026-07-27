@@ -19,7 +19,6 @@ import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Dropdown, DropdownItem, DropdownLabel } from '@/components/ui/dropdown'
 import { IconButton } from '@/components/ui/icon-button'
-import { useToast } from '@/components/ui/toast'
 import { TagEditor } from '@/features/tags/tag-editor'
 import { useChannels } from '@/lib/api/channels'
 import { pluralize } from '@/lib/utils/format'
@@ -52,7 +51,6 @@ export function BulkBar({
   onAddTags,
   onExport,
 }: BulkBarProps) {
-  const toast = useToast()
   const [confirming, setConfirming] = useState(false)
   const [tagsOpen, setTagsOpen] = useState(false)
   const { data: channels } = useChannels()
@@ -175,7 +173,7 @@ export function BulkBar({
         // Names the COUNT, so the user can see the scope of what they are about
         // to destroy rather than trusting the selection.
         title={`Delete ${pluralize(count, 'meeting')}?`}
-        body="Their transcripts, summaries and action items will be deleted. You can undo this."
+        body="Their transcripts, summaries, and action items will be deleted. You can undo this."
         confirmLabel="Delete"
         onConfirm={onDelete}
         testId="bulk-confirm"

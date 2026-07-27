@@ -15,14 +15,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type RequestParams } from './client'
 import { qk, type MeetingFilters } from './query-keys'
 import { resolveTagIds, useTags } from './tags'
-import type {
-  Facets,
-  MeetingCreate,
-  MeetingDetail,
-  MeetingListItem,
-  MeetingUpdate,
-  Page,
-} from './types'
+import type { Facets, MeetingDetail, MeetingListItem, MeetingUpdate, Page } from './types'
 
 /**
  * camelCase in the app, snake_case on the wire.
@@ -125,18 +118,15 @@ export function useMeeting(id: number | null) {
   })
 }
 
-export function useCreateMeeting() {
-  const client = useQueryClient()
-
-  return useMutation({
-    mutationFn: (payload: MeetingCreate) => api.post<MeetingDetail>('/api/v1/meetings', payload),
-    onSuccess: () => {
-      // Invalidate the whole list branch, not one filter's key — a new meeting
-      // may match filters the user is not currently looking at.
-      void client.invalidateQueries({ queryKey: qk.meetings.lists() })
-    },
-  })
-}
+/*
+ * Creating a meeting lives in `./import`, not here.
+ *
+ * There were two `useCreateMeeting` hooks for a while — this one, which only
+ * knew `POST /meetings`, and the import module's, which routes to
+ * `/meetings/import` when there are segments to send. Every call site used the
+ * import one; two exported hooks of the same name in the same folder is a trap
+ * whether or not anyone has fallen into it yet, so this one is gone.
+ */
 
 export function useUpdateMeeting(id: number) {
   const client = useQueryClient()

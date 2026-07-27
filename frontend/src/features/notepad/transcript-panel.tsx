@@ -360,7 +360,7 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
             variant="empty"
             testId="transcript-empty"
             title="No transcript available for this meeting"
-            body="Upload a recording or a transcript file and it will appear here."
+            body="Upload a transcript file and it will appear here."
             action={
               <Button variant="primary" asChild>
                 <a href="/upload">Upload a transcript</a>
