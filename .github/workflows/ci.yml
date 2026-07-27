@@ -105,6 +105,16 @@ jobs:
       # Routers must not touch the ORM — see ADR-004.
       - run: python scripts/check_layering.py backend
 
+      # Documents vs the code they describe. Both were added on 2026-07-28 after
+      # design.md was found specifying ten colours the app does not use, and
+      # ui-audit.md's ratio table was found describing a card height that had
+      # changed under it. They live in `make lint` too, but CI runs the
+      # sub-commands rather than the gate — which is exactly how three CI runs
+      # went red earlier that day on a formatter nothing local was invoking. A
+      # check that only runs on one developer's machine is not a check.
+      - run: python scripts/check_design_tokens.py .
+      - run: uv run --with pillow --with numpy python scripts/check_reference_ratios.py .
+
   pytest:
     name: Backend tests
     runs-on: ubuntu-latest
