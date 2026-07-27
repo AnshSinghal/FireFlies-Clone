@@ -27,6 +27,8 @@ interface SelectionToolbarProps {
   /** Selections outside this element are ignored. */
   containerRef: React.RefObject<HTMLElement | null>
   onCopy: (text: string) => void
+  /** Opens the comment composer for the selection's segment (T-31.3). */
+  onComment?: (segmentId: number) => void
   /** Applies a highlight. Absent while the transcript is in edit mode. */
   onHighlight?: (selection: SegmentSelection, color: HighlightColorName) => void
   /** The colour the plain `Highlight` button uses (T-32.2). */
@@ -37,7 +39,21 @@ interface Anchor {
   top: number
   left: number
   text: string
-  /** `null` when the selection spans more than one segment. */
+  /**
+   * The segment the selection STARTS in, from the row's data attribute.
+   *
+   * A COMMENT anchors here, which is the natural reading of "comment on this"
+   * and stays unambiguous for a drag across lines.
+   */
+  segmentId: number | null
+  /**
+   * The selection resolved to character offsets, or `null` when it spans more
+   * than one segment.
+   *
+   * A HIGHLIGHT needs more than the comment path does — offsets, not just a
+   * line — and cannot fall back to the starting segment, because the offsets
+   * past that line's end do not exist (ADR-119).
+   */
   segment: SegmentSelection | null
 }
 
@@ -47,6 +63,7 @@ const MIN_SELECTION = 2
 export function SelectionToolbar({
   containerRef,
   onCopy,
+  onComment,
   onHighlight,
   lastColor = 'amber',
 }: SelectionToolbarProps) {
@@ -83,11 +100,21 @@ export function SelectionToolbar({
       return
     }
 
+    // A comment anchors to the line where the selection STARTS — the natural
+    // reading of "comment on this", and unambiguous for cross-line drags.
+    const startElement =
+      range.startContainer instanceof Element
+        ? range.startContainer
+        : range.startContainer.parentElement
+    const segmentId = startElement?.closest<HTMLElement>('[data-segment-id]')?.dataset.segmentId
+
     const parsed = readSegmentSelection()
+
     setAnchor({
       top: rect.top,
       left: rect.left + rect.width / 2,
       text,
+      segmentId: segmentId != null ? Number(segmentId) : null,
       segment: parsed === null || parsed === 'cross-segment' ? null : parsed,
     })
   }, [containerRef])
@@ -137,7 +164,7 @@ export function SelectionToolbar({
     if (!anchor.segment) {
       /*
        * T-32.11, decided rather than fudged: a selection crossing two lines is
-       * REFUSED with an explanation (ADR-102). Splitting it would create marks
+       * REFUSED with an explanation (ADR-119). Splitting it would create marks
        * at both ends that the user did not draw — the first and last lines are
        * almost always partially selected — with no way to remove one without
        * removing all of them.
@@ -243,7 +270,16 @@ export function SelectionToolbar({
         label="Comment"
         size="sm"
         icon={<MessageSquarePlus size={16} strokeWidth={1.75} />}
-        onClick={soon}
+        data-testid="selection-comment"
+        onClick={
+          onComment && anchor.segmentId != null
+            ? () => {
+                onComment(anchor.segmentId as number)
+                window.getSelection()?.removeAllRanges()
+                setAnchor(null)
+              }
+            : soon
+        }
       />
       <IconButton
         label="Soundbite"

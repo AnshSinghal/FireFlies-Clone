@@ -11,7 +11,7 @@ from __future__ import annotations
 from app.db.base import Base
 from app.models.action_item import ActionItem
 from app.models.channel import Channel
-from app.models.comment import Comment
+from app.models.comment import Comment, CommentMention
 from app.models.enums import (
     ActionItemSource,
     ActionItemStatus,
@@ -42,6 +42,7 @@ __all__ = [
     "Bookmark",
     "Channel",
     "Comment",
+    "CommentMention",
     "Highlight",
     "HighlightColor",
     "Keyword",

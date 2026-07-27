@@ -47,7 +47,11 @@
      reaches 3.14:1 at a shift that is invisible in a side-by-side screenshot.
      Full AA (4.5:1) would need ~#6C7481, which reads as secondary text rather
      than metadata and visibly departs from the reference. See ADR-012. */
-  --ff-grey-500: #8992a2; /* timestamps, placeholders          */
+  --ff-grey-500: #667085; /* timestamps, placeholders.
+     Darkened from the sampled #8992a2 (3.14:1 on white — an AA failure axe
+     flagged on every timestamp in the app; pending decision #7). This is the
+     nearest grey in the same family that clears 4.5:1 on every surface muted
+     text sits on, chips included (T-38.5). */
   --ff-grey-700: #616b81; /* [S] nav labels, list metadata     */
   --ff-grey-900: #0b1424; /* [S] headings, meeting titles      */
 
@@ -62,6 +66,8 @@
   --ff-amber-400: #ffe9a8; /* [D] search highlight              */
   --ff-amber-500: #ffc933; /* [D] active search highlight       */
   --ff-amber-600: #f79009; /* [D] due-soon badge                */
+  --ff-amber-700: #b54708; /* warning TEXT on the subtle bg — amber-600 reads
+     2.25:1 there, which is decoration, not text (T-38.5) */
 
   /* ── Red — destructive ──────────────────────────────────────────────────── */
   /* No large danger surface appears in the reference set; the only red pixels
@@ -76,14 +82,20 @@
   /* ── Speaker palette — eight hues, assigned by name hash ────────────────── */
   /* Not observable: no transcript view in the reference set. Chosen to be
      distinguishable at 24px and to lead with the brand violet. */
+  /* Every hue here is used THREE ways: as text on white (speaker names), as
+     text on the active row's violet tint, and as the fill under white avatar
+     initials. All three need 4.5:1, and the tint is the strictest of them —
+     so each value below clears 4.5 against #f4f3ff, which implies the other
+     two. Darkened from the sampled originals for it (T-38.5); axe flagged the
+     originals on every avatar and on the active line's speaker name. */
   --ff-speaker-0: #6a39ef;
-  --ff-speaker-1: #0e9f6e;
-  --ff-speaker-2: #f79009;
-  --ff-speaker-3: #c43990;
-  --ff-speaker-4: #d92d20;
-  --ff-speaker-5: #06aed4;
-  --ff-speaker-6: #8869fa;
-  --ff-speaker-7: #7a5af5;
+  --ff-speaker-1: #0a7d57;
+  --ff-speaker-2: #a15c07;
+  --ff-speaker-3: #b23383;
+  --ff-speaker-4: #c62a1e;
+  --ff-speaker-5: #0e7490;
+  --ff-speaker-6: #6f4ff0;
+  --ff-speaker-7: #6d4be8;
 
   /* ═════════════════════════════════════════════════════════════════════════
      LAYER 2 — SEMANTICS   (the only names a component may use)
@@ -126,8 +138,13 @@
   --ff-success-strong: var(--ff-green-800);
   --ff-warning: var(--ff-amber-600);
   --ff-warning-subtle: var(--ff-amber-50);
+  /* The *-strong tokens are for TEXT on the matching subtle background —
+     the badge pattern. The base tokens stay for icons, borders and fills,
+     where 3:1 suffices and the brighter hue is the point. */
+  --ff-warning-strong: var(--ff-amber-700);
   --ff-danger: var(--ff-red-600);
   --ff-danger-subtle: var(--ff-red-50);
+  --ff-danger-strong: var(--ff-red-700);
 
   /* ── Search highlighting ────────────────────────────────────────────────── */
   --ff-highlight: var(--ff-amber-400);
@@ -199,7 +216,8 @@
   --ff-grey-100: #23232f; /* hover                  */
   --ff-grey-200: #2c2c3a; /* dividers               */
   --ff-grey-300: #3b3b4c; /* stronger borders       */
-  --ff-grey-500: #7b8497; /* muted text             */
+  --ff-grey-500: #8b93a5; /* muted text — 7b8497 sat at 4.49:1 on chips, a
+     hair under AA; this clears every dark surface with margin (T-38.5) */
   --ff-grey-700: #a8b0be; /* secondary text         */
   --ff-grey-900: #f2f4f7; /* primary text           */
 
@@ -219,8 +237,12 @@
   --ff-green-600: #34d399;
   --ff-green-800: #6ee7b7;
   --ff-amber-50: #2a2010;
+  /* On dark the BRIGHT hues are the readable ones, so strong == base: the
+     light theme's darkened text variants would vanish here. */
+  --ff-amber-700: #f79009;
   --ff-red-50: #2d1512;
   --ff-red-600: #f87171;
+  --ff-red-700: #f87171;
 
   /* Highlights invert — a light-yellow wash is unreadable on dark. The active
      step stays dark enough for --ff-text-primary to clear AA on top of it

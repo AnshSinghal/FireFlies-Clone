@@ -11,6 +11,8 @@ from fastapi import APIRouter
 
 from app.api.v1.routers import (
     channels,
+    comments,
+    export,
     highlights,
     me,
     meetings,
@@ -25,11 +27,16 @@ api_router.include_router(me.router)
 api_router.include_router(channels.router)
 api_router.include_router(search.router)
 api_router.include_router(transcript.router)
-# Before `meetings`, whose `/{meeting_id}` would otherwise shadow nothing here
-# but keeps the specific-before-generic ordering this file already relies on.
+# BEFORE meetings, so the static `GET /meetings/export` (bulk zip, T-34.9) is
+# matched ahead of `GET /meetings/{meeting_id}` — Starlette tries routes in
+# registration order, and `export` must never be parsed as an id.
+api_router.include_router(export.router)
+# Same ordering rule, no static path of its own to protect — kept here so the
+# file reads specific-before-generic top to bottom.
 api_router.include_router(highlights.router)
 api_router.include_router(meetings.router)
 api_router.include_router(summaries.router)
 api_router.include_router(users.router)
+api_router.include_router(comments.router)
 
 __all__ = ["api_router"]

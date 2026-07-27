@@ -152,8 +152,9 @@ const BADGE_VARIANT: Record<BadgeVariant, string> = {
   neutral: 'bg-surface-2 text-secondary',
   accent: 'bg-accent-subtle text-accent-strong',
   success: 'bg-success-subtle text-success-strong',
-  warning: 'bg-warning-subtle text-warning',
-  danger: 'bg-danger-subtle text-danger',
+  // `-strong` because this is TEXT on the subtle fill (T-38.5).
+  warning: 'bg-warning-subtle text-warning-strong',
+  danger: 'bg-danger-subtle text-danger-strong',
 }
 
 const DOT_VARIANT: Record<BadgeVariant, string> = {

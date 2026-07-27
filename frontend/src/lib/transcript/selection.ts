@@ -44,7 +44,7 @@ function segmentElement(node: Node | null): HTMLElement | null {
  *
  * Returns `'cross-segment'` when the selection spans more than one line.
  * T-32.11 offers a choice between splitting such a selection into one highlight
- * per segment and refusing it; this codebase REFUSES, and says so (ADR-102).
+ * per segment and refusing it; this codebase REFUSES, and says so (ADR-119).
  * Splitting produces marks the user did not ask for at both ends — the leading
  * and trailing lines are almost always partially selected — and there is no
  * affordance for removing one of them without removing all of them.

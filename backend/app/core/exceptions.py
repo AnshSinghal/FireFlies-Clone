@@ -73,6 +73,25 @@ class BookmarkNotFoundError(NotFoundError):
     code = "BOOKMARK_NOT_FOUND"
 
 
+class CommentNotFoundError(NotFoundError):
+    code = "COMMENT_NOT_FOUND"
+    message = "Comment not found."
+
+
+class ForbiddenError(AppException):
+    status_code = 403
+    code = "FORBIDDEN"
+    message = "You do not have permission to do that."
+
+
+class NotYourCommentError(ForbiddenError):
+    """Single-user build, but the check is server-side anyway (T-31.7) —
+    trusting the client about authorship is how multi-user bugs are born."""
+
+    code = "NOT_YOUR_COMMENT"
+    message = "Only the author can change a comment."
+
+
 class GoneError(AppException):
     """410, not 404.
 

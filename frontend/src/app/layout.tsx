@@ -40,8 +40,10 @@ export default function RootLayout({
    * against the latter.
    */
   const themeBoot =
+    // `t==null` is a first visit, which defaults to `system` — the branch has
+    // to agree with DEFAULT_THEME or first paint and first render disagree.
     "(function(){try{var t=JSON.parse(localStorage.getItem('ff.theme'));" +
-    "var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);" +
+    "var d=t==='dark'||((t==='system'||t==null)&&matchMedia('(prefers-color-scheme: dark)').matches);" +
     "document.documentElement.dataset.theme=d?'dark':'light'}catch(e){}})()"
 
   return (

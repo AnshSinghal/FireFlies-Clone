@@ -14,6 +14,8 @@ dependencies = [
     "webvtt-py>=0.5",
     "httpx2>=2.9.1",
     "slowapi>=0.1.10",
+    "reportlab>=4.2",
+    "python-docx>=1.1",
 ]
 
 [dependency-groups]
@@ -113,8 +115,9 @@ plugins = ["pydantic.mypy"]
 exclude = ["^alembic/versions/"]
 
 [[tool.mypy.overrides]]
-# Third-party packages without bundled type information.
-module = ["webvtt.*"]
+# Third-party packages without bundled type information. (python-docx ships
+# py.typed; ReportLab does not.)
+module = ["webvtt.*", "reportlab.*"]
 ignore_missing_imports = true
 
 # ─────────────────────────────────────────────────────────────────────────────

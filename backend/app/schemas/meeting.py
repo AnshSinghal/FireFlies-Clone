@@ -406,6 +406,8 @@ class MeetingDetail(BaseModel):
     tags: list[TagRef] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
     segment_count: int = 0
+    #: Live comments + replies (T-31.10) — the drawer's "3 comments" line.
+    comment_count: int = 0
     channel: ChannelRef | None = None
     created_at: datetime
     updated_at: datetime

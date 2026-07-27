@@ -23,11 +23,14 @@ export const TOAST_MESSAGES = {
   selectionCopied: 'Selection copied to clipboard',
   transcriptCopied: 'Transcript copied to clipboard',
   summaryCopied: 'Summary copied to clipboard',
+  markdownCopied: 'Markdown copied to clipboard',
+  exportReady: 'Export downloaded',
   highlightRemoved: 'Highlight removed',
   bookmarkAdded: 'Bookmarked',
   bookmarkRemoved: 'Bookmark removed',
 
   saveFailed: "Couldn't save changes. Please try again.",
+  exportFailed: "Couldn't export. Please try again.",
   /*
    * T-32.11: a selection spanning two lines is refused rather than split.
    * Splitting would create marks at both ends the user never drew, and the

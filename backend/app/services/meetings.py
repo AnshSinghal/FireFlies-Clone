@@ -59,6 +59,7 @@ from app.schemas.meeting import (
 )
 from app.schemas.summary import NoteGroup, OutlineEntry, SummaryOut
 from app.schemas.user import UserRef
+from app.services.comments import CommentService
 from app.services.meeting_filters import (
     MeetingFilters,
     apply_filters,
@@ -316,6 +317,7 @@ class MeetingService:
             tags=[TagRef.model_validate(t) for t in meeting.tags],
             keywords=[k.term for k in meeting.keywords],
             segment_count=segment_count,
+            comment_count=CommentService(self.db).live_count(meeting.id),
             created_at=meeting.created_at,
             updated_at=meeting.updated_at,
         )

@@ -31,6 +31,7 @@ import { notebookReturnUrl } from '@/lib/notebook-return'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 
 import { EditMeetingModal } from '@/features/edit/edit-meeting-modal'
+import { ExportModal } from '@/features/export/export-modal'
 
 import { BookmarksFlyout } from './highlights/bookmarks-flyout'
 import { HighlightsFlyout } from './highlights/highlights-flyout'
@@ -38,6 +39,7 @@ import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
 import { NotepadHeader } from './notepad-header'
 import { ShortcutsModal } from './player/shortcuts-modal'
 import { IndexPanel } from './summary/index-panel'
+import { CommentsPanel } from './comments/comments-panel'
 import { SmartSearchPanel } from './transcript/smart-search-panel'
 import { SummaryPanel } from './summary-panel'
 import { TranscriptPanel } from './transcript-panel'
@@ -53,6 +55,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
   const [openPanel, setOpenPanel] = useState<RailItemId | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [tab, setTab] = useState('summary')
 
   // Below 1024px the split becomes tabs (T-18.9): two 300px panels side by side
@@ -141,6 +144,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
               }
               onDelete={() => setConfirmingDelete(true)}
               onEditDetails={() => setEditing(true)}
+              onExport={() => setExporting(true)}
             />
 
             <div className="flex min-h-0 flex-1 flex-col md:flex-row">
@@ -151,12 +155,13 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
 
               {openPanel && (
                 <RailFlyout item={openPanel} onClose={() => setOpenPanel(null)}>
-                  {/* Smart Search (T-22.10), Index (T-23.13), Bookmarks and
-                    Highlights (T-32.7, T-32.8) are real; Soundbites and
-                    Comments are still placeholders, and the flyout says so
-                    itself. */}
+                  {/* Smart Search (T-22.10), Index (T-23.13), Comments
+                    (T-31.6), Bookmarks and Highlights (T-32.7, T-32.8) are
+                    real; only Soundbites is still a placeholder, and the
+                    flyout says so itself. */}
                   {openPanel === 'search' ? <SmartSearchPanel meetingId={meetingId} /> : undefined}
                   {openPanel === 'index' ? <IndexPanel meetingId={meetingId} /> : undefined}
+                  {openPanel === 'comments' ? <CommentsPanel meetingId={meetingId} /> : undefined}
                   {openPanel === 'bookmarks' ? <BookmarksFlyout meetingId={meetingId} /> : undefined}
                   {openPanel === 'highlights' ? (
                     <HighlightsFlyout meetingId={meetingId} />
@@ -210,6 +215,12 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
             <PlayerKeyboard />
 
             <EditMeetingModal meeting={meeting} open={editing} onOpenChange={setEditing} />
+
+            <ExportModal
+              open={exporting}
+              onOpenChange={setExporting}
+              target={{ kind: 'single', meeting }}
+            />
 
             <ConfirmDialog
               open={confirmingDelete}

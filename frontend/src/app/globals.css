@@ -83,6 +83,34 @@
   }
 }
 
+@layer base {
+  /*
+   * The UA paints `<mark>` yellow-on-black. Neutralised HERE, in the base
+   * layer, so the Highlighter's utility classes own the colours without a
+   * competing `bg-transparent` on the element — two background utilities on
+   * one element resolve by stylesheet order, not by author intent, and that
+   * exact conflict flipped between builds (see lib/utils/cn.ts).
+   */
+  mark {
+    background: none;
+    color: inherit;
+  }
+
+  /*
+   * The theme switch fades rather than snaps (T-38.10).
+   *
+   * `background-color` and `color` ONLY, on the root and the surfaces that
+   * derive from it — never `transition: all`, which would animate widths and
+   * positions and make every layout change smear. Scoped with :where() so the
+   * selector adds no specificity for components to fight.
+   */
+  :where(html, body) {
+    transition:
+      background-color var(--ff-dur-base) var(--ff-ease),
+      color var(--ff-dur-base) var(--ff-ease);
+  }
+}
+
 @layer utilities {
   /* Every timestamp and duration in the app carries this (design.md §3.5). */
   .tnum {

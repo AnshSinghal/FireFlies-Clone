@@ -78,6 +78,10 @@ test.describe('notepad shell', () => {
 
     await page.reload()
     await expect(page.getByTestId('notepad-page')).toBeVisible()
+    // The handle exists only once the meeting has LOADED — under suite load
+    // that can outlive the default expect window, same as every other
+    // post-reload wait on this on-demand route.
+    await expect(page.getByTestId('panel-handle')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('panel-handle')).toHaveAttribute('aria-valuenow', ratio!)
   })
 

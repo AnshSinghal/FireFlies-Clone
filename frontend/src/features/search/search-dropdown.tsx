@@ -168,7 +168,12 @@ function Row({
          * follows, so the click bubbled to the anchor and Next navigated. It
          * only misfired when React had already re-rendered the list, so what
          * you saw was an ✕ that USUALLY removed an entry and occasionally ran
-         * the search that had just moved into its place.
+         * the search that had just moved into its place — which is why T35-K
+         * flaked under suite load and passed alone.
+         *
+         * Swallowing the click on the button also works and was the first fix;
+         * moving the button out of the anchor removes the bubble path instead
+         * of intercepting it, and drops the invalid nesting on the way.
          *
          * Pointer-only and outside the tab order, like the link: focus lives in
          * the input while the listbox is driven by aria-activedescendant. The

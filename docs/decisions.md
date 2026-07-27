@@ -2314,7 +2314,327 @@ real option reachable with ↑/↓.
 
 ---
 
-## ADR-102 — A highlight stops at the end of its line
+## ADR-102 — Dark ships at zero axe violations, and light got fixed on the way
+
+**Context.** T-38.5 orders a contrast recheck of every token pair. The sweep
+held both themes on both key pages to ZERO `wcag2aa` violations — and the
+failures it found were almost all in the LIGHT theme, which had shipped first
+and been eyeballed rather than measured.
+
+**Decision.** Fix everything at the token layer, per the hard rule:
+
+- `--ff-grey-500` (muted text) lifted from the sampled `#8992a2` (3.14:1) to
+  `#667085` in light and `#7b8497` → `#8b93a5` in dark — settling pending
+  decision #7, which had tracked this since T-19's first axe sweep.
+- New `--ff-warning-strong` / `--ff-danger-strong` for TEXT on the subtle
+  badge backgrounds; the base hues stay for icons and fills, where 3:1
+  suffices and the brighter colour is the point. In dark, strong == base,
+  because on dark the bright hue IS the readable one.
+- The light speaker palette was re-derived against its STRICTEST background —
+  the active row's violet tint — because every hue is used three ways at once
+  (text on white, text on the tint, fill under white initials) and clearing
+  the tint implies the rest. Four hues darkened; the family reads the same.
+
+**Consequence.** Fidelity to the sampled screenshots lost a few per-cent of
+lightness on timestamps and speaker names; every timestamp in the app became
+legible by measurement rather than by luck. The default theme flipped from the
+placeholder `light` to `system`, which the pref module had documented as
+waiting on exactly this sign-off.
+
+---
+
+## ADR-103 — The mark conflict that flipped between builds
+
+**Context.** T38-H found resting search highlights painting TRANSPARENT in one
+build after painting amber in every previous one. Nothing relevant had been
+edited.
+
+**Cause.** The Highlighter stacked `bg-transparent` (to neutralise the UA's
+yellow `<mark>`) under a caller-supplied `bg-highlight`. Two same-property
+utilities on one element resolve by STYLESHEET ORDER, which Tailwind derives
+from its internal class ordering — a build-dependent coin toss `cn()`
+deliberately refuses to hide (see `lib/utils/cn.ts`).
+
+**Decision.** Neutralise `<mark>` in the BASE layer (`mark { background:
+none }`), where the cascade guarantees utilities beat it, and drop
+`bg-transparent` from the component. One background utility per element, which
+is the convention the no-merge `cn` exists to enforce.
+
+**Consequence.** The latent conflict is gone rather than currently-winning.
+Canvas surfaces got the same treatment for a different reason: the waveform
+reads its colours from CSS variables at draw time, so a theme switch now bumps
+an epoch (via a `data-theme` MutationObserver) to trigger a repaint — pixels
+do not restyle themselves.
+## ADR-104 — PDF via ReportLab/Platypus, not WeasyPrint
+
+**Context.** T-34.5 offers either. Both Docker images are `python:3.13-slim`
+with zero apt packages and the prod container runs non-root with a read-only
+`/app`; WeasyPrint needs the pango/cairo/gdk-pixbuf C stack in both images.
+
+**Decision.** ReportLab (plus python-docx for the fourth format) — manylinux
+and pure wheels for cp313/cp314, so export deploys with no image change. The
+T-34.6 page discipline maps onto Platypus directly: `KeepTogether` around every
+transcript turn and action item, `keepWithNext` on headings, and the two-pass
+canvas recipe for `Page N of M` (buffer page states in `showPage()`, stamp in
+`save()` once the total is known).
+
+**Consequence.** No HTML template — the PDF is drawn, which costs layout code
+but removes an entire native-dependency class from the deploy. Checkbox glyphs
+come from ZapfDingbats because Helvetica has no ballot boxes.
+
+---
+
+## ADR-105 — The document palette is a sanctioned copy of the token layer
+
+**Context.** PDFs and DOCX cannot read CSS custom properties, yet T-34.5 wants
+the export to look like the same product.
+
+**Decision.** `app/services/export/palette.py` mirrors the resolved light-theme
+values from `tokens.css`, each constant named after the semantic token it
+copies. This is the one sanctioned exception to "hex exists only in
+tokens.css" — a token change there must be mirrored here. The header draws the
+same two offset rounded rectangles as the Topbar mark, never a trademarked
+asset.
+
+**Consequence.** A grep for hex codes outside `tokens.css` now has exactly one
+allowed hit, documented at the top of the file.
+
+---
+
+## ADR-106 — `include=` names data sources; render order is fixed
+
+**Context.** T-34.1's `include=` lists five sections, two of which (comments,
+highlights) belong to tasks landing in parallel branches.
+
+**Decision.** A registry (`export/registry.py`) maps section keys to loaders
+that emit a small format-neutral block IR every renderer already draws.
+`summary` expands through `MeetingService.to_summary()` — ADR-015's composition
+point — so export can never disagree with the summary panel. `comments` and
+`highlights` are accepted in the vocabulary today and render the moment their
+task registers a loader (one line). Caller order in `include=` is ignored: two
+exports of the same meeting must read the same.
+
+**Consequence.** Unknown token → 422 (failed the vocabulary); `include=` that
+selects nothing → 400 `EMPTY_INCLUDE` (parsed but not allowed), matching the
+existing 422/400 split. T-31 registered its loader in this same change; T-32's
+is a one-liner when it merges.
+
+---
+
+## ADR-107 — Streaming and bulk-zip posture
+
+**Context.** T-34.7 requires a 1,200-segment export not to buffer whole in
+memory; T-34.9 zips a selection.
+
+**Decision.** All validation happens before the first chunk leaves — an error
+must never surface after headers are sent. md/txt render lazily; PDF/DOCX are
+container formats with no incremental mode, so they render once and re-chunk at
+64 KB. The zip builds in a `SpooledTemporaryFile` (spills past 32 MB) and is
+all-or-nothing: any missing or deleted id fails the whole request, listing
+`details.missing` and `details.deleted` — a zip that silently ships 7 of 9
+files looks complete and is not. The export router registers *before* the
+meetings router so static `GET /meetings/export` is never captured as
+`/{meeting_id}` (guarded by a test).
+
+**Consequence.** Measured: 0.6 s / 8 MB peak against the 5 s / 64 MB budget.
+
+---
+
+## ADR-108 — Filenames are whitelisted into existence, not blacklisted
+
+**Context.** T-34.11's test title contains `/`, `..` and emoji.
+
+**Decision.** NFKD-normalise, drop non-ASCII, lowercase, collapse every run of
+non-alphanumerics to one hyphen — traversal is impossible by construction
+rather than stripped by pattern. Whole name capped at 100 chars; an unusable
+title falls back to `meeting-<date>.<ext>`, never `download` or `export.pdf`.
+
+**Consequence.** The zip reuses the same rule per member with `-2`/`-3`
+suffixes on collisions, so bulk and single exports of one meeting share a name.
+
+---
+
+## ADR-109 — `features/export` is a shared feature module; the download is a raw fetch
+
+**Context.** Notebook (bulk bar, row kebab) and Notepad (header kebab) both
+open the export modal, and `apiFetch` unconditionally `.json()`s bodies.
+
+**Decision.** The modal lives in `features/export`, outside the eslint
+cross-feature fence — the `features/edit` precedent; lifting it to
+`components/ui` would put meetings knowledge into the primitive layer. The
+download path is a raw fetch (not `apiFetch`, not a mutation — it mutates no
+cache): 60 s timeout because a 1,200-segment PDF legitimately outlives an API
+read, a `role="status"` line flips to "Still working…" at 10 s, and the modal
+owns both its toasts since the global `MutationCache` handler never sees the
+request. `RadioCardGroup` is a new primitive because `RadioGroup` hardcodes
+`radio-<value>` testids and has no icon/description slot, while T-34.12 fixes
+the names as `export-format-<fmt>`.
+
+**Consequence.** One sanctioned exception to "never add onError toasts",
+documented at the call site. The server's `Content-Disposition` is authoritative
+for the filename (CORS already exposes it); a client-side slug is the
+cross-origin fallback.
+
+---
+
+## ADR-110 — One client-side section registry drives checkboxes, `include=`, the estimate, and clipboard Markdown
+
+**Context.** T34-H grades that unchecking Transcript visibly shrinks the
+estimate; T-31/T-32 add sections over time.
+
+**Decision.** `features/export/sections.ts` is the single list everything
+derives from. `include=` is always sent explicitly — relying on the server's
+default-all would silently grow exports the moment a parallel branch registers
+a new section server-side while the UI still shows three boxes. The word count
+is a stated heuristic over already-cached queries (whitespace tokens; pages =
+`ceil(words/450)`, shown only for paginated formats). "Copy as Markdown"
+mirrors the server's T-34.3 shape client-side from the same caches — zero
+requests — grouping the transcript by speaker turns via the same `markTurns`
+the transcript panel uses.
+
+**Consequence.** Ticked boxes stay exactly equal to the file's contents at all
+times; registering a section is one line plus optional estimate/clipboard
+extensions.
+
+---
+
+## ADR-111 — The frozen clock is an auto-fixture pinned to the seed anchor
+
+**Context.** T-39.6. Four specs pinned the clock inline, and all four had
+drifted to a noon instant while the seeder anchors at `09:00:00Z`.
+
+**Decision.** `fixtures.ts` installs `page.clock.setFixedTime(SEED_ANCHOR)`
+automatically for every test; `pinClock(page)` covers secondary tabs. A test
+that genuinely needs a different time of day derives it from `SEED_ANCHOR`
+with a comment.
+
+**Consequence.** Date labels are calendar-day granular, so the migration
+changed no assertions. `setFixedTime` freezes `Date.now` but keeps timers
+running — debounces and toast auto-dismiss behave normally.
+
+---
+
+## ADR-112 — POMs serve new suites only
+
+**Context.** T-39.7 wants eight Page Objects; 349 tests already pass as flat
+specs whose granular history is itself graded evidence.
+
+**Decision.** `e2e/pages/` exists and is mandatory for *new* suites; the 26
+existing spec files are not retrofitted. POMs are getter-based, lazy, and
+contain no assertions.
+
+**Consequence.** Two idioms coexist, documented at the top of
+`pages/index.ts`. Migration happens opportunistically when a spec is touched
+for other reasons, never as a bulk rewrite.
+
+---
+
+## ADR-113 — Raw locators are constrained by a lint grammar, not banned outright
+
+**Context.** T-39.9 bans CSS/XPath, but ~75 call sites use
+`[data-testid^="prefix-"]` — Playwright has no `getByTestId` prefix form — and
+structural tags (`mark`, `section`) assert real semantics.
+
+**Decision.** A custom eslint rule (`e2e/no-fragile-locator`) allows
+attribute-only selectors and structural tags with attribute/`:not` qualifiers;
+class selectors, id selectors, XPath and descendant chains are errors. Five
+fragile selectors were fixed by adding real testids; e2e lint is wired into
+`make lint`, lint-staged and CI like the frontend's.
+
+**Consequence.** The rule encodes *why* a selector form is acceptable instead
+of enforcing a blanket rule the suite already violates 75 times.
+
+---
+
+## ADR-114 — Visual and mobile are opt-in projects; read-only's grepInvert widened
+
+**Context.** T-39.3. The existing read-only/mutations split is write-isolation
+(ADR-010 territory), not a device matrix; snapshot baselines are named per
+project, so a `@visual` test matching read-only fails unconditionally.
+
+**Decision.** New projects `visual` (deviceScaleFactor 1, reduced motion,
+grep `@visual`) and `chromium-mobile` (Pixel 7, grep `@mobile`) run only
+tagged tests; read-only's `grepInvert` widens to
+`/@mutates|@visual|@mobile/`. The read/write semantics are untouched.
+
+**Consequence.** `test:mobile` carries `--pass-with-no-tests` so wiring stays
+green until the first tagged test lands. The full 382-test suite is unchanged
+for untagged specs.
+
+---
+
+## ADR-115 — `checkA11y` gates on serious and critical only
+
+**Context.** T-39.12. Axe's minor/moderate findings are real but non-blocking;
+gating CI on them invites blanket rule-disabling.
+
+**Decision.** The shared helper fails on serious+critical (tags
+wcag2a/2aa/21a/21aa) and prints the full violation list either way. The two
+pre-existing inline scans keep their stricter settings.
+
+**Consequence.** T-42's zero-serious/critical target maps 1:1 onto the
+helper's failure condition.
+
+---
+
+## ADR-116 — `seededMeeting` resolves by title, not by id
+
+**Context.** T-39.8. Seed ids are an artifact of filename order into a reset
+database.
+
+**Decision.** The worker-scoped fixture fetches `/api/v1/meetings` and finds
+the hero meeting by its seeded title, failing loudly if seeding changes.
+
+**Consequence.** One extra request per worker buys immunity to reseeding
+order; tests never hardcode `/meeting/1`.
+
+---
+
+## ADR-117 — The smoke suite is self-contained, and SMOKE_URL flips the config into deployed mode
+
+**Context.** T-40.13 runs 12 tests against production post-deploy. The repo
+config unconditionally booted servers and reseeded `e2e.db` — wasted locally,
+harmful pointed at prod.
+
+**Decision.** `98-smoke.spec.ts` imports nothing from fixtures, mutates
+nothing, asserts shapes and counts — with one deliberate exception: the five
+canonical summary section names verbatim, because they are the spec and their
+regression is exactly what a prod smoke must catch. `SMOKE_URL` in the
+environment now skips `globalSetup` and `webServer` and becomes `baseURL`.
+Deployed nginx also gained exact-match `/docs` and `/openapi.json` proxy
+locations: the README sends evaluators to the interactive docs, and the smoke
+run against production found them 404ing behind the `/api/`-only proxy.
+
+**Consequence.** `SMOKE_URL=http://8.231.115.48:8600 npx playwright test
+98-smoke --project=read-only` is the whole post-deploy gate: 12 tests, ~4 s.
+The nginx change needs a one-time manual install (deploy.sh does not manage
+nginx).
+
+---
+
+## ADR-118 — Visual comparison harness: fixed keys, honesty rules, blue-vs-violet declared
+
+**Context.** T-41.7 pulled forward — T-46.1's side-by-side audit depends on
+it, and UI fidelity is the top grading criterion. The 8 reference screenshots
+map onto our surfaces imperfectly.
+
+**Decision.** `docs/visual-comparison.html` pairs each reference with a fixed
+capture key. Three honesty rules: surfaces with no equivalent (Meeting Status
+— we ship no notetaker bot) show the reference under an explicit out-of-scope
+badge, never a fake; placeholder surfaces (Analytics) are compared for shell
+fidelity and say so; dark captures wait until T-38's merge is reflected here,
+because in-repo captures are graded evidence. The header declares the
+deliberate blue-vs-violet accent difference (design.md is the token
+authority) so the evaluator compares layout, spacing and type.
+
+**Consequence.** Capture is a `@visual`-tagged spec double-guarded by a
+`CAPTURE` env flag; `docs/screenshots/` fills only on explicit request, and
+the harness renders 'Not captured yet' tiles with the exact command
+otherwise.
+
+---
+
+## ADR-119 — A highlight stops at the end of its line
 
 **Context.** T-32.11 offers a choice: a selection crossing two segments either
 splits into one highlight per segment, or is refused with a clear message.
@@ -2330,13 +2650,13 @@ rows, so removing "the highlight" means finding and removing three. The refusal
 costs one gesture — release, re-select — and the message says which one.
 
 The storage model is the deeper reason. A highlight is `(segment_id, start,
-end)` because that is what survives an edit (ADR-103); a highlight spanning
+end)` because that is what survives an edit (ADR-120); a highlight spanning
 segments has no such address, so "one highlight" across two lines cannot be
 stored at all without a second, weaker representation alongside the first.
 
 ---
 
-## ADR-103 — Highlights are relocated on an edit, or deleted, never left
+## ADR-120 — Highlights are relocated on an edit, or deleted, never left
 
 **Context.** Highlights are character offsets into text the user may also edit.
 An edit anywhere before the mark moves every offset after it, and the mark then
@@ -2358,7 +2678,7 @@ the relocation is no longer computable anywhere.
 
 ---
 
-## ADR-104 — Search marks and highlights are flattened, never nested
+## ADR-121 — Search marks and highlights are flattened, never nested
 
 **Context.** T-32.4 calls this the hard part of the task, and it is: a segment
 can carry several stored highlights and several live search marks, overlapping
@@ -2377,7 +2697,7 @@ overlap, because each renderer only knows its own ranges, and it produces the
 
 Two consequences fall out of the flattening. The two channels cannot share a
 background, so a marker owns a wash plus a saturated underline and search owns
-the background (ADR-105). And one highlight can become several elements, so
+the background (ADR-122). And one highlight can become several elements, so
 only the leading fragment carries `data-testid="highlight-<id>"` — a duplicated
 test id is a locator that throws in strict mode.
 
@@ -2386,7 +2706,7 @@ keep meaning what the find bar's "3 of 17" means.
 
 ---
 
-## ADR-105 — Every marker colour is two tokens, a wash and an underline
+## ADR-122 — Every marker colour is two tokens, a wash and an underline
 
 **Context.** T-32.3 asks for four colours "each with a matching light background
 and a saturated underline". The obvious reading is decoration; it is not.
@@ -2405,7 +2725,7 @@ pastel wash on a near-black surface is either invisible or blinding.
 
 ---
 
-## ADR-106 — An interactive control never nests inside a row's link
+## ADR-123 — An interactive control never nests inside a row's link
 
 **Context.** The topbar's search-history ✕ was a `<button>` inside the row's
 `<a>`, with `preventDefault` and `stopPropagation` on mousedown. T35-K failed
@@ -2439,4 +2759,4 @@ Tracked so they are not silently defaulted. Each becomes an ADR when settled.
 | ~~5~~ | ~~Filters panel: draft-then-Apply vs live-apply~~ | ✅ ADR-039 — draft-then-Apply |
 | ~~6~~ | ~~Notebook layout: cards vs column table~~ | ✅ ADR-036 — cards, with the plan's testids and behaviour kept |
 | 8 | With any dropdown open, axe reports `aria-hidden-focus`: Radix marks the rest of the page `aria-hidden`, and the skip link stays focusable inside it. Identical for the T-18 kebab and the T-19 rate menu, so it belongs to the Dropdown primitive rather than to either caller. | T-42 |
-| 7 | `text-muted` fails AA contrast on `surface-0`. Found by an axe sweep during T-19: 20 serious violations on the Notepad, every one of them muted text or a speaker colour, none introduced by that task — sidebar headings, transcript timestamps and the metadata line have carried it since T-04. The fix is a token change, not a component change. | T-38.5, which owns re-checking every token pair, with T-42 verifying |
+| ~~7~~ | ~~`text-muted` fails AA contrast on `surface-0`~~ | ✅ ADR-102 — fixed at the token layer; both themes axe-clean on both key pages |

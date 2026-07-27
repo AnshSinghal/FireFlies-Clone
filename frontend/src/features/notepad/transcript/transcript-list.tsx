@@ -15,12 +15,16 @@ import { ArrowDown } from 'lucide-react'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { useComments, useCreateComment, type CachedComment } from '@/lib/api/comments'
+import { useMeeting } from '@/lib/api/meetings'
 import type { HighlightOut, SegmentOut, SpeakerRef } from '@/lib/api/types'
 import { useNotepadCommands } from '@/lib/notepad/commands'
 import { markTurns } from '@/lib/transcript/grouping'
 import type { SearchRange } from '@/lib/transcript/segment-spans'
 import { getSpeakerColorByIndex } from '@/lib/utils/speaker-color'
 
+import { CommentComposer, type MentionOption } from '../comments/comment-composer'
+import { CommentThread } from '../comments/comment-thread'
 import { SegmentRow } from './segment-row'
 
 interface TranscriptListProps {
@@ -61,6 +65,10 @@ interface TranscriptListProps {
   onSeek: (ms: number, options?: { play?: boolean }) => void
   onCopyText: (segment: SegmentOut) => void
   onCopyLink: (segment: SegmentOut) => void
+  /** Which segment has the inline composer open (T-31.3); null for none. */
+  commentingSegmentId?: number | null
+  /** Opens (id) or closes (null) the composer. Stable — rows memoise on it. */
+  onSetCommenting?: (segmentId: number | null) => void
 }
 
 /** A row's assumed height before it has been measured. */
@@ -135,9 +143,38 @@ function TranscriptListImpl({
   onSeek,
   onCopyText,
   onCopyLink,
+  commentingSegmentId = null,
+  onSetCommenting,
 }: TranscriptListProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const { revealNonce } = useNotepadCommands()
+
+  // Comments render inline beneath their rows (T-31.5); the virtualiser's
+  // ResizeObserver re-measures each row as threads mount, so variable-height
+  // discussion costs nothing extra here.
+  const { data: commentsPage } = useComments(meetingId)
+  const { data: meetingDetail } = useMeeting(meetingId)
+  const createComment = useCreateComment(meetingId)
+
+  const threadsBySegment = useMemo(() => {
+    const map = new Map<number, CachedComment[]>()
+    for (const thread of commentsPage?.items ?? []) {
+      if (thread.segment_id == null) continue
+      const existing = map.get(thread.segment_id)
+      if (existing) existing.push(thread)
+      else map.set(thread.segment_id, [thread])
+    }
+    return map
+  }, [commentsPage])
+
+  const mentionOptions = useMemo<MentionOption[]>(
+    () =>
+      (meetingDetail?.participants ?? []).map((participant) => ({
+        id: participant.id,
+        displayName: participant.display_name,
+      })),
+    [meetingDetail],
+  )
 
   const rows = useMemo(() => markTurns(segments), [segments])
   const speakerById = useMemo(
@@ -491,11 +528,37 @@ function TranscriptListImpl({
                       ? currentMatch.indexInSegment
                       : -1
                   }
+                  commentCount={countComments(threadsBySegment.get(row.id))}
+                  onAddComment={onSetCommenting ?? undefined}
                   highlights={highlightsBySegment?.get(row.id)}
                   onHighlightActivate={onHighlightActivate}
                   bookmarked={bookmarkedSegments?.has(row.id) ?? false}
                   onToggleBookmark={onToggleBookmark}
                 />
+
+                {/* Threads live INSIDE the measured row wrapper, so the
+                    virtualiser sees their height (T-31.5). */}
+                {(threadsBySegment.has(row.id) || commentingSegmentId === row.id) && (
+                  <div className="space-y-3 py-2 pl-[52px] pr-4">
+                    {(threadsBySegment.get(row.id) ?? []).map((thread) => (
+                      <CommentThread
+                        key={thread.id}
+                        meetingId={meetingId}
+                        thread={thread}
+                        participants={mentionOptions}
+                      />
+                    ))}
+                    {commentingSegmentId === row.id && onSetCommenting && (
+                      <CommentComposer
+                        participants={mentionOptions}
+                        onSubmit={(payload) =>
+                          createComment.mutateAsync({ ...payload, segment_id: row.id })
+                        }
+                        onCancel={() => onSetCommenting(null)}
+                      />
+                    )}
+                  </div>
+                )}
               </li>
             )
           })}
@@ -545,3 +608,12 @@ function TranscriptListImpl({
  * re-render reaches the whole transcript.
  */
 export const TranscriptList = memo(TranscriptListImpl)
+
+/** Live parents + replies for the gutter chip; tombstones don't count. */
+function countComments(threads: CachedComment[] | undefined): number {
+  if (!threads) return 0
+  return threads.reduce(
+    (sum, thread) => sum + (thread.is_deleted ? 0 : 1) + thread.replies.length,
+    0,
+  )
+}

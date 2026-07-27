@@ -49,6 +49,18 @@ export default defineConfig({
    */
   expect: { timeout: 10_000 },
 
+  /*
+   * 60s per test, doubling Playwright's default.
+   *
+   * Not because any test needs a minute — solo, the slowest is ~20s — but
+   * because four workers each rendering `/meeting/[id]` on demand contend for
+   * the same cores, and this machine also runs builds concurrently. The
+   * assertions are all event-driven, so a generous ceiling costs nothing when
+   * things are fast and stops the suite converting load into false failures
+   * when they are not.
+   */
+  timeout: 60_000,
+
   reporter: process.env.CI
     ? [['html', { open: 'never' }], ['list'], ['github']]
     : [['html', { open: 'never' }], ['list']],

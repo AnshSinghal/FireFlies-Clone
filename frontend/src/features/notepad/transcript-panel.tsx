@@ -110,6 +110,8 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
   const edit = useEditSession({ onSave: saveSegment })
 
   const [speakerFilter, setSpeakerFilter] = useState<number | null>(null)
+  //: Which segment has the inline comment composer open (T-31.3).
+  const [commentingSegmentId, setCommentingSegmentId] = useState<number | null>(null)
 
   /*
    * The filter is applied HERE rather than in the list, so the match count,
@@ -423,6 +425,8 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
                   }
                 : null
             }
+            commentingSegmentId={commentingSegmentId}
+            onSetCommenting={setCommentingSegmentId}
             highlightsBySegment={highlightsBySegment}
             onHighlightActivate={onHighlightActivate}
             bookmarkedSegments={bookmarkSession.segmentIds}
@@ -434,6 +438,7 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
       <SelectionToolbar
         containerRef={bodyRef}
         onCopy={(text) => void copy(text, TOAST_MESSAGES.selectionCopied)}
+        onComment={setCommentingSegmentId}
         // Absent while editing: highlighting text you are about to retype is a
         // highlight the next keystroke invalidates.
         onHighlight={edit.editing ? undefined : addHighlight}

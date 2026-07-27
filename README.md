@@ -101,18 +101,18 @@ Two consequences worth naming, because both are places a simpler implementation 
   the only moment the relocation is computable — and either moves the range to the substring's new
   position or deletes it. Relocation happens only when the quoted text occurs *exactly once* in the
   new text; ambiguity and disappearance both delete, because a highlight painted over the wrong
-  words is worse than one the user can see is gone ([ADR-103](docs/decisions.md)).
+  words is worse than one the user can see is gone ([ADR-120](docs/decisions.md)).
 - **A search hit inside a highlight.** Rendering one inside the other produces nested `<mark>`s and
   loses the characters at the seam. Instead `buildSegmentSpans()` cuts the line at every range
   boundary and emits a single list of disjoint spans, each carrying what applies to it; the unit
-  tests assert that concatenating them reproduces the line exactly ([ADR-104](docs/decisions.md)).
+  tests assert that concatenating them reproduces the line exactly ([ADR-121](docs/decisions.md)).
   The two channels then coexist visually rather than structurally — a marker owns a wash plus a
-  saturated underline, search owns the background ([ADR-105](docs/decisions.md)).
+  saturated underline, search owns the background ([ADR-122](docs/decisions.md)).
 
 Bookmarks are deliberately a different thing: a whole starred *moment*, toggled with `B` or from a
 segment's ⋯ menu, listed chronologically in the flyout and drawn as star ticks on the seekbar.
 Highlighting across two segments is refused with an explanation rather than split into two marks
-([ADR-102](docs/decisions.md)).
+([ADR-119](docs/decisions.md)).
 
 ---
 
