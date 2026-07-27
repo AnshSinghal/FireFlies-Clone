@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Share2,
   SlidersHorizontal,
+  Sparkles,
   Trash2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -41,6 +42,8 @@ interface NotepadHeaderProps {
   onRegenerate: () => void
   onDelete: () => void
   onEditDetails: () => void
+  onAskFred: () => void
+  askFredOpen: boolean
 }
 
 export function NotepadHeader({
@@ -48,6 +51,8 @@ export function NotepadHeader({
   onRegenerate,
   onDelete,
   onEditDetails,
+  onAskFred,
+  askFredOpen,
 }: NotepadHeaderProps) {
   const router = useRouter()
   const toast = useToast()
@@ -70,6 +75,18 @@ export function NotepadHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        <Button
+          variant="secondary"
+          size="sm"
+          leftIcon={<Sparkles size={16} strokeWidth={1.75} />}
+          onClick={onAskFred}
+          aria-pressed={askFredOpen}
+          data-testid="notepad-askfred"
+          className={cn(askFredOpen && 'bg-accent-subtle text-accent hover:bg-accent-subtle')}
+        >
+          Ask Fred
+        </Button>
+
         <IconButton
           label="Copy link"
           icon={<Link2 size={18} strokeWidth={1.75} />}
