@@ -95,7 +95,7 @@ export function ConfirmDialog({
             variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={pending}
-            data-testid="confirm-dialog-cancel"
+            data-testid={`${testId}-cancel`}
           >
             {cancelLabel}
           </Button>
@@ -103,7 +103,7 @@ export function ConfirmDialog({
             variant={destructive ? 'danger' : 'primary'}
             onClick={() => void confirm()}
             loading={pending}
-            data-testid="confirm-dialog-confirm"
+            data-testid={`${testId}-confirm`}
           >
             {confirmLabel}
           </Button>

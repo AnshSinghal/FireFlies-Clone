@@ -90,6 +90,20 @@
   }
 
   /*
+   * A row leaving the list (T-28.6).
+   *
+   * Height AND opacity, so the rows below close the gap rather than jumping up
+   * into it. Animating `height` directly is possible here only because a row
+   * is a FIXED 72px (`h-row`) — from `auto` it would not animate at all, and
+   * the usual workaround is a grid-rows trick this does not need.
+   */
+  .ff-row-exit {
+    overflow: hidden;
+    animation: ff-row-out var(--ff-dur-base) var(--ff-ease) forwards;
+    pointer-events: none;
+  }
+
+  /*
    * The volume slider (T-19.7).
    *
    * A range input's track and thumb are shadow-DOM pseudo-elements that no
@@ -230,6 +244,15 @@
 }
 
 /* Reduced motion: fade, no scale. Reuses the toast's fade keyframe. */
+
+@keyframes ff-row-out {
+  to {
+    height: 0;
+    /* The list is `space-y-2`, so the gap has to go with the row. */
+    margin-top: 0;
+    opacity: 0;
+  }
+}
 
 @keyframes ff-toast-in {
   from {

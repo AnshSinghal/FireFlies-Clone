@@ -124,11 +124,24 @@ test.describe('transcript ↔ player sync', () => {
   test('T21-E · playing moves the highlight, one line at a time', async ({ page }) => {
     await openTranscript(page)
 
+    /*
+     * Played at 2×, so three segment changes fit comfortably inside the test's
+     * budget.
+     *
+     * At 1× the hero transcript's first few lines are eight to twelve seconds
+     * apart, so collecting three distinct ones needs most of thirty seconds —
+     * the whole timeout — and the test failed on its own deadline rather than
+     * on anything about the app. The claim is unchanged: the highlight moves,
+     * one line at a time.
+     */
+    await page.getByTestId('player-rate').click()
+    await page.getByTestId('player-rate-2').click()
+
     await page.getByTestId('player-play').click()
     await expect.poll(() => activeLine(page).count(), { timeout: 10_000 }).toBe(1)
 
     const seen = new Set<string>()
-    const deadline = Date.now() + 30_000
+    const deadline = Date.now() + 18_000
 
     while (seen.size < 3 && Date.now() < deadline) {
       const id = await activeLine(page).getAttribute('data-testid')
