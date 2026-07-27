@@ -233,7 +233,7 @@ make lint        # Both apps' linters + the backend layering check
 make typecheck   # mypy --strict and tsc --noEmit
 ```
 
-Playwright starts its own copies of both apps on ports **3100/8100**, so `make dev` can stay running
+Playwright starts its own copies of both apps on ports **3140/8140**, so `make dev` can stay running
 on 3000/8000 while the suite executes, and a run can never accidentally test whatever else happens to
 be listening. Override with `E2E_FRONTEND_PORT` / `E2E_BACKEND_PORT`.
 

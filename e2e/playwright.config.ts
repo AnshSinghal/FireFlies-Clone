@@ -3,18 +3,24 @@ import path from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
 
 /**
- * The suite runs on DEDICATED PORTS (3100/8100), not the app's usual 3000/8000.
+ * The suite runs on DEDICATED PORTS (3140/8140), not the app's usual 3000/8000.
  * `reuseExistingServer` cannot tell our dev server from someone else's — point
  * it at an occupied port and Playwright silently tests whatever is already
  * listening (ADR-010). Isolating the ports also means `make dev` can stay up
  * while the suite runs.
  *
+ * 3140/8140 rather than the round 3100/8100: those are exactly the numbers
+ * every other tool on a shared box also reaches for first, and Playwright's
+ * answer to an occupied port is to refuse to start — which is correct, and
+ * which stops the suite dead. Anything in the 41xx/81xx range would do; what
+ * matters is that they are not the obvious ones.
+ *
  * `globalSetup` builds a freshly migrated and seeded database first, so every
  * run starts identical (T-39.5).
  */
 
-const FRONTEND_PORT = process.env.E2E_FRONTEND_PORT ?? '3100'
-const BACKEND_PORT = process.env.E2E_BACKEND_PORT ?? '8100'
+const FRONTEND_PORT = process.env.E2E_FRONTEND_PORT ?? '3140'
+const BACKEND_PORT = process.env.E2E_BACKEND_PORT ?? '8140'
 
 const FRONTEND_URL = process.env.E2E_BASE_URL ?? `http://localhost:${FRONTEND_PORT}`
 const BACKEND_URL = process.env.E2E_API_URL ?? `http://localhost:${BACKEND_PORT}`

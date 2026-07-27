@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+import { API_BASE } from '../api-base'
+
 /**
  * Scaffold smoke test (T-01.10).
  *
@@ -8,11 +10,8 @@ import { expect, test } from '@playwright/test'
  * is a genuine check rather than a green tick over nothing.
  */
 
-const API_URL =
-  process.env.E2E_API_URL ?? `http://localhost:${process.env.E2E_BACKEND_PORT ?? '8100'}`
-
 test('backend reports healthy', async ({ request }) => {
-  const response = await request.get(`${API_URL}/api/health`)
+  const response = await request.get(`${API_BASE}/api/health`)
 
   expect(response.status()).toBe(200)
   expect(await response.json()).toMatchObject({ status: 'ok', ai_provider: 'mock' })
@@ -20,7 +19,7 @@ test('backend reports healthy', async ({ request }) => {
 
 test('API documents itself', async ({ request }) => {
   // /docs is a deliverable in its own right — the README links evaluators to it.
-  expect((await request.get(`${API_URL}/docs`)).status()).toBe(200)
+  expect((await request.get(`${API_BASE}/docs`)).status()).toBe(200)
 })
 
 test('frontend renders through the token layer', async ({ page }) => {
