@@ -10,7 +10,7 @@
  */
 
 import { Check, Copy, Highlighter, MessageSquarePlus, Quote } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { IconButton } from '@/components/ui/icon-button'
 import { useToast } from '@/components/ui/toast'
@@ -70,6 +70,9 @@ interface Anchor {
 /** Below this many characters a "selection" is usually a stray click-drag. */
 const MIN_SELECTION = 2
 
+/** How close the toolbar may sit to either edge of the viewport. */
+const EDGE_MARGIN = 8
+
 export function SelectionToolbar({
   containerRef,
   onCopy,
@@ -81,6 +84,20 @@ export function SelectionToolbar({
   const toast = useToast()
   const [anchor, setAnchor] = useState<Anchor | null>(null)
   const [pickingColor, setPickingColor] = useState(false)
+
+  /*
+   * The toolbar is centred on the selection, so half of it hangs to each side
+   * — and it has grown from three controls to six as T-31, T-32 and T-33 each
+   * added one. Centred on a selection near either edge, that half now runs off
+   * the viewport, and a `position: fixed` element cannot be scrolled back into
+   * view: Playwright hangs on "scrolling into view if needed" and a real user
+   * simply cannot reach the button.
+   *
+   * So the position is CLAMPED, which needs the rendered width — measured
+   * rather than estimated, because the swatch row changes it by 120px.
+   */
+  const toolbarRef = useRef<HTMLDivElement | null>(null)
+  const [halfWidth, setHalfWidth] = useState(0)
 
   const update = useCallback(() => {
     const selection = window.getSelection()
@@ -166,6 +183,11 @@ export function SelectionToolbar({
    * paint the open swatch row over the new selection first, then close it,
    * which is a visible flicker for state nobody has looked at yet.
    */
+  useLayoutEffect(() => {
+    const width = toolbarRef.current?.offsetWidth
+    if (width) setHalfWidth(width / 2)
+  }, [anchor?.text, pickingColor])
+
   const [lastSelection, setLastSelection] = useState(anchor?.text)
   if (anchor?.text !== lastSelection) {
     setLastSelection(anchor?.text)
@@ -204,8 +226,18 @@ export function SelectionToolbar({
       // `fixed`, because the anchor comes from a viewport-relative rect. An
       // absolutely positioned version would need the offset parent's scroll
       // subtracted, and would drift the moment anything between them scrolled.
+      ref={toolbarRef}
       className="fixed z-popover flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-lg border border-subtle bg-surface-0 p-1 shadow-md"
-      style={{ top: anchor.top - 8, left: anchor.left }}
+      style={{
+        top: anchor.top - 8,
+        // Clamped into the viewport with an 8px margin. Before the first
+        // measurement `halfWidth` is 0, which leaves the centred position
+        // unchanged — the same frame the old code always rendered.
+        left: Math.min(
+          Math.max(anchor.left, halfWidth + EDGE_MARGIN),
+          Math.max(halfWidth + EDGE_MARGIN, window.innerWidth - halfWidth - EDGE_MARGIN),
+        ),
+      }}
       // The toolbar must not steal the selection it is describing: focusing a
       // button inside it would collapse the range and unmount this component
       // before the click landed.

@@ -21,7 +21,6 @@ import { buildSegmentSpans, type SearchRange } from '@/lib/transcript/segment-sp
 import { cn } from '@/lib/utils/cn'
 
 interface SegmentTextProps {
-  segmentId: number
   text: string
   /** This segment's highlights only. */
   highlights: readonly HighlightOut[]
@@ -30,17 +29,14 @@ interface SegmentTextProps {
   /** Which match is the current one, or -1. */
   activeMatch?: number
   onHighlightActivate?: (highlightId: number, anchor: HTMLElement) => void
-  className?: string
 }
 
 export function SegmentText({
-  segmentId,
   text,
   highlights,
   matchRanges,
   activeMatch = -1,
   onHighlightActivate,
-  className,
 }: SegmentTextProps) {
   const spans = buildSegmentSpans(
     text,
@@ -53,14 +49,19 @@ export function SegmentText({
     matchRanges,
   )
 
+  /*
+   * A FRAGMENT, not a wrapper element.
+   *
+   * The offsets are relative to the element carrying `data-segment-text`, and
+   * that element is the caller's `<p>`. Wrapping the spans in a `<span>` of our
+   * own would work just as well for the offsets — and it changed the
+   * paragraph's DOM shape, so an unmarked line's `firstChild` stopped being a
+   * text node and every Range built against it silently addressed child
+   * indices instead of characters. One element saved; one class of breakage
+   * with it.
+   */
   return (
-    <span
-      data-segment-text={segmentId}
-      className={cn('whitespace-pre-wrap', className)}
-      // Explicit, because a reset that killed selection would make the
-      // transcript unhighlightable as well as uncopyable.
-      style={{ userSelect: 'text' }}
-    >
+    <>
       {spans.map((span) => {
         const highlight = span.highlight
         const isMatch = span.matchIndex >= 0
@@ -135,6 +136,6 @@ export function SegmentText({
           </mark>
         )
       })}
-    </span>
+    </>
   )
 }

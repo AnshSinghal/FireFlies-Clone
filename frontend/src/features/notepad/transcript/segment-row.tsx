@@ -200,7 +200,18 @@ function SegmentRowImpl({
         what makes a turn read as one block.
       */}
       <div className="flex items-start gap-2 pl-9">
-        <p className="min-w-0 flex-1 select-text text-transcript text-primary">
+        <p
+          /*
+            The coordinate system stored highlight offsets are relative to
+            (T-32.4): this element's text content must equal `segment.text`
+            exactly, so nothing decorative may be rendered inside it.
+          */
+          data-segment-text={segment.id}
+          className="min-w-0 flex-1 select-text whitespace-pre-wrap text-transcript text-primary"
+          // Explicit, because a reset that killed selection would make the
+          // transcript unhighlightable as well as uncopyable.
+          style={{ userSelect: 'text' }}
+        >
           {editing && onEditText && onCommitEdit ? (
             <SegmentEditor
               segmentId={segment.id}
@@ -216,7 +227,6 @@ function SegmentRowImpl({
               broken markup or dropping the characters at the seam.
             */
             <SegmentText
-              segmentId={segment.id}
               text={segment.text}
               highlights={highlights}
               matchRanges={matchRanges}
