@@ -61,6 +61,22 @@ class AIProvider(ABC):
     def extract_keywords(self, transcript: Transcript) -> list[KeywordResult]:
         """The salient terms, most salient first."""
 
+    def propose_tags(self, transcript: Transcript, *, limit: int = 6) -> list[str]:
+        """Candidate tag names for a meeting, most salient first (T-36.4).
+
+        Deliberately CONCRETE where everything else is abstract: a tag
+        proposal is a keyword wearing a different hat, so the default derives
+        it from `extract_keywords` — which means every implementation AND
+        every wrapper (fallback, caching) gets a correct, composable version
+        for free. The mock's determinism carries over unchanged: same
+        transcript in, same proposals out, which is what lets the Suggested
+        chips survive a refresh without jumping around.
+
+        The service downstream filters out names the meeting already carries
+        and caps the list — the provider does not know the tag table exists.
+        """
+        return [keyword.term for keyword in self.extract_keywords(transcript)[:limit]]
+
     @abstractmethod
     def generate_outline(self, transcript: Transcript) -> list[OutlineEntryResult]:
         """Chapters with timestamps that land on real segments."""
