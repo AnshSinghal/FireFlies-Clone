@@ -44,6 +44,33 @@ git reset --hard origin/main --quiet
 docker compose -f deploy/docker-compose.prod.yml build --quiet
 docker compose -f deploy/docker-compose.prod.yml up -d
 
+# The nginx config is part of the deployment and was NOT being deployed: this
+# script only ever rebuilt containers, so a change to nginx-fireflies.conf sat
+# in git looking applied while the running entry point kept its old copy. That
+# is how the missing `gzip` block (T-42.9) survived a dozen deploys.
+#
+# Copied only when it differs, and only after `nginx -t` accepts it — a reload
+# with a bad config takes the site down, and a deploy timer that can do that
+# every 90 seconds is worse than no automation.
+NGINX_TARGET="/etc/nginx/sites-available/fireflies"
+if ! sudo -n cmp -s deploy/nginx-fireflies.conf "$NGINX_TARGET" 2>/dev/null; then
+  log "nginx config changed; validating"
+  # `nginx -t` tests the WHOLE config, so the candidate has to be in place to
+  # be tested — which means the rollback has to exist before it is. Backup,
+  # install, test, and put the backup back if the test says no. Reload only
+  # ever runs against a config nginx has already accepted.
+  NGINX_BACKUP="$(mktemp)"
+  sudo -n cp "$NGINX_TARGET" "$NGINX_BACKUP" 2>/dev/null || true
+  if sudo -n cp deploy/nginx-fireflies.conf "$NGINX_TARGET" && sudo -n nginx -t >/dev/null 2>&1; then
+    sudo -n systemctl reload nginx
+    log "nginx reloaded"
+  else
+    sudo -n cp "$NGINX_BACKUP" "$NGINX_TARGET" 2>/dev/null || true
+    log "nginx config REJECTED — rolled back, running config untouched"
+  fi
+  rm -f "$NGINX_BACKUP"
+fi
+
 # The box runs another product's stack and sits at >90% disk; reclaim build
 # leftovers every time, but never touch volumes (the demo DB lives there).
 docker image prune -f >/dev/null
