@@ -110,15 +110,25 @@ would have compressed the whole upstream one — so this is waste, not breakage.
 Do **not** "fix the inconsistency" by adding audio to `gzip_types`; that is the
 change the existing comment exists to prevent.
 
-**No security headers on any response.** No `X-Content-Type-Options`, no
-`X-Frame-Options`, no `Referrer-Policy`; `X-Powered-By: Next.js` is present. The
-README attributes Lighthouse Best Practices 79 entirely to `is-on-https` on a
-bare-IP host, which is true, but "nothing else to fix" had been inferred rather
-than checked. Three `add_header ... always` lines in the server block cover it —
-`always` because without it nginx omits them on error responses, which are the
-ones most worth hardening. CSP is deliberately not in that list: Next injects
-inline scripts, a naive `default-src 'self'` breaks the app, and doing it
-properly needs a nonce.
+**~~No security headers on any response.~~ WRONG — I truncated my own
+measurement.** Retracted rather than deleted, because the mistake is more
+instructive than the claim was.
+
+The headers have been there since T-44 (`ca14de8`) and are live right now:
+`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`,
+`Referrer-Policy: strict-origin-when-cross-origin`, and a `Permissions-Policy`
+locking camera, microphone and geolocation. I dumped the response headers
+through `... | head -14` and read the absence of a header in the first fourteen
+lines as its absence from the response. The security block starts at line 15.
+
+The one real part: **`X-Powered-By: Next.js` is present**, which is free
+reconnaissance and buys nothing. `poweredByHeader: false` in `next.config.ts`
+removes it.
+
+The general lesson is the one this file already illustrates twice: a check that
+cannot fail cleanly is not a check. `head -14` silently converts "I did not
+look" into "it is not there", and the resulting claim reads exactly like a
+finding.
 
 ## First-time install (already done; recorded for reproducibility)
 

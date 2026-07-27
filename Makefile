@@ -83,6 +83,7 @@ lint-backend:
 	cd backend && uv run ruff check .
 	cd backend && uv run ruff format --check .
 	python3 scripts/check_layering.py backend
+	python3 scripts/check_design_tokens.py .
 
 lint-frontend:
 	cd frontend && npm run lint

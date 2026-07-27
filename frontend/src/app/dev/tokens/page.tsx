@@ -129,6 +129,22 @@ function toHex(value: string): string {
 
 // ── Page ────────────────────────────────────────────────────────────────────
 
+/*
+ * Rendered per request, not at build time.
+ *
+ * `notFound()` below is the gate, and it worked — no dev content ever reached
+ * production. But this route was statically generated, so the gate ran during
+ * the BUILD and its output was baked into a static page, which the server then
+ * served with a 200 like any other asset. Measured on the deployment:
+ * /dev/tokens answered 200 with a not-found body while an unknown route
+ * answered a correct 404.
+ *
+ * A soft 404 is the failure mode where the truth requires reading the page.
+ * Anyone checking whether dev surfaces shipped runs `curl -I` and sees 200.
+ * Forcing dynamic moves the gate to request time, where it can set a status.
+ */
+export const dynamic = 'force-dynamic'
+
 export default function TokensPage() {
   if (!DEV_SURFACES_ENABLED) notFound()
 
