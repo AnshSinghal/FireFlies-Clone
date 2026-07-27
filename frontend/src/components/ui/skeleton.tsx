@@ -60,11 +60,11 @@ export function SkeletonText({ lines = 3, className }: { lines?: number; classNa
  * The Notebook is a date-grouped card list, not a table (ADR-036), so this is
  * a card and not a row.
  */
-export function MeetingRowSkeleton() {
+export function MeetingRowSkeleton({ idSuffix = '' }: { idSuffix?: string }) {
   return (
     <div
       className="flex h-row items-center gap-3 rounded-lg border border-subtle bg-surface-0 px-3"
-      data-testid="meeting-row-skeleton"
+      data-testid={`meeting-row-skeleton${idSuffix}`}
     >
       <Skeleton variant="rect" className="h-10 w-10 shrink-0" />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -93,22 +93,30 @@ export function MeetingRowSkeleton() {
 const SKELETON_GROUPS = [2, 3, 3]
 
 /**
- * @param testId  overridden by the PRERENDER fallbacks.
+ * @param idSuffix  set by the PRERENDER fallbacks, and by nothing else.
  *
  * Three components render this: the route's `loading.tsx`, the Notebook page's
  * Suspense fallback, and the view's own pending state. The first two can be on
  * screen at the same instant as the third — React keeps a boundary's fallback
- * mounted until the boundary resolves — and if all three carried the same
- * testid, a test locator would bind to whichever happened to be first in the
- * DOM and then measure it after it had been hidden. Only the view's own
- * skeleton, the one that actually stands in for the list, keeps the plain id.
+ * mounted, and hidden, until the boundary resolves.
+ *
+ * If all three carried the same testids, a locator would bind to whichever came
+ * first in the DOM, pass a visibility check against the live one, and then
+ * measure the hidden one — `boundingBox()` returning null on a test that had
+ * just asserted the element was visible. That is what CI caught, and it is why
+ * the suffix applies to the ROWS as well as to the container: renaming only the
+ * container left the rows colliding, and the rows are what the height
+ * assertions measure.
+ *
+ * Only the view's own skeleton, the one that actually stands in for the list,
+ * carries the plain ids.
  */
 export function MeetingListSkeleton({
   rows = 8,
-  testId = 'meeting-list-skeleton',
+  idSuffix = '',
 }: {
   rows?: number
-  testId?: string
+  idSuffix?: string
 }) {
   const groups: number[] = []
   let remaining = rows
@@ -121,7 +129,7 @@ export function MeetingListSkeleton({
 
   return (
     <div
-      data-testid={testId}
+      data-testid={`meeting-list-skeleton${idSuffix}`}
       aria-busy="true"
       aria-label="Loading meetings"
       // Matches the real list's group spacing, so the whole block is the same
@@ -136,7 +144,7 @@ export function MeetingListSkeleton({
             <Skeleton variant="text" className="h-[22px] w-24" />
           </div>
           {Array.from({ length: size }, (_, index) => (
-            <MeetingRowSkeleton key={index} />
+            <MeetingRowSkeleton key={index} idSuffix={idSuffix} />
           ))}
         </div>
       ))}

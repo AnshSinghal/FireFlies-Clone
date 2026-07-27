@@ -131,6 +131,34 @@ test.describe('states', () => {
     await expect(page.getByTestId('notebook-toolbar')).toBeVisible()
   })
 
+  test('only one skeleton is live while the list loads', async ({ page }) => {
+    /*
+     * A REGRESSION TEST, for a bug CI found and this machine could not
+     * reproduce.
+     *
+     * Three components render the meeting-list skeleton — the route's
+     * `loading.tsx`, the page's Suspense fallback, and the view's own pending
+     * state — and React keeps a boundary's fallback mounted, hidden, until the
+     * boundary resolves. While they shared testids, a locator could pass a
+     * visibility check against the live one and then measure the hidden one:
+     * `boundingBox()` returning null on an element just asserted visible.
+     *
+     * The prerender fallbacks now carry suffixed ids. This asserts that the
+     * plain ids identify exactly one skeleton, whatever the timing.
+     */
+    await page.route(MEETINGS_LIST, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2500))
+      await route.continue()
+    })
+    await page.goto('/notebook')
+
+    for (const wait of [0, 250, 700]) {
+      if (wait > 0) await page.waitForTimeout(wait)
+      await expect(page.getByTestId('meeting-list-skeleton')).toHaveCount(1)
+      await expect(page.getByTestId('meeting-row-skeleton')).toHaveCount(8)
+    }
+  })
+
   test('T16-F · the skeleton mirrors the list it stands in for', async ({ page }) => {
     /*
      * ASSERTS THE STRUCTURE, not a before/after offset.

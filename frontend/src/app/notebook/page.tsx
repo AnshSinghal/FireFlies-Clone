@@ -17,7 +17,7 @@ export const metadata: Metadata = {
  */
 export default function NotebookPage() {
   return (
-    <Suspense fallback={<MeetingListSkeleton testId="meeting-list-skeleton-fallback" />}>
+    <Suspense fallback={<MeetingListSkeleton idSuffix="-fallback" />}>
       <NotebookView />
     </Suspense>
   )
