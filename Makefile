@@ -61,6 +61,9 @@ test: test-backend test-frontend ## Run both unit test suites
 test-backend:
 	cd backend && uv run pytest -q
 
+coverage: ## Backend tests with the T-43.12 coverage report (services/ai/parsers)
+	cd backend && uv run pytest -q --cov --cov-report=term-missing
+
 test-frontend:
 	cd frontend && npm test
 

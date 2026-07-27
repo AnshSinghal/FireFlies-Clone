@@ -1,7 +1,12 @@
 # Fireflies.ai Clone
 
+![backend coverage](https://img.shields.io/badge/backend_coverage-95%25-brightgreen)
+
 An AI meeting-notetaker: a searchable meetings library, an interactive transcript wired
 bidirectionally to a media player, AI-generated summaries and extracted action items.
+
+The badge is the measured `pytest --cov` number over `services/`, `ai/` and `parsers/`
+(target ≥80%, per T-43.12); regenerate with `make coverage`.
 
 **Live demo:** _(deployed in T-44)_ · **Repository:** https://github.com/AnshSinghal/FireFlies-Clone
 
@@ -196,6 +201,7 @@ cd frontend && npm install && npm run dev
 | `make dev` | Both apps via Docker Compose |
 | `make seed` | Reset and populate the demo database |
 | `make test` | Backend test suite (pytest) |
+| `make coverage` | Backend tests with the coverage report (services/ai/parsers, target ≥80%) |
 | `make e2e` | Playwright end-to-end suite |
 | `make lint` | Lint + typecheck both apps and check backend layering |
 | `make format` | Auto-format both apps |

@@ -150,9 +150,7 @@ def assert_max_queries(db_engine: Engine) -> Callable[[int], AbstractContextMana
             event.remove(db_engine, "after_cursor_execute", record)
 
         rendered = "\n".join(f"  {i + 1}. {s.splitlines()[0]}" for i, s in enumerate(statements))
-        assert len(statements) <= budget, (
-            f"{len(statements)} SELECTs, budget {budget}:\n{rendered}"
-        )
+        assert len(statements) <= budget, f"{len(statements)} SELECTs, budget {budget}:\n{rendered}"
 
     return guard
 

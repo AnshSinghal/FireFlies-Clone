@@ -103,7 +103,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: uv sync --frozen
         working-directory: backend
-      - run: uv run pytest -q
+      # --cov reads its scope from pyproject ([tool.coverage.run]): services,
+      # ai and parsers — the layers with logic. The summary lands in the job
+      # output (T-43.13); the ≥80% bar is documented in T-43.12.
+      - run: uv run pytest -q --cov --cov-report=term
         working-directory: backend
 
       # Seed the real database and check every invariant (T-05.14). The unit
