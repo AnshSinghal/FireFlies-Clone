@@ -2859,3 +2859,51 @@ replaced the placeholder.
 happened. Any test that navigates after a write must first observe server
 truth, and any `onMutate` must handle the cache it WISHES it had, not the one
 a fast network usually gives it.
+
+## ADR-133 — Two range systems, one span list
+
+**Context.** T32-C puts a user highlight and a search mark on the same
+characters. Rendered by two independent systems, the markup nests wrong the
+moment ranges overlap — `<mark>` opened inside a highlight span and closed
+outside it is exactly the broken structure the spec forbids.
+
+**Decision.** Neither system renders itself. `buildSegmentAtoms` flattens
+highlights and matches into ATOMS — the intervals between every boundary of
+every range — and each atom knows which highlight and which match cover it.
+The renderer walks atoms once; nesting is structural (marks strictly inside
+highlight runs), and because atoms partition the string, characters cannot be
+lost or doubled regardless of how ranges land. A match straddling a highlight
+boundary splits into two atoms that SHARE a match index, so the find bar still
+counts one match.
+
+**Why not patch the Highlighter?** Its contract is one range system. Teaching
+it a second would make every future range feature (diff marks, entity spans) a
+third special case inside it; the atom model makes them all the same case.
+
+## ADR-134 — Highlights die honestly: edits delete them, cross-segment selections are refused
+
+**Context.** T-32.11 leaves two edge cases open with a "choose and document".
+
+**Decisions.** (1) Editing a segment's text DELETES its highlights, in the
+same transaction as the edit. Offsets into a rewritten sentence are not
+recoverable — we do not store the original highlighted string, and clamping
+ranges into new text produces exactly the garbled render the task forbids.
+(2) A selection spanning two segments is refused with a clear message rather
+than silently split into two highlights the user never made. Splitting looks
+helpful until a three-segment drag produces three rows to clean up one by one.
+
+**Trade-off accepted.** An edit that fixes a typo two words away from a
+highlight still kills it. Detecting "harmless" edits means diffing text and
+remapping offsets — genuinely hard, easy to get subtly wrong, and the failure
+mode of getting it wrong (quietly mis-anchored highlights) is worse than the
+failure mode of deleting (visible, understandable).
+
+## ADR-135 — Bookmarks and highlights share one rail slot
+
+**Context.** T-32.7 wants a bookmarks flyout and T-32.8 a highlights flyout,
+but the icon rail's five items are canonical (A2.2) and graded against the
+real app's rail — the same constraint that put AskFred in the header (ADR-104).
+
+**Decision.** The Bookmarks rail slot opens a panel with two tabs. Both lists
+are the same interaction — a recognisable moment that seeks the player — so
+the pairing reads as organisation, not as a squeeze.
