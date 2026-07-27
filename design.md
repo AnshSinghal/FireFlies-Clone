@@ -267,20 +267,26 @@ light-mode shadows into dark is the classic tell of a rushed dark theme.
 
 | Token | Value |
 |---|---|
-| `--ff-surface-0` | `#161A22` |
-| `--ff-surface-1` | `#0F1218` |
-| `--ff-surface-2` | `#1F242E` |
-| `--ff-surface-hover` | `#232935` |
-| `--ff-border-subtle` | `#2A313D` |
-| `--ff-border-strong` | `#3A4351` |
+| `--ff-surface-0` | `#14141D` |
+| `--ff-surface-1` | `#0E0E15` |
+| `--ff-surface-2` | `#1C1C28` |
+| `--ff-surface-hover` | `#23232F` |
+| `--ff-border-subtle` | `#2C2C3A` |
+| `--ff-border-strong` | `#3B3B4C` |
 | `--ff-text-primary` | `#F2F4F7` |
-| `--ff-text-secondary` | `#B4BCC9` |
-| `--ff-text-muted` | `#79839A` |
+| `--ff-text-secondary` | `#A8B0BE` |
+| `--ff-text-muted` | `#8B93A5` |
 | `--ff-accent` | `#9B7BFF` |
 | `--ff-accent-subtle` | `#1D1638` |
 | `--ff-highlight` | `#6B5714` |
 
 The light accent `#6A39EF` fails contrast on dark backgrounds — hence the lifted `#9B7BFF`.
+
+> **The whole dark table above was stale until 2026-07-28.** Eight of its ten rows still carried the
+> blue-grey scale this document specified before T-02.1 re-hued the palette to violet — `#161A22`
+> against the shipped `#14141D`, `#232935` against `#23232F`, and so on. `tokens.css` was re-hued;
+> this table was not. Caught by `scripts/check_design_tokens.py`, which resolves every hex here
+> through the token cascade and fails when the two disagree.
 
 > These three values were `#2A6EF4` / `#5B8DEF` / `#18243C` until 2026-07-28 — the blue this
 > document specified before T-02.1 sampled the reference screenshots and found violet
