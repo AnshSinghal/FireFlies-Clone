@@ -18,7 +18,10 @@ import { IconButton } from '@/components/ui/icon-button'
 import { SkeletonText } from '@/components/ui/skeleton'
 import { StateView } from '@/components/ui/state-view'
 import { useToast } from '@/components/ui/toast'
+import { useCreateHighlight } from '@/lib/api/highlights'
 import { useRenameSpeaker, useTranscript, useUpdateSegment } from '@/lib/api/transcript'
+import type { HighlightColor } from '@/lib/api/types'
+import { useHighlightColorPref } from '@/lib/prefs/app-prefs'
 import type { SegmentOut } from '@/lib/api/types'
 import { useNotepadCommands } from '@/lib/notepad/commands'
 import { usePlayer } from '@/lib/player/player-context'
@@ -30,7 +33,11 @@ import { formatTimestamp, pluralize } from '@/lib/utils/format'
 import { PlayerCard } from './player/player-card'
 import { SoundbiteModal, type SoundbiteDraft } from './soundbites/soundbite-modal'
 import { FindBar } from './transcript/find-bar'
-import { SelectionToolbar, type SoundbiteSelection } from './transcript/selection-toolbar'
+import {
+  SelectionToolbar,
+  type HighlightSelection,
+  type SoundbiteSelection,
+} from './transcript/selection-toolbar'
 import { SpeakerLegend } from './transcript/speaker-legend'
 import { TranscriptList } from './transcript/transcript-list'
 import { useEditSession } from './transcript/use-edit-session'
@@ -93,6 +100,24 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
 
   const updateSegment = useUpdateSegment(meetingId)
   const renameSpeaker = useRenameSpeaker(meetingId)
+  const createHighlight = useCreateHighlight(meetingId)
+  const [highlightColor, setHighlightColor] = useHighlightColorPref()
+
+  const onHighlight = useCallback(
+    (selection: HighlightSelection, color: HighlightColor) => {
+      // The picked colour becomes the last-used one (T-32.2) — the main
+      // button applies it instantly next time.
+      setHighlightColor(color)
+      createHighlight.mutate({
+        segment_id: selection.segmentId,
+        start_offset: selection.startOffset,
+        end_offset: selection.endOffset,
+        color,
+      })
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutate is stable
+    [setHighlightColor],
+  )
 
   const saveSegment = useCallback(
     (id: number, text: string) => updateSegment.mutateAsync({ id, text }),
@@ -383,6 +408,8 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
         onCopy={(text) => void copy(text, TOAST_MESSAGES.selectionCopied)}
         onComment={setCommentingSegmentId}
         onSoundbite={onSoundbite}
+        onHighlight={onHighlight}
+        highlightColor={highlightColor}
       />
 
       <SoundbiteModal
