@@ -94,7 +94,10 @@ export function SmartSearchPanel({ meetingId }: { meetingId: number }) {
                       {formatTimestamp(segment.start_ms)}
                     </span>
                   </span>
-                  <span className="mt-0.5 line-clamp-2 block text-sm text-secondary">
+                  <span
+                    data-testid="smart-search-result-text"
+                    className="mt-0.5 line-clamp-2 block text-sm text-secondary"
+                  >
                     {segment.text}
                   </span>
                 </ResultRow>

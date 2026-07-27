@@ -180,6 +180,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/export': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Export several meetings as a zip archive
+     * @description One file per meeting, all in the requested format (T-34.9). All-or-nothing: an unknown or deleted id fails the whole request with a 404 naming the offenders, rather than shipping a zip that silently misses files.
+     */
+    get: operations['export_meetings_api_v1_meetings_export_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/meetings/facets': {
     parameters: {
       query?: never
@@ -372,6 +392,26 @@ export interface paths {
      * @description Optionally anchored to a segment (`segment_id`) or replying to a top-level comment (`parent_id`). Mentions are participant ids.
      */
     post: operations['create_comment_api_v1_meetings__meeting_id__comments_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/export': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Export a meeting as a file
+     * @description The meeting rendered to `pdf`, `md`, `txt` or `docx`, streamed as a download (T-34.7). `include=` picks sections; the five canonical summary sections come from `summary` + `actions`.
+     */
+    get: operations['export_meeting_api_v1_meetings__meeting_id__export_get']
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -2081,6 +2121,61 @@ export interface operations {
       }
     }
   }
+  export_meetings_api_v1_meetings_export_get: {
+    parameters: {
+      query: {
+        /** @description Comma-separated meeting ids. */
+        ids: string
+        /** @description The file format to render. */
+        format: 'pdf' | 'md' | 'txt' | 'docx'
+        /** @description Comma-separated sections: `summary`, `transcript`, `actions`, `comments`, `highlights`. Omitted means all of them. */
+        include?: string | null
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description A zip archive with one file per requested meeting. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+          'application/zip': string
+        }
+      }
+      /** @description One or more ids are unknown or deleted; `details` lists them. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   meeting_facets_api_v1_meetings_facets_get: {
     parameters: {
       query?: never
@@ -2797,6 +2892,73 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  export_meeting_api_v1_meetings__meeting_id__export_get: {
+    parameters: {
+      query: {
+        /** @description The file format to render. */
+        format: 'pdf' | 'md' | 'txt' | 'docx'
+        /** @description Comma-separated sections: `summary`, `transcript`, `actions`, `comments`, `highlights`. Omitted means all of them. */
+        include?: string | null
+      }
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description The exported file, as an attachment. `Content-Disposition` carries the sanitised `<slug-of-title>-<date>.<ext>` filename. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+          'application/pdf': string
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': string
+          'text/markdown': string
+          'text/plain': string
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */

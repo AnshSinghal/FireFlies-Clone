@@ -31,6 +31,7 @@ import { notebookReturnUrl } from '@/lib/notebook-return'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 
 import { EditMeetingModal } from '@/features/edit/edit-meeting-modal'
+import { ExportModal } from '@/features/export/export-modal'
 
 import { AskFredFlyout } from './askfred/askfred-flyout'
 import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
@@ -54,6 +55,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
   const [askFredOpen, setAskFredOpen] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [tab, setTab] = useState('summary')
 
   // Below 1024px the split becomes tabs (T-18.9): two 300px panels side by side
@@ -144,6 +146,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
               onEditDetails={() => setEditing(true)}
               onAskFred={() => setAskFredOpen((open) => !open)}
               askFredOpen={askFredOpen}
+              onExport={() => setExporting(true)}
             />
 
             <div className="flex min-h-0 flex-1 flex-col md:flex-row">
@@ -216,6 +219,12 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
             <PlayerKeyboard />
 
             <EditMeetingModal meeting={meeting} open={editing} onOpenChange={setEditing} />
+
+            <ExportModal
+              open={exporting}
+              onOpenChange={setExporting}
+              target={{ kind: 'single', meeting }}
+            />
 
             <ConfirmDialog
               open={confirmingDelete}

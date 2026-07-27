@@ -15,4 +15,5 @@ export default {
   'backend/**/*.py': () => ['make lint-backend'],
   'frontend/src/**/*.{ts,tsx,css}': () => ['make lint-frontend'],
   'scripts/**/*.py': () => ['make lint-backend'],
+  'e2e/**/*.ts': () => ['make lint-e2e'],
 }

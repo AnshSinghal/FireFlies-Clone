@@ -43,7 +43,28 @@ class CommentService:
     # ── Reads ───────────────────────────────────────────────────────────
 
     def list_threads(self, meeting: Meeting, pagination: PaginationParams) -> Page[CommentOut]:
-        """Top-level threads in timeline order, replies nested one level.
+        """One page of top-level threads in timeline order, replies nested."""
+        threads = self._threads(meeting)
+        window = threads[pagination.offset : pagination.offset + pagination.limit]
+        return Page.build(
+            [self._to_out(comment) for comment in window],
+            page=pagination.page,
+            page_size=pagination.limit,
+            total=len(threads),
+        )
+
+    def threads(self, meeting: Meeting) -> list[CommentOut]:
+        """Every thread, unpaginated — what the export renders (T-34).
+
+        Shares `_threads` with the paginated read so an exported comment
+        stream can never disagree with the flyout about ordering or about
+        which tombstones survive. Unpaginated because an export that stopped
+        at the first page would be silently partial.
+        """
+        return [self._to_out(comment) for comment in self._threads(meeting)]
+
+    def _threads(self, meeting: Meeting) -> list[Comment]:
+        """Top-level threads in timeline order, replies eager-loaded.
 
         A thread appears when its parent is live, OR when the parent is
         deleted but still has live replies — the tombstone case (T-31.7).
@@ -80,14 +101,7 @@ class CommentService:
                 c.id,
             )
         )
-
-        window = threads[pagination.offset : pagination.offset + pagination.limit]
-        return Page.build(
-            [self._to_out(comment) for comment in window],
-            page=pagination.page,
-            page_size=pagination.limit,
-            total=len(threads),
-        )
+        return threads
 
     def live_count(self, meeting_id: int) -> int:
         """Comments + replies, excluding deleted — the drawer's `3 comments`."""
