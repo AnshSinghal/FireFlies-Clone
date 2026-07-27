@@ -12,6 +12,7 @@
  * announcing a slider does not then offer the buttons inside it.
  */
 
+import { Star } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { TrackMarker } from '@/components/ui/media-controls'
@@ -44,6 +45,8 @@ interface SeekbarProps {
   /** Sorted by `startMs`; used for the hover preview's speaker name. */
   cues: SpeakerCue[]
   soundbites?: SoundbiteBand[]
+  /** Bookmarked moments — small star ticks below the chapter row (T-32.9). */
+  bookmarks?: { id: number; startMs: number; label: string }[]
   onSeek: (ms: number) => void
   /** Chapter ticks seek AND reveal, which scrubbing does not (T-21.6). */
   onSeekChapter: (ms: number) => void
@@ -75,6 +78,7 @@ export function Seekbar({
   chapters,
   cues,
   soundbites = [],
+  bookmarks = [],
   onSeek,
   onSeekChapter,
 }: SeekbarProps) {
@@ -231,6 +235,24 @@ export function Seekbar({
           style={{ left: `${progress * 100}%` }}
         />
       </div>
+
+      {/* Bookmark stars (T-32.9): decorative like the bands — the flyout is
+          the interactive surface for bookmarks, the tick is a location cue. */}
+      {bookmarks.length > 0 && (
+        <div className="pointer-events-none absolute inset-x-0 -top-1 h-3">
+          {bookmarks.map((bookmark) => (
+            <Star
+              key={bookmark.id}
+              size={10}
+              strokeWidth={1.75}
+              aria-hidden="true"
+              data-testid={`bookmark-tick-${bookmark.id}`}
+              className="absolute -translate-x-1/2 fill-warning text-warning"
+              style={{ left: `${ratioOf(bookmark.startMs, durationMs) * 100}%` }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Chapter ticks (T-19.8), above the track and outside the slider. */}
       {chapters.length > 0 && (

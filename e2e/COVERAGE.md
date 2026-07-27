@@ -52,7 +52,7 @@ Conventions in the table:
 | Placeholder: integrations | T-30.3 | PW-30-01 | `24-placeholders.spec.ts › placeholder surfaces` | Covered |
 | Placeholder: team/sharing | T-30.4 | PW-30-01 | `24-placeholders.spec.ts › placeholder surfaces` | Covered |
 | Placeholder: auth | T-30.8 | PW-30-06 | `24-placeholders.spec.ts › placeholder surfaces` | Covered |
-| Bonus: comments / highlights / soundbites | T-31/32/33 | PW-31-\*, PW-32-\*, PW-33-\* | Comments: `25-comments.spec.ts › comments · threads on transcript lines`. Highlights: **pending** — `feat/T-32-highlights` (in progress elsewhere). Soundbites: **pending** — `feat/T-33-soundbites` (in progress) | Partial |
+| Bonus: comments / highlights / soundbites | T-31/32/33 | PW-31-\*, PW-32-\*, PW-33-\* | Comments: `25-comments.spec.ts › comments · threads on transcript lines`. Highlights & bookmarks: `27-highlights.spec.ts › highlights · seeded`, `› writes` (T32-A → T32-J; T32-K's export claim in `backend/tests/test_highlights.py`). Soundbites: `26-soundbites.spec.ts › soundbites` | Covered |
 | Bonus: export | T-34 | PW-34-\* | `34-export.spec.ts › export modal`, `› bulk export`; renderers (md/txt/pdf/docx) in `backend/tests/test_export.py` (pytest) | Covered |
 | Bonus: global search | T-35 | PW-35-\* | `24-search.spec.ts › global search` (page, deep links, filters); `05-topbar.spec.ts › topbar` (dropdown, grouping, history) | Covered |
 | Bonus: tags & filtering | T-36 | PW-36-\* | **Pending** — `feat/T-36-tags` (in progress) | Pending |
@@ -101,6 +101,8 @@ The suite is still growing on this branch; the listing is authoritative.
 | `25-comments.spec.ts` | 10 | Comments & threads (T-31) |
 | `25-dark-mode.spec.ts` | 10 | Dark mode: state, first paint, contrast (T-38) |
 | `26-askfred.spec.ts` | 7 | AskFred grounded Q&A (T-37) |
+| `26-soundbites.spec.ts` | 11 | Soundbites: clips, trimmer, range playback (T-33) |
+| `27-highlights.spec.ts` | 10 | Highlights & bookmarks (T-32) |
 | `34-export.spec.ts` | 4 | Export modal & bulk zip (T-34) |
 | `90-mutations.spec.ts` | 33 | Every write path, serial (`@mutates`) |
 | `98-smoke.spec.ts` | 12 | Post-deploy smoke, `@smoke` (T-40.13) |

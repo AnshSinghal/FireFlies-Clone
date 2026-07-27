@@ -39,7 +39,7 @@ import { useMeeting } from '@/lib/api/meetings'
 import { qk } from '@/lib/api/query-keys'
 import { useSummary } from '@/lib/api/summaries'
 import { useTranscript } from '@/lib/api/transcript'
-import type { MeetingDetail, Page } from '@/lib/api/types'
+import type { HighlightOut, MeetingDetail, Page } from '@/lib/api/types'
 import { summaryToMarkdown } from '@/lib/summary/to-markdown'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { LOCALE, formatTimestamp, pluralize } from '@/lib/utils/format'
@@ -133,9 +133,14 @@ export function ExportModal({ open, onOpenChange, target }: ExportModalProps) {
     meetingId === null
       ? undefined
       : client.getQueryData<Page<CommentOut>>(qk.meetings.comments(meetingId))?.items
+  // Same contract as comments: cache-only, absent contributes nothing.
+  const highlights =
+    meetingId === null
+      ? undefined
+      : client.getQueryData<HighlightOut[]>(qk.meetings.highlights(meetingId))
 
   const estimate = useMemo(
-    () => estimateExportSize({ include, summary, transcript, actionItems, comments }),
+    () => estimateExportSize({ include, summary, transcript, actionItems, comments, highlights }),
     [include, summary, transcript, actionItems, comments],
   )
 
@@ -211,6 +216,7 @@ export function ExportModal({ open, onOpenChange, target }: ExportModalProps) {
       transcript,
       actionItems,
       comments,
+      highlights,
     })
     void copy(text, TOAST_MESSAGES.markdownCopied)
   }

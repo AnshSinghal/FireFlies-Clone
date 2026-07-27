@@ -150,6 +150,13 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     await page.getByTestId('comment-composer-input').fill('<script>alert(1)</script>')
     await page.getByTestId('comment-submit').click()
 
+    /*
+     * The composer closes ON SUCCESS (its submit awaits the POST, then
+     * cancels itself), so waiting for it to leave is waiting for the server
+     * row — and it removes the second strict-mode match for the script text,
+     * which briefly lives in BOTH the textarea and the optimistic row.
+     */
+    await expect(page.getByTestId('comment-composer-input')).toHaveCount(0)
     await expect(page.getByText('<script>alert(1)</script>')).toBeVisible()
     // T31-H clicks this thread's flyout entry next test — it must be a real
     // row, not an optimistic one an unload would abort.

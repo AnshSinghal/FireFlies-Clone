@@ -14,12 +14,22 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { IconButton } from '@/components/ui/icon-button'
 import { useToast } from '@/components/ui/toast'
+import type { HighlightColor } from '@/lib/api/types'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
+import { cn } from '@/lib/utils/cn'
+
+import { HIGHLIGHT_COLORS, SWATCH_CLASSES } from './segment-text'
 
 export interface SoundbiteSelection {
   startSegmentId: number
   endSegmentId: number
   text: string
+}
+
+export interface HighlightSelection {
+  segmentId: number
+  startOffset: number
+  endOffset: number
 }
 
 interface SelectionToolbarProps {
@@ -30,6 +40,10 @@ interface SelectionToolbarProps {
   onComment?: (segmentId: number) => void
   /** Opens the create-soundbite modal for the selection's range (T-33.2). */
   onSoundbite?: (selection: SoundbiteSelection) => void
+  /** Creates a highlight over the selection (T-32.2). */
+  onHighlight?: (selection: HighlightSelection, color: HighlightColor) => void
+  /** The last-used colour — what the main Highlight button applies. */
+  highlightColor?: HighlightColor
 }
 
 interface Anchor {
@@ -40,6 +54,9 @@ interface Anchor {
   segmentId: number | null
   /** …and the one it ENDS in — a soundbite spans both (T-33.2). */
   endSegmentId: number | null
+  /** Character offsets within the start segment's text (T-32.2); null when
+   *  the selection crosses segments or the boundary could not be measured. */
+  offsets: { start: number; end: number } | null
 }
 
 /** Below this many characters a "selection" is usually a stray click-drag. */
@@ -50,6 +67,8 @@ export function SelectionToolbar({
   onCopy,
   onComment,
   onSoundbite,
+  onHighlight,
+  highlightColor = 'amber',
 }: SelectionToolbarProps) {
   const toast = useToast()
   const [anchor, setAnchor] = useState<Anchor | null>(null)
@@ -103,6 +122,10 @@ export function SelectionToolbar({
       text,
       segmentId: segmentId != null ? Number(segmentId) : null,
       endSegmentId: endSegmentId != null ? Number(endSegmentId) : null,
+      offsets:
+        segmentId != null && segmentId === endSegmentId
+          ? measureOffsets(range, startElement?.closest('[data-segment-id]') ?? null)
+          : null,
     })
   }, [containerRef])
 
@@ -131,6 +154,27 @@ export function SelectionToolbar({
 
   const soon = () => toast.info(TOAST_MESSAGES.comingSoon)
 
+  const applyHighlight = (color: HighlightColor) => {
+    if (anchor.segmentId == null) return
+    if (anchor.segmentId !== anchor.endSegmentId || anchor.offsets == null) {
+      // The documented T-32.11 choice: block cross-segment selections with a
+      // clear message rather than silently splitting them into two ranges the
+      // user never asked for.
+      toast.error(TOAST_MESSAGES.highlightOneSegment)
+      return
+    }
+    onHighlight?.(
+      {
+        segmentId: anchor.segmentId,
+        startOffset: anchor.offsets.start,
+        endOffset: anchor.offsets.end,
+      },
+      color,
+    )
+    window.getSelection()?.removeAllRanges()
+    setAnchor(null)
+  }
+
   return (
     <div
       data-testid="selection-toolbar"
@@ -153,12 +197,36 @@ export function SelectionToolbar({
         data-testid="selection-copy"
         onClick={() => onCopy(anchor.text)}
       />
-      <IconButton
-        label="Highlight"
-        size="sm"
-        icon={<Highlighter size={16} strokeWidth={1.75} />}
-        onClick={soon}
-      />
+      <span className="flex items-center gap-0.5" data-testid="highlight-toolbar">
+        <IconButton
+          label="Highlight"
+          size="sm"
+          icon={<Highlighter size={16} strokeWidth={1.75} />}
+          data-testid="selection-highlight"
+          onClick={onHighlight ? () => applyHighlight(highlightColor) : soon}
+        />
+        {onHighlight &&
+          HIGHLIGHT_COLORS.map((color) => (
+            <IconButton
+              key={color}
+              label={`Highlight in ${color}`}
+              size="sm"
+              data-testid={`highlight-color-${color}`}
+              onClick={() => applyHighlight(color)}
+              icon={
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'block size-3.5 rounded-full transition-transform hover:scale-110',
+                    SWATCH_CLASSES[color],
+                    color === highlightColor &&
+                      'ring-offset-surface-0 ring-1 ring-accent ring-offset-1',
+                  )}
+                />
+              }
+            />
+          ))}
+      </span>
       <IconButton
         label="Comment"
         size="sm"
@@ -197,4 +265,36 @@ export function SelectionToolbar({
       />
     </div>
   )
+}
+
+/**
+ * Character offsets of a selection within its segment's text (T-32.2).
+ *
+ * Measured by cloning a range from the start of the segment's paragraph to
+ * each selection boundary and counting its text — which walks nested spans
+ * and marks correctly, so a selection over an existing highlight or a search
+ * mark still lands on the right characters.
+ */
+function measureOffsets(
+  range: Range,
+  segmentElement: Element | null,
+): { start: number; end: number } | null {
+  const paragraph = segmentElement?.querySelector('p')
+  if (!paragraph) return null
+
+  try {
+    const probe = document.createRange()
+    probe.selectNodeContents(paragraph)
+    probe.setEnd(range.startContainer, range.startOffset)
+    const start = probe.toString().length
+    probe.setEnd(range.endContainer, range.endOffset)
+    const end = probe.toString().length
+
+    if (end <= start) return null
+    return { start, end }
+  } catch {
+    // A boundary outside the paragraph (double-click on the speaker name that
+    // drags into the text) makes the range invalid — no highlight, no crash.
+    return null
+  }
 }

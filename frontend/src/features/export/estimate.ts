@@ -20,7 +20,7 @@
  */
 
 import type { CommentOut } from '@/lib/api/comments'
-import type { ActionItemOut, SummaryOut, TranscriptPage } from '@/lib/api/types'
+import type { ActionItemOut, HighlightOut, SummaryOut, TranscriptPage } from '@/lib/api/types'
 
 import type { ExportSectionId } from './sections'
 
@@ -38,8 +38,9 @@ export function estimateExportSize(input: {
   transcript?: TranscriptPage
   actionItems?: readonly ActionItemOut[]
   comments?: readonly CommentOut[]
+  highlights?: readonly HighlightOut[]
 }): { words: number; pages: number } {
-  const { include, summary, transcript, actionItems, comments } = input
+  const { include, summary, transcript, actionItems, comments, highlights } = input
   let words = 0
 
   if (include.has('summary') && summary) {
@@ -57,6 +58,13 @@ export function estimateExportSize(input: {
 
   if (include.has('actions') && actionItems) {
     for (const item of actionItems) words += countWords(item.text)
+  }
+
+  if (include.has('highlights') && highlights) {
+    for (const highlight of highlights) {
+      words += countWords(highlight.text)
+      words += countWords(highlight.note)
+    }
   }
 
   if (include.has('comments') && comments) {

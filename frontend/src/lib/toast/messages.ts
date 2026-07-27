@@ -34,6 +34,7 @@ export const TOAST_MESSAGES = {
   // The clipboard API refuses on an insecure origin and when the user has
   // denied permission. Both leave a button that appears to do nothing.
   copyFailed: "Couldn't copy — your browser blocked clipboard access",
+  highlightOneSegment: 'Highlights live within a single line — select inside one segment',
   regenerateFailed: "Couldn't regenerate the summary. Please try again.",
   invalidFileType: 'File must be .txt, .vtt, .srt or .json',
 

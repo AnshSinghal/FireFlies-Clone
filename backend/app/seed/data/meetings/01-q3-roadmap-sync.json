@@ -159,5 +159,12 @@
   "soundbites": [
     { "title": "Aisha's case for usage-based billing", "from_segment": 6, "to_segment": 9 },
     { "title": "Why a canary would have caught the incident", "from_segment": 44, "to_segment": 46, "auto_generated": true }
+  ],
+  "highlights": [
+    { "segment": 7, "phrase": "four times the API volume of the median account", "color": "amber", "note": "The number that started the whole pricing conversation." },
+    { "segment": 22, "phrase": "grandfather existing contracts through to renewal", "color": "green" }
+  ],
+  "bookmarks": [
+    { "segment": 28 }
   ]
 }

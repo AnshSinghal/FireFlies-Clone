@@ -28,6 +28,7 @@ export const APP_PREF_KEYS = {
   pageSize: 'ff.app.page-size',
   autoplay: 'ff.app.autoplay',
   dateFormat: 'ff.app.date-format',
+  highlightColor: 'ff.app.highlight-color',
 } as const
 
 // ── Theme ───────────────────────────────────────────────────────────────────
@@ -98,4 +99,20 @@ export function parseDateFormat(raw: string | null): DateFormat {
 
 export function useDateFormatPref() {
   return usePref(APP_PREF_KEYS.dateFormat, parseDateFormat, (value) => value, 'relative')
+}
+
+// ── Highlights (T-32.2) ─────────────────────────────────────────────────────
+
+export const HIGHLIGHT_COLOR_VALUES = ['amber', 'green', 'blue', 'pink'] as const
+export type HighlightColorPref = (typeof HIGHLIGHT_COLOR_VALUES)[number]
+
+export function parseHighlightColor(raw: string | null): HighlightColorPref {
+  return (HIGHLIGHT_COLOR_VALUES as readonly string[]).includes(raw ?? '')
+    ? (raw as HighlightColorPref)
+    : 'amber'
+}
+
+/** The last-used colour — what the toolbar's main Highlight button applies. */
+export function useHighlightColorPref() {
+  return usePref(APP_PREF_KEYS.highlightColor, parseHighlightColor, String, 'amber')
 }

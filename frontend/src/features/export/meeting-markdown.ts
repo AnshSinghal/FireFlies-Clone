@@ -15,6 +15,7 @@
  */
 
 import type { CommentOut } from '@/lib/api/comments'
+import type { HighlightOut } from '@/lib/api/types'
 import type { ActionItemOut, MeetingDetail, SummaryOut, TranscriptPage } from '@/lib/api/types'
 import { markTurns } from '@/lib/transcript/grouping'
 import { formatDuration, formatFullDate, formatTimestamp } from '@/lib/utils/format'
@@ -31,8 +32,9 @@ export function buildMeetingMarkdown(input: {
   transcript?: TranscriptPage
   actionItems?: readonly ActionItemOut[]
   comments?: readonly CommentOut[]
+  highlights?: readonly HighlightOut[]
 }): string {
-  const { meeting, include, summary, transcript, actionItems, comments } = input
+  const { meeting, include, summary, transcript, actionItems, comments, highlights } = input
 
   const blocks: string[] = [`# ${meeting.title}`, metadataBlock(meeting)]
 
@@ -71,6 +73,14 @@ export function buildMeetingMarkdown(input: {
 
   if (include.has('comments') && comments && comments.length > 0) {
     blocks.push(`## Comments\n\n${commentLines(comments).join('\n')}`)
+  }
+
+  if (include.has('highlights') && highlights && highlights.length > 0) {
+    const lines = highlights.map((highlight) => {
+      const note = highlight.note ? ` — ${highlight.note}` : ''
+      return `- [${formatTimestamp(highlight.start_ms)}] ${highlight.speaker}: “${highlight.text}”${note}`
+    })
+    blocks.push(`## Highlights\n\n${lines.join('\n')}`)
   }
 
   return `${blocks.join('\n\n')}\n`
