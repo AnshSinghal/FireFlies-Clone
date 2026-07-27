@@ -476,6 +476,24 @@ are larger than an RSC-first build would be. If this app ever grows a genuinely 
 surface — a publicly shared transcript, say — that route should be an RSC, because none of the three
 reasons above apply to it.
 
+**Two costs measured against the deployment, added 2026-07-28.** Both follow
+from the same property — the server answers before it knows anything about the
+data — and both are fixed by the same change, so they are recorded together:
+
+1. **LCP is 4.0s against an FCP of 0.8s.** The shell paints immediately; the
+   largest element is the meeting list, which waits on a client fetch. This is
+   the Lighthouse Performance number in the README, and its cause is here.
+2. **`GET /meeting/999999` returns HTTP 200.** The body is correct — the branded
+   not-found page — and the API correctly returns `MEETING_NOT_FOUND`. Only the
+   status lies, because the response starts before anyone has asked whether the
+   meeting exists. A crawler or uptime check reads a missing resource as
+   healthy. `curl -I` on a deleted meeting is how someone would notice.
+
+The second was found by probing the running site rather than by reading code,
+and it is the more visible of the two. The remedy for both is to render enough
+of the route on the server to resolve existence before the response begins —
+which is a reversal of this ADR for that route, not a patch on top of it.
+
 ---
 
 ## ADR-020 · Three CSS Grid traps, all of which failed silently
