@@ -30,6 +30,7 @@ from app.models import (
     Keyword,
     Meeting,
     Participant,
+    Soundbite,
     Speaker,
     Summary,
     SummarySection,
@@ -158,6 +159,7 @@ def _clear_meeting_children(db: Session, meeting: Meeting) -> None:
     db.execute(delete(TranscriptSegment).where(TranscriptSegment.meeting_id == meeting.id))
     db.execute(delete(ActionItem).where(ActionItem.meeting_id == meeting.id))
     db.execute(delete(Keyword).where(Keyword.meeting_id == meeting.id))
+    db.execute(delete(Soundbite).where(Soundbite.meeting_id == meeting.id))
     db.execute(delete(Speaker).where(Speaker.meeting_id == meeting.id))
     db.execute(delete(Participant).where(Participant.meeting_id == meeting.id))
     if meeting.summary is not None:
@@ -361,6 +363,23 @@ def _seed_meeting(
             )
         )
         stats.action_items += 1
+
+    # ── Soundbites ──────────────────────────────────────────────────────────
+    for clip in spec.get("soundbites", []):
+        # Ranges are stored as segment INDICES and resolved against the
+        # timeline, for the same reason outline timestamps are (T05-D): a
+        # hand-written millisecond would drift the moment a line is edited.
+        # The 3s-3min check constraints then hold by construction.
+        db.add(
+            Soundbite(
+                meeting_id=meeting.id,
+                created_by=host.id,
+                title=clip["title"],
+                start_ms=timeline[clip["from_segment"]].start_ms,
+                end_ms=timeline[clip["to_segment"]].end_ms,
+                auto_generated=clip.get("auto_generated", False),
+            )
+        )
 
     # ── Tags ────────────────────────────────────────────────────────────────
     meeting.tags = list(db.execute(select(Tag).where(Tag.name.in_(spec.get("tags", [])))).scalars())

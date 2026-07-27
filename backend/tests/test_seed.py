@@ -20,6 +20,7 @@ from app.models import (
     Keyword,
     Meeting,
     Participant,
+    Soundbite,
     Speaker,
     Summary,
     SummarySection,
@@ -352,6 +353,36 @@ def test_every_meeting_has_keywords(seeded: Session) -> None:
 def test_users_all_have_avatars(seeded: Session) -> None:
     for user in seeded.execute(select(User)).scalars():
         assert user.avatar_url and user.avatar_url.startswith("/avatars/")
+
+
+def test_soundbites_are_seeded_valid_and_idempotent(seeded: Session, monkeypatch) -> None:
+    """The flyout (T-33.5) needs clips on first load, including one Auto badge.
+
+    Ranges resolve from segment indices, so every seeded clip must land inside
+    its meeting and inside the 3s-3min constraints — and reseeding must not
+    duplicate them (`_clear_meeting_children` covers the vertical).
+    """
+    monkeypatch.setenv("SEED_ANCHOR_DATE", "2026-07-26T09:00:00Z")
+    from app.core.config import get_settings
+
+    get_settings.cache_clear()
+
+    soundbites = list(seeded.execute(select(Soundbite)).scalars())
+    assert 2 <= len(soundbites) <= 6
+    assert len({s.meeting_id for s in soundbites}) >= 2, "clips span multiple meetings"
+    assert any(s.auto_generated for s in soundbites), "the Auto badge needs an example"
+    assert any(not s.auto_generated for s in soundbites)
+
+    for soundbite in soundbites:
+        assert 3_000 <= soundbite.duration_ms <= 180_000, soundbite.title
+        assert "lorem" not in soundbite.title.lower()
+        meeting = seeded.get(Meeting, soundbite.meeting_id)
+        assert meeting is not None
+        assert soundbite.end_ms <= meeting.duration_seconds * 1000 + 999, soundbite.title
+
+    seed_into(seeded, quiet=True)
+    assert _count(seeded, Soundbite) == len(soundbites)
+    get_settings.cache_clear()
 
 
 @pytest.mark.parametrize(
