@@ -227,7 +227,7 @@ with an override.**
 | `--ff-border-strong` | `#DDE0E7` | [D] | Input hover border, table outer border |
 | `--ff-text-primary` | `#0B1424` | [S] | Headings, meeting titles, transcript body |
 | `--ff-text-secondary` | `#616B81` | [S] | Nav labels, list metadata, summary paragraphs |
-| `--ff-text-muted` | `#8992A2` | [S]* | Timestamps, column headers, placeholders |
+| `--ff-text-muted` | `#667085` | [D]* | Timestamps, column headers, placeholders |
 | `--ff-text-inverse` | `#FFFFFF` | [S] | Text on accent |
 | `--ff-success` | `#0E9F6E` | [D] | Completed action items, positive sentiment |
 | `--ff-success-subtle` | `#D7FBE3` | [S] | Completed action item row bg (the Upgrade button fill) |
@@ -241,9 +241,20 @@ with an override.**
 
 \* **`--ff-text-muted` is deliberately not the sampled value.** Fireflies' own muted grey is
 `#97A1B3`, which scores **2.60:1** on white — below every WCAG threshold, including the 3:1 non-text
-floor. The token is darkened ~9% to `#8992A2` (3.14:1), a shift invisible in a side-by-side
-screenshot. Full AA would need ~`#6C7481`, which reads as secondary text and visibly departs from
-the reference. See ADR-012; expect this to be the one known axe exception in T-42.
+floor.
+
+ADR-012 decided to darken it only ~9%, to `#8992A2` (3.14:1) — a shift invisible in a side-by-side —
+and to accept one known axe exception rather than depart visibly from the reference.
+
+**That is not what shipped.** The implementation carries `#667085` at **4.97:1**, which is full AA,
+and dark carries `#8B93A5` at 5.66:1. Accessibility won the conflict outright. This table said
+`#8992A2` until 2026-07-28, when a token-by-token diff of this file against `tokens.css` caught it —
+`design.md` had been specifying a colour the app does not use, on a token that appears on every
+timestamp and every metadata line in the product.
+
+The fidelity cost is real and is the one worth stating: our metadata text is visibly darker than
+Fireflies', which is a deliberate trade of side-by-side likeness for legibility. It is the one place
+this clone knowingly does **not** match the reference on colour.
 
 No large danger surface appears in the reference set, so red is derived — the only red pixels are a
 16px "not allowed" glyph, too antialiased to trust.
