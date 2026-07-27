@@ -132,6 +132,13 @@ export function TagEditor({
       testId="tag-editor"
       className="w-flyout p-0"
       trigger={trigger}
+      /*
+        Every entry point is a menu item, and a closing menu restores focus to
+        its own trigger — which the panel would read as focus-outside and
+        dismiss itself over, ~14ms after opening. The editor also holds an
+        uncommitted draft, so it closes only on Escape or an outside click.
+      */
+      dismissOnFocusOutside={false}
     >
       <div className="flex max-h-80 flex-col">
         <div className="shrink-0 border-b border-subtle p-2">

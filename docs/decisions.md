@@ -2864,6 +2864,31 @@ in-file as a follow-up, not silently patched during a test task.
 
 ---
 
+## ADR-132 — A popover opened from a menu must not dismiss on focus-outside
+
+**Context.** The tag editor opened from a row kebab never appeared. A
+MutationObserver showed it *did* open at t=486 ms and vanish by t=500 ms: the
+dropdown closes on select and restores focus to its own trigger, and Radix
+reads that programmatic focus move as focus-outside, so the panel dismissed
+itself ~14 ms after mounting. Every T-36 entry point (row kebab, drawer,
+notepad header) opens this way, which is why all four failures shared one
+stack.
+
+**Decision.** `Popover` gains `dismissOnFocusOutside` (default true); the tag
+editor sets it false. Explicit dismissal is untouched — Escape and an outside
+*click* both still close and commit — so what changes is only that focus
+merely leaving the panel no longer discards an uncommitted draft. Rejected:
+deferring the state flip a tick (timing-dependent, the exact class of fix
+ADR-129 argued against), and preventing the menu's close-autofocus (that
+removes focus restore, which ADR-129 had just repaired).
+
+**Consequence.** Focus lands on the kebab with the editor open, which is a
+real and visible place to be; the panel is reachable by Tab and dismissable by
+Escape. Any future popover opened from a menu needs the same flag — the prop's
+doc comment says so.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
