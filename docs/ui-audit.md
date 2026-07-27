@@ -88,6 +88,29 @@ is one finding seen twice, not two findings, and it means the row height is the
 single remaining geometric deviation on this screen. Do not touch the topbar
 token to chase it.
 
+**One refinement measured but not yet applied: how the group gap is split.**
+Matching the gap's total (done, ADR-149) is not the same as matching its
+distribution. Decomposing the space between two cards that straddle a date
+heading — gap below the previous card, the heading's own glyph band, gap above
+the next card — as fractions of the whole:
+
+| | below card | heading | above next card |
+|---|---|---|---|
+| Fireflies | 0.52 | 0.18 | 0.31 |
+| Ours | 0.64 | 0.21 | 0.16 |
+
+Both put the heading closer to the card *below* it than the one above, which is
+the correct proximity reading — a heading belongs to the group it introduces.
+Ours just overdoes it: their ratio of the two gaps is 1.7:1, ours is 3.9:1, so
+our heading reads as attached to the following card rather than floating between
+groups.
+
+At our 67px group gap the reference's split works out to roughly 28px above the
+heading (`group-gap`) and 18px below it (the section's `space-y-2`), against the
+36px and 8px we have. Queued rather than applied: it landed mid-verification and
+is a smaller effect than the two spacing fixes already made, so it belongs in the
+next batch with the settings card anatomy rather than as a fourth interruption.
+
 **The row height is deliberately still 1.29 against their 1.51.** Matching it
 means 72px → ~85px, and that token is load-bearing in a way the gaps are not:
 `design.md` §3.7 fixes it, T12-B asserts it, ADR-036 kept it on purpose, the
