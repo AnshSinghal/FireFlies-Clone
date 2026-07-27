@@ -58,6 +58,7 @@ Conventions in the table:
 | Bonus: tags & filtering | T-36 | PW-36-\* | `27-tags.spec.ts › tags · chips, filters and colour` (T36-C/D/E/L read paths), `› tags · editor, settings and bulk` (T36-A/B/F/G/H/I/J/K writes); service rules (CI uniqueness, merge, cap) in `backend/tests/test_tags.py` (pytest) | Covered |
 | Bonus: LLM Q&A chat | T-37 | PW-37-\* | `26-askfred.spec.ts › AskFred` (T37-E → T37-K: suggestions, thinking state, citation seek, history carry, retry, badge); endpoint claims (citations, guardrail, 429, truncation) in `backend/tests/test_ask.py` (pytest T37-A..D) | Covered |
 | Bonus: dark mode | T-38 | PW-38-\* | `25-dark-mode.spec.ts › dark mode` (T38-A → T38-I + shortcut cycle: first paint, system tracking, axe at zero in dark, canvas repaint). `02-tokens.spec.ts › design tokens` pins the token layer both themes read from | Covered |
+| Quality: network hygiene | T-46.3 | T46-N | `35-network.spec.ts › network hygiene` — no 404s on four routes, nothing fetched twice, no request to an unconfigured origin, and the notepad's four independent panel fetches overlap rather than chaining | Covered |
 | Quality: accessibility, performance, cross-browser | T-42 | PW-42-\*, T42-A → T42-J | `28-a11y.spec.ts` (axe × 8 surfaces × 2 themes + 393px, keyboard, focus traps); `30-zoom.spec.ts` (200%/400% reflow, reduced motion); `31-crossbrowser.spec.ts` (Firefox + WebKit platform seams); `32-bundle.spec.ts` (route JS, CLS); `33-colour-vision.spec.ts` (dichromacy simulation, colour-never-alone); `34-stress.spec.ts` (5,000-segment meeting); latency budgets and the backend half of the stress case in `backend/tests/test_performance.py` (pytest) | Covered |
 
 Every row above is now Covered: the bonus features landed across two parallel
@@ -73,7 +74,7 @@ is itself graded evidence, for a purely cosmetic gain.
 ## Test counts
 
 Measured with `npx playwright test --list` on `main` (2026-07-27):
-**553 tests across 43 spec files**, split into `read-only` (parallel readers),
+**564 tests across 44 spec files**, split into `read-only` (parallel readers),
 `mutations` (serial writers, tagged `@mutates`), `visual` (`@visual`, opt-in)
 `chromium-mobile` (`@mobile`, opt-in) and `firefox`/`webkit` (`@crossbrowser`,
 opt-in) — see the project split rationale in
@@ -112,7 +113,7 @@ opt-in) — see the project split rationale in
 | `26-soundbites.spec.ts` | 11 | Soundbites: clips, trimmer, range playback (T-33) |
 | `27-highlights.spec.ts` | 10 | Highlights & bookmarks (T-32) |
 | `27-tags.spec.ts` | 12 | Tags: chips, filters, settings, bulk (T-36) |
-| `28-a11y.spec.ts` | 25 | Axe on 8 surfaces × 2 themes + 393px, keyboard, focus traps (T-40.12, T-42.1) |
+| `28-a11y.spec.ts` | 29 | Axe on 8 surfaces × 2 themes + 393px, keyboard, focus traps, dropdown overlays (T-40.12, T-42.1) |
 | `29-errors.spec.ts` | 9 | Timeouts, malformed payloads, degraded floors (T-40.11) |
 | `30-zoom.spec.ts` | 6 | Reflow at 200%/400%, reduced motion (T-42.13) |
 | `31-crossbrowser.spec.ts` | 8 | Platform seams, `@crossbrowser` — Firefox + WebKit (T-42.12) |
@@ -120,6 +121,7 @@ opt-in) — see the project split rationale in
 | `33-colour-vision.spec.ts` | 6 | Dichromacy simulation, status never colour-alone (T-42.6) |
 | `34-export.spec.ts` | 4 | Export modal & bulk zip (T-34) |
 | `34-stress.spec.ts` | 4 | The 5,000-segment meeting, `@mutates` (T-42.11) |
+| `35-network.spec.ts` | 7 | No 404s, no duplicate fetches, no stray origin, no waterfall (T-46.3) |
 | `90-mutations.spec.ts` | 33 | Every write path, serial (`@mutates`) |
 | `98-smoke.spec.ts` | 12 | Post-deploy smoke, `@smoke` (T-40.13) |
 | `97-visual.spec.ts` | 36 | Visual baselines, `@visual` (T-41) — 68 snapshots |
