@@ -134,21 +134,27 @@ undoing half of ADR-149 while fixing the distribution. Fixing one ratio by
 breaking the one already matched is not a fix, and the only thing that caught it
 was re-deriving the arithmetic before typing the edit.
 
-**The row height is deliberately still 1.29 against their 1.51.** Matching it
-means 72px → ~85px, and that token is load-bearing in a way the gaps are not:
-`design.md` §3.7 fixes it, T12-B asserts it, ADR-036 kept it on purpose, and
-the skeleton is pinned to it.
+**The row height is fixed too — 82px, ADR-150.** This was the last open item
+and the only one on this screen still measurably off:
 
-**This used to say "and the virtualiser sizes its items from it, so a wrong
-value breaks scrolling". That is false.** The virtualiser is on the transcript
-list and estimates from its own `ESTIMATED_ROW_PX = 92`; the notebook is not
-virtualised. The claim was written once, repeated into three documents, and
-believed for a day because it sounded like a reason.
+| | Before | After | Reference |
+|---|---|---|---|
+| card ÷ topbar | 1.286 | **1.446** | 1.514 |
+| card ÷ title glyph | 5.143 | **5.786** | 5.658 |
 
-The real obstacle is that the target is ambiguous: scaling their card by the
-topbar gives ~85px, by the type scale ~79px, because it is short against both
-anchors (17% and 12%). A ±3px band on a token three tests pin is a decision to
-take deliberately, not a risk to hide behind. Open, not dropped.
+It stayed open for a day behind a reason that was false — that the virtualiser
+sizes its items from this token. It does not; the virtualiser is on the
+transcript list with its own `ESTIMATED_ROW_PX = 92` and the notebook is not
+virtualised. Once that was checked, the real constraints were three assertions
+and a `design.md` line, which is the same shape as the gap tokens ADR-149 had
+already changed with their tests in one commit.
+
+The value needed deciding rather than reading off: their capture is not a
+uniform zoom of ours (implied scale 1.268 via topbar, 1.357 via glyph, 1.493
+via card), so anchoring on the topbar gives 84.8px and on type 79.2px. 82
+minimises the worst case. **Cost, recorded rather than hidden:** fewer meetings
+fit above the fold — roughly four cards where six used to sit, which is the
+reference's own density.
 
 ## Differences we are keeping, and why
 
@@ -381,10 +387,24 @@ rather than by re-reading the code:
   a smaller difference and is described in the entry.
 
 - **The list's gaps were 54% and 18% tighter than the reference** — measured,
-  not eyeballed. **Fixed** (ADR-149). The row height remains 15% tighter and is
-  open — and NOT because of the virtualiser, which does not touch this token
-  (see the correction above). The obstacle is that the reference scales to
-  ~79-85px depending on which anchor you transfer through.
+  not eyeballed. **Fixed** (ADR-149).
+- **The row itself was 15% short** — **fixed** (ADR-150), 72px → 82px, after
+  the reason for deferring it turned out to be false.
+
+**Nothing measured on the notebook or Settings is still open.** Type scale,
+horizontal padding, leading tile, topbar, gap totals, gap distribution, row
+height, settings measure, settings gutters, settings card anatomy, and
+light/dark geometric parity have all been measured against the reference and
+either match or were changed to match.
+
+Two differences remain, both deliberate and neither a measurement:
+
+- **Settings cards carry no icon.** Fireflies puts a small product glyph left of
+  each title. Ours would be invented — there is no calendar integration behind a
+  calendar icon here.
+- **Muted text is darker than theirs** (4.97:1 against their 2.60:1). The one
+  place this clone knowingly departs from the reference on colour, traded for
+  legibility. See §3.2 of `design.md`.
 
 Items 2–8 remain scope or convention decisions with reasons. Item 9 is a
 deliberate behaviour with a missing affordance. If an evaluator disagrees with
