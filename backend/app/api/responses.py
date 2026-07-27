@@ -34,6 +34,10 @@ VALIDATION: dict[int | str, dict[str, Any]] = {
     422: {**_ENVELOPE, "description": "Invalid payload; `details` is keyed by field path."},
 }
 
+CONFLICT: dict[int | str, dict[str, Any]] = {
+    409: {**_ENVELOPE, "description": "Conflicts with existing state, e.g. a duplicate name."},
+}
+
 RATE_LIMITED: dict[int | str, dict[str, Any]] = {
     429: {**_ENVELOPE, "description": "Rate limit exceeded."},
 }

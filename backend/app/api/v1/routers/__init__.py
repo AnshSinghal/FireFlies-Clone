@@ -16,6 +16,7 @@ from app.api.v1.routers import (
     meetings,
     search,
     summaries,
+    tags,
     transcript,
     users,
 )
@@ -29,5 +30,6 @@ api_router.include_router(meetings.router)
 api_router.include_router(summaries.router)
 api_router.include_router(users.router)
 api_router.include_router(comments.router)
+api_router.include_router(tags.router)
 
 __all__ = ["api_router"]

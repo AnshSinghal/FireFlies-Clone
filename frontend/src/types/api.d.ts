@@ -459,6 +459,46 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/{meeting_id}/tags': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Set a meeting's tags
+     * @description REPLACES the meeting's tag list with exactly `tag_ids` — set semantics, so the editor popover applies its checkbox state in one request and an empty list clears everything. Duplicate ids collapse; more than 10 distinct tags is a **422** with code `TAG_LIMIT`; an unknown id is a **404** listing every missing one.
+     */
+    put: operations['set_meeting_tags_api_v1_meetings__meeting_id__tags_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/tags/proposals': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Propose tags for a meeting
+     * @description Up to 5 deterministic suggestions from the AI provider's top transcript terms, excluding tags the meeting already carries. `tag_id` is set when a tag with that name exists, so accepting it is a plain `PUT`; when null, create the tag first. Nothing is persisted — dismissals are the client's business.
+     */
+    get: operations['propose_tags_api_v1_meetings__meeting_id__tags_proposals_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/meetings/{meeting_id}/transcript': {
     parameters: {
       query?: never
@@ -499,6 +539,54 @@ export interface paths {
     options?: never
     head?: never
     patch?: never
+    trace?: never
+  }
+  '/api/v1/tags': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List tags
+     * @description Every tag with its live usage count, sorted by name (case-insensitively). Counts exclude soft-deleted meetings, and an unused tag still appears showing zero — the settings page lists it either way. Names are stored without the leading `#`; add the glyph at render time.
+     */
+    get: operations['list_tags_api_v1_tags_get']
+    put?: never
+    /**
+     * Create a tag
+     * @description Names are unique case-insensitively — creating `Sales` next to `sales` is a **409** naming the existing tag. A leading `#` is stripped before validation; 1-24 characters after that. Omitting `color_index` leaves it null, meaning the client derives the colour from the name via the shared speaker-colour hash.
+     */
+    post: operations['create_tag_api_v1_tags_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tags/{tag_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete a tag, optionally merging it into another
+     * @description Without `merge_into`: the tag and its meeting associations are removed outright. With `merge_into`: every meeting carrying this tag gains the surviving one first (no duplicates), THEN the tag is removed — which is the merge operation. The target must exist and must not be the tag being deleted.
+     */
+    delete: operations['delete_tag_api_v1_tags__tag_id__delete']
+    options?: never
+    head?: never
+    /**
+     * Rename or recolour a tag
+     * @description Partial update. A rename propagates everywhere automatically — meetings reference tags by id — and collides with existing names under the same case-insensitive 409 rule as create. Sending `color_index: null` drops a pinned colour and returns the tag to its hash-derived one.
+     */
+    patch: operations['update_tag_api_v1_tags__tag_id__patch']
     trace?: never
   }
   '/api/v1/users': {
@@ -795,7 +883,7 @@ export interface components {
       /** Participants */
       participants: string[]
       /** Tags */
-      tags: string[]
+      tags: components['schemas']['TagFacet'][]
     }
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -1067,6 +1155,19 @@ export interface components {
      * @enum {string}
      */
     MeetingSource: 'upload' | 'manual' | 'seed' | 'integration'
+    /**
+     * MeetingTagsUpdate
+     * @description PUT body: the FULL tag list for a meeting, set semantics (T-36.1).
+     *
+     *     Replaces whatever is there — the editor popover applies its checkbox state
+     *     on close, and a diff protocol would just re-derive this on the server. The
+     *     10-tag cap is enforced in the service (after de-duplication) so the error
+     *     is a TAG_LIMIT the client can match on, not a generic length failure.
+     */
+    MeetingTagsUpdate: {
+      /** Tag Ids */
+      tag_ids: number[]
+    }
     /**
      * MeetingUpdate
      * @description Partial update. Every field optional; unset fields are left alone.
@@ -1368,14 +1469,117 @@ export interface components {
        */
       provider: string
     }
-    /** TagRef */
-    TagRef: {
-      /** Color */
-      color: string
+    /**
+     * TagCreate
+     * @description A new tag (T-36.3's `Create "<query>"`, or the settings page).
+     */
+    TagCreate: {
+      /** Color Index */
+      color_index?: number | null
+      /** Name */
+      name: string
+    }
+    /**
+     * TagFacet
+     * @description One tag as the filter panel's chip cloud offers it (T-36.5).
+     *
+     *     Richer than the plain strings the other facets are: the list filter takes
+     *     tag IDS (`?tags=1,2`), the chip needs a colour, and T-36.5 specifies counts
+     *     on the cloud — so all three ride along. Only tags with at least one live
+     *     meeting appear; a zero-count option here would match nothing, which is how
+     *     a filter panel loses the user's trust (unused tags still show on the
+     *     settings page via `GET /tags`).
+     */
+    TagFacet: {
+      /** Color Index */
+      color_index: number | null
+      /**
+       * Count
+       * @description Live meetings carrying this tag.
+       */
+      count: number
       /** Id */
       id: number
       /** Name */
       name: string
+    }
+    /**
+     * TagList
+     * @description `{items: [...]}` rather than a bare array, matching every other list.
+     */
+    TagList: {
+      /** Items */
+      items: components['schemas']['TagOut'][]
+    }
+    /**
+     * TagOut
+     * @description One tag as the settings page and the editor popover see it.
+     *
+     *     No defaults on any field: a default makes it optional in the emitted
+     *     OpenAPI, and the generated client then types an absence the API never
+     *     produces (the ADR-076 defect).
+     */
+    TagOut: {
+      /** Color Index */
+      color_index: number | null
+      /** Id */
+      id: number
+      /** Name */
+      name: string
+      /**
+       * Usage Count
+       * @description Meetings carrying this tag, excluding deleted ones.
+       */
+      usage_count: number
+    }
+    /**
+     * TagProposal
+     * @description One suggested tag (T-36.4). Nothing about it is persisted.
+     *
+     *     `tag_id` is set when a tag with this name already exists — accepting it is
+     *     then a plain PUT — and null when accepting means creating the tag first.
+     *     Dismissals never reach the server; they live in the client.
+     */
+    TagProposal: {
+      /** Name */
+      name: string
+      /** Tag Id */
+      tag_id: number | null
+    }
+    /** TagProposalList */
+    TagProposalList: {
+      /** Items */
+      items: components['schemas']['TagProposal'][]
+    }
+    /**
+     * TagRef
+     * @description A tag on a meeting row or detail — LIGHT on purpose.
+     *
+     *     `usage_count` (see `schemas/tag.py:TagOut`) is deliberately absent: a
+     *     Notebook page carries up to twenty rows x ten chips, and the count is a
+     *     settings-page concern, not a chip concern. The schemas are direction-split
+     *     already, so the two shapes diverging is the design, not drift.
+     */
+    TagRef: {
+      /** Color Index */
+      color_index: number | null
+      /** Id */
+      id: number
+      /** Name */
+      name: string
+    }
+    /**
+     * TagUpdate
+     * @description Rename and/or recolour (T-36.6). Omitted fields are left alone.
+     *
+     *     `color_index: null` is a real edit — "go back to the hash-derived colour" —
+     *     so the service reads `model_fields_set`, not `is not None`.
+     */
+    TagUpdate: {
+      /** Color Index */
+      color_index?: number | null
+      /** Name */
+      name?: string | null
     }
     /**
      * TeamMemberOut
@@ -1720,8 +1924,10 @@ export interface operations {
         min_duration?: number | null
         /** @description Seconds. */
         max_duration?: number | null
-        /** @description Tag names. ALL must match. */
-        tags?: string[] | null
+        /** @description Tag ids, comma-separated. `tags_mode` decides how they combine. */
+        tags?: string | null
+        /** @description `or` (default): meetings carrying ANY selected tag. `and`: only meetings carrying ALL of them. */
+        tags_mode?: 'or' | 'and'
         /** @description Channel slug. */
         channel?: string | null
         /** @description True = has OPEN action items. */
@@ -3037,6 +3243,126 @@ export interface operations {
       }
     }
   }
+  set_meeting_tags_api_v1_meetings__meeting_id__tags_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MeetingTagsUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TagList']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  propose_tags_api_v1_meetings__meeting_id__tags_proposals_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TagProposalList']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   get_transcript_api_v1_meetings__meeting_id__transcript_get: {
     parameters: {
       query?: {
@@ -3137,6 +3463,198 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  list_tags_api_v1_tags_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TagList']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  create_tag_api_v1_tags_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TagCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TagOut']
+        }
+      }
+      /** @description Conflicts with existing state, e.g. a duplicate name. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  delete_tag_api_v1_tags__tag_id__delete: {
+    parameters: {
+      query?: {
+        /** @description Id of the surviving tag to reassign this tag's meetings to. */
+        merge_into?: number | null
+      }
+      header?: never
+      path: {
+        tag_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description No such resource. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  update_tag_api_v1_tags__tag_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tag_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TagUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TagOut']
+        }
+      }
+      /** @description No such resource. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Conflicts with existing state, e.g. a duplicate name. */
+      409: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */

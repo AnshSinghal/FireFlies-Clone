@@ -70,6 +70,11 @@ class CommentNotFoundError(NotFoundError):
     message = "Comment not found."
 
 
+class TagNotFoundError(NotFoundError):
+    code = "TAG_NOT_FOUND"
+    message = "Tag not found."
+
+
 class ForbiddenError(AppException):
     status_code = 403
     code = "FORBIDDEN"
@@ -138,10 +143,32 @@ class ValidationError(AppException):
     message = "The request payload is invalid."
 
 
+class TagLimitError(ValidationError):
+    """An eleventh tag on a meeting (T-36.10).
+
+    A 422 with its own code rather than the generic VALIDATION_ERROR, because
+    the client shows a specific message for it ("max 10 tags") and matching on
+    a code is stable where matching on wording is not.
+    """
+
+    code = "TAG_LIMIT"
+    message = "A meeting can carry at most 10 tags."
+
+
 class ConflictError(AppException):
     status_code = 409
     code = "CONFLICT"
     message = "The request conflicts with the current state."
+
+
+class DuplicateTagError(ConflictError):
+    """`sales` vs `Sales` vs `#sales` are one tag, not three (T-36.10).
+
+    The message names the EXISTING tag so the editor can offer "use 'Sales'
+    instead" rather than a bare rejection.
+    """
+
+    code = "DUPLICATE_TAG"
 
 
 class RateLimitError(AppException):
