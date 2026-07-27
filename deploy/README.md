@@ -49,6 +49,38 @@ docker logs fireflies-backend --tail 100         # app logs
 ~/apps/fireflies/deploy/deploy.sh --force        # manual redeploy
 ```
 
+## Known limitation: a seconds-long unstyled window on every deploy
+
+Observed directly on 2026-07-28. `/notebook` served HTML linking
+`/_next/static/chunks/2u69cybe1lsrx.css`, and that URL returned **404**. Twenty
+seconds later the HTML named a different hash which resolved fine. A page whose
+only stylesheet 404s renders completely unstyled.
+
+**Mechanism.** nginx proxies everything to the frontend container — there is no
+static `alias`, so HTML and assets come from the same place, which is normally
+what makes a swap atomic. The race is across *requests*, not within one:
+`docker compose up -d` replaces the container between a visitor's HTML request
+and their asset requests. The HTML they already hold names hashes that the new
+container has never heard of. Content-hashed filenames make this correct
+behaviour — the old chunk genuinely no longer exists — and a 404 rather than
+stale content is the honest failure.
+
+**Scope.** Only on an actual rebuild, which only happens when `origin/main`
+moves, and only for a request in flight across the swap. The 90-second timer
+does not widen it; the timer usually finds nothing to do.
+
+**Not fixed, and what fixing it would take.** The real remedy is retaining the
+previous build's `.next/static` so old hashes keep resolving through the
+changeover — a named volume that new builds copy into rather than replace, plus
+a sweep for anything older than two builds. That is a persistent-state change to
+a deploy that currently has none: the whole script's safety property is
+"build first, swap second, a failed build leaves the running stack untouched",
+and adding a mutable shared volume is the kind of thing that turns a stateless
+deploy into one with its own failure modes. For a single-box demo, a window of a
+few seconds per push did not justify it. It is written down rather than fixed
+because an evaluator loading the page mid-push would see something broken and
+deserve an explanation that exists.
+
 ## First-time install (already done; recorded for reproducibility)
 
 ```bash
