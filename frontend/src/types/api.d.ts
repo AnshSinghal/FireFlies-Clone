@@ -44,6 +44,30 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/comments/{comment_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete a comment
+     * @description Author-only, soft. A deleted parent with replies survives as a 'Comment deleted' tombstone so the thread doesn't collapse.
+     */
+    delete: operations['delete_comment_api_v1_comments__comment_id__delete']
+    options?: never
+    head?: never
+    /**
+     * Edit or resolve a comment
+     * @description Author-only. Body edits set the `edited` marker; resolve applies to threads.
+     */
+    patch: operations['update_comment_api_v1_comments__comment_id__patch']
+    trace?: never
+  }
   '/api/v1/me': {
     parameters: {
       query?: never
@@ -304,6 +328,30 @@ export interface paths {
      * @description Appended after the extracted items and marked `manual`, so a task somebody typed is distinguishable from one the model guessed.
      */
     post: operations['create_action_item_api_v1_meetings__meeting_id__action_items_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/comments': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List comment threads
+     * @description Top-level threads in timeline order; replies nested one level.
+     */
+    get: operations['list_comments_api_v1_meetings__meeting_id__comments_get']
+    put?: never
+    /**
+     * Add a comment
+     * @description Optionally anchored to a segment (`segment_id`) or replying to a top-level comment (`parent_id`). Mentions are participant ids.
+     */
+    post: operations['create_comment_api_v1_meetings__meeting_id__comments_post']
     delete?: never
     options?: never
     head?: never
@@ -647,6 +695,56 @@ export interface components {
       /** Slug */
       slug: string
     }
+    /** CommentCreate */
+    CommentCreate: {
+      /** Body */
+      body: string
+      /** Mentions */
+      mentions?: number[]
+      /** Parent Id */
+      parent_id?: number | null
+      /** Segment Id */
+      segment_id?: number | null
+    }
+    /** CommentOut */
+    CommentOut: {
+      author: components['schemas']['UserRef']
+      /** Body */
+      body: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Id */
+      id: number
+      /** Is Deleted */
+      is_deleted: boolean
+      /** Is Edited */
+      is_edited: boolean
+      /** Is Resolved */
+      is_resolved: boolean
+      /** Mentions */
+      mentions: components['schemas']['MentionRef'][]
+      /** Parent Id */
+      parent_id: number | null
+      /** Replies */
+      replies: components['schemas']['CommentOut'][]
+      /** Segment Id */
+      segment_id: number | null
+      /** Start Ms */
+      start_ms: number | null
+    }
+    /**
+     * CommentUpdate
+     * @description Partial update. Every field optional; unset fields are left alone.
+     */
+    CommentUpdate: {
+      /** Body */
+      body?: string | null
+      /** Is Resolved */
+      is_resolved?: boolean | null
+    }
     /** ErrorDetail */
     ErrorDetail: {
       /**
@@ -819,6 +917,11 @@ export interface components {
     MeetingDetail: {
       channel?: components['schemas']['ChannelRef'] | null
       /**
+       * Comment Count
+       * @default 0
+       */
+      comment_count: number
+      /**
        * Created At
        * Format: date-time
        */
@@ -985,6 +1088,13 @@ export interface components {
       title?: string | null
       visibility?: components['schemas']['Visibility'] | null
     }
+    /** MentionRef */
+    MentionRef: {
+      /** Display Name */
+      display_name: string
+      /** Participant Id */
+      participant_id: number
+    }
     /**
      * NoteGroup
      * @description Bullet notes, grouped under their outline chapter.
@@ -1009,6 +1119,27 @@ export interface components {
       start_ms: number
       /** Title */
       title: string
+    }
+    /** Page[CommentOut] */
+    Page_CommentOut_: {
+      /** Has Next */
+      readonly has_next: boolean
+      /** Items */
+      items: components['schemas']['CommentOut'][]
+      /**
+       * Page
+       * @description 1-indexed page number.
+       */
+      page: number
+      /** Page Size */
+      page_size: number
+      /**
+       * Total
+       * @description Total matching rows, ignoring pagination.
+       */
+      total: number
+      /** Total Pages */
+      readonly total_pages: number
     }
     /** Page[MeetingListItem] */
     Page_MeetingListItem_: {
@@ -1439,6 +1570,88 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['SidebarChannels']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  delete_comment_api_v1_comments__comment_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        comment_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  update_comment_api_v1_comments__comment_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        comment_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CommentUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CommentOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */
@@ -2323,6 +2536,131 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  list_comments_api_v1_meetings__meeting_id__comments_get: {
+    parameters: {
+      query?: {
+        /** @description 1-indexed page number. */
+        page?: number
+        /** @description Items per page. Clamped to 100. */
+        page_size?: number
+      }
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['Page_CommentOut_']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  create_comment_api_v1_meetings__meeting_id__comments_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CommentCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CommentOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */
