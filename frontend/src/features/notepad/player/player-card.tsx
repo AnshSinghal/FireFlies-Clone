@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo, useRef } from 'react'
 
+import { useBookmarks } from '@/lib/api/highlights'
 import { useSoundbites } from '@/lib/api/soundbites'
 import { useSummary } from '@/lib/api/summaries'
 import { useTranscript } from '@/lib/api/transcript'
@@ -54,6 +55,17 @@ export function PlayerCard({ meetingId, src, className }: PlayerCardProps) {
   // Saved clips become amber bands on the seekbar (T-33.7). Shared with the
   // flyout through the query cache, so a delete there removes the band here.
   const { data: soundbiteData } = useSoundbites(meetingId)
+  const { data: bookmarkData } = useBookmarks(meetingId)
+
+  const bookmarkTicks = useMemo(
+    () =>
+      (bookmarkData ?? []).map((bookmark) => ({
+        id: bookmark.id,
+        startMs: bookmark.start_ms,
+        label: bookmark.snippet,
+      })),
+    [bookmarkData],
+  )
 
   const soundbites = useMemo<SoundbiteBand[]>(
     () =>
@@ -116,6 +128,7 @@ export function PlayerCard({ meetingId, src, className }: PlayerCardProps) {
         chapters={chapters}
         cues={cues}
         soundbites={soundbites}
+        bookmarks={bookmarkTicks}
         onSeek={player.seek}
         onSeekChapter={(ms) => seekTo(ms, { reveal: true })}
       />
