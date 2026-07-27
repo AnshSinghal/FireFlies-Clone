@@ -38,6 +38,7 @@ export interface MeetingFilters {
 
 export const qk = {
   me: ['me'] as const,
+  health: ['health'] as const,
 
   meetings: {
     all: ['meetings'] as const,
