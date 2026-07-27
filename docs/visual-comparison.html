@@ -113,14 +113,22 @@
     <h1>Visual comparison — Fireflies reference vs this clone</h1>
     <p>
       Each pair shows the reference screenshot (<code>docs/reference/fireflies/</code>) beside our
-      capture (<code>docs/screenshots/</code>) at matched width. References were taken at 2000&#215;~1050
-      (2&#215; scale, wider window); ours at 1440&#215;900&#64;1&#215; — so compare proportions, not pixel
-      dimensions, and expect ours to run slightly taller at equal width.
+      capture (<code>docs/screenshots/</code>) at matched width. References are 2000&#215;~1050, ours
+      1440&#215;900 at 1&#215; — so compare <strong>proportions, not pixel dimensions</strong>.
+      An earlier version of this note called the references &#8220;2&#215; scale&#8221;; the measurements
+      do not support that. At 2&#215; their topbar would be 35px and their row titles 9px. Measured,
+      those are 71&#215;px and ~19px, which only makes sense at 1&#215; on a wide window. Either way
+      the ratios below are the evidence and they are scale-free, which is why they are quoted as
+      ratios.
     </p>
     <p class="hue-note">
-      <strong>Expected hue difference:</strong> design.md fixes this clone&#8217;s accent as
-      <strong>blue</strong>; Fireflies uses violet. Accent-hue deltas are deliberate, not drift.
-      The comparison targets are <strong>layout, spacing and type scale</strong>.
+      <strong>The accent matches — do not expect a hue difference.</strong> This note used to say
+      the clone was blue and Fireflies violet, and that deltas were deliberate. That was written
+      from PLAN.md A3.1, which supplied <code>#2A6EF4</code> and flagged it as unsampled. T-02.1
+      sampled these eight screenshots and found <code>#6A39EF</code> violet; <code>tokens.css</code>
+      has resolved <code>--ff-accent</code> to violet ever since (<strong>ADR-011</strong>). Reading
+      the old note, an evaluator would have gone looking for a difference that is not there, or
+      discounted a match that was earned. Judge the hue like everything else.
     </p>
     <p>
       Refresh captures with
