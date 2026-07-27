@@ -315,7 +315,13 @@ heading to carry it.
 - Settings: a left sub-nav of sections with `Soon` badges, and a titled body
   per section (references 07, 08).
 - Dark theme: near-black app background, lifted card surfaces, no light-mode
-  shadows, legible chips and avatars — checked on every dark capture.
+  shadows, legible chips and avatars — checked on every dark capture. Also
+  **geometrically identical to light**, which is measured rather than assumed:
+  edge-detecting the horizontal rules in `02-meetings-list`, `07-settings-recording`
+  and `09-notepad` gives the same count at the same y-positions in both themes.
+  A theme that shifts layout is a token-layer bug — a spacing value reachable
+  from a colour scheme — and it would be invisible in a side-by-side of two
+  differently-coloured screenshots.
 
 ## Not fixed here
 
