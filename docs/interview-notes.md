@@ -121,6 +121,64 @@ row, and the budget is the thing that makes "it feels fast" falsifiable.
   `30 min` (`docs/ui-audit.md`, item 1) — kept for consistency with the player
   clock, but it is a defensible thing to change if the evaluator disagrees.
 
+## 8 · Which bugs did the tests find that reading the code could not?
+
+Four, and the mechanism matters more than the bug in each case.
+
+**The transcript silently stopped at 200 lines.** `useTranscript` fetched one
+page and never followed `next_cursor` — its own docstring said
+paging-to-exhaustion was coming, and it never arrived. Any meeting over 200
+segments showed 200 lines, and the find bar answered `0 of 0` for a word
+plainly in the recording, because it searches what the client holds.
+
+*Why nothing caught it:* every seeded meeting tops out at 159 segments. The bug
+needed a transcript longer than any fixture in the project to become visible,
+so no amount of running the existing suite could have surfaced it. The fix was
+to build the fixture — `34-stress.spec.ts` imports a 5,000-segment meeting
+through the real ingest path, asserts on it, and deletes it again so the seed
+counts a dozen other specs depend on stay put.
+
+**Three of the eight speaker hues were the same violet.** `--ff-speaker-6` and
+`-7` were `#6f4ff0` and `#6d4be8` — ΔE 2.5 apart, and both barely separable
+from speaker-0. The comment above them said "chosen to be distinguishable at
+24px".
+
+*Why nothing caught it:* it is not a contrast failure, so axe is silent, and at
+a glance eight violet-ish avatars look like a palette. It took writing the
+dichromacy simulation in `33-colour-vision.spec.ts` and printing the worst pair
+to see that the worst pair was in *ordinary* vision. Worth knowing: eight hues
+cannot all separate under red-green blindness while still looking like a normal
+palette, so the real mitigation is that a speaker's name is always rendered
+beside their colour — which that spec now asserts directly.
+
+**Nothing in the deployed chain was gzipping, and the nginx config had never
+been deployed at all.** `next start` compresses HTML and RSC responses but
+serves `/_next/static` untouched, and the entry point had no `gzip` block — so
+every visitor downloaded ~2.7× what they needed. Chasing it turned up the
+larger problem: `deploy.sh` only ever rebuilt containers, so
+`nginx-fireflies.conf` had sat in git looking applied since T-44 while the box
+ran whatever was installed by hand.
+
+*Why nothing caught it:* the repo and the box disagreed and nothing compared
+them. The measurement that exposed it was a route-JS budget that gzipped the
+bytes itself rather than trusting the wire — `responseBodySize` was reporting
+raw bytes against a budget denominated in gzipped ones.
+
+**Both built-in sidebar views showed an empty Notebook.** "All Meetings" and
+"My Meetings" link to `?channel=<id>`, which went straight to the API's
+`channel` filter — and that matches a *stored* channel slug. Neither built-in
+is one, so both queries matched nothing.
+
+*Why nothing caught it:* the rail's badges kept reporting 8 and 2 beside the
+empty list, because the counts come from a different endpoint that knows what
+the views mean. Two of the app's most prominent nav items were dead, under
+correct-looking numbers.
+
+The through-line: each one needed an instrument that did not exist yet — a
+longer fixture, a colour simulation, a compression-aware measurement, a test
+that clicks the nav rather than trusting its badge. Reading the code would not
+have produced any of them, and neither would running the suite as it stood.
+
 ## Things I would rather be asked
 
 - Why the mutations project runs one worker (three "feature bugs" that were
