@@ -342,7 +342,26 @@ out of time:
 
 ## Testing
 
-_(Counts and coverage added in T-45.10.)_
+**440 backend tests** across 27 files and **548 end-to-end tests** across 44 spec files, all green.
+
+| Suite | Tests | Runs in | Covers |
+|---|---|---|---|
+| pytest | 440 | ~28s | Services, parsers, the AI layer, schema invariants, latency budgets |
+| Playwright `read-only` | ~430 | ~3m | Every read surface, in parallel |
+| Playwright `mutations` | ~90 | ~1m | Writes, serialised — they share one database |
+| Playwright `chromium-mobile` | 36 | ~26s | The 393px layout (`@mobile`) |
+| Playwright `visual` | 16 | ~20s | Screenshot comparison (`@visual`) |
+| Playwright `firefox` + `webkit` | 16 | ~17s | Platform seams only (`@crossbrowser`) |
+
+Backend coverage is **95%** over `services/`, `ai/` and `parsers/` — the plan's target is 80%.
+Regenerate with `make coverage`, which writes `backend/htmlcov/index.html`.
+
+The e2e total exceeds the number of `test()` declarations because the `@mobile`, `@visual` and
+`@crossbrowser` tags run the same declaration in more than one project. Both numbers are honest; the
+executed count is the one printed by `make e2e`.
+
+Which tests found which bugs — the more useful question at interview — is answered in
+**[docs/interview-notes.md](docs/interview-notes.md) §8**.
 
 ```bash
 make verify      # Everything CI runs, in CI's order — the one to use before pushing
