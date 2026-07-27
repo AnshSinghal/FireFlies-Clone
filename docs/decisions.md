@@ -2175,6 +2175,49 @@ reference, no resolved date — an honest null beats a clock-dependent guess.
 
 **Consequence.** The provider layer contains zero calls to `now()`, and the
 same fixture asserts the same dates forever.
+## ADR-095 — Single delete confirms first; the undo toast stays
+
+**Context.** T-12 shipped row deletion with an Undo toast and no confirmation
+— defensible for a soft delete with a six-second escape hatch. T-28 specifies a
+named confirmation dialog as well.
+
+**Decision.** Both. The dialog stops the accident; the toast catches the
+confirmed-but-regretted. They guard different mistakes, and each is cheap.
+
+The dialog names the meeting in bold — "which one" is the whole question — and
+autofocuses CANCEL, because a destructive dialog that autofocuses its
+destructive button turns an Enter still travelling from the opening keystroke
+into a deletion.
+
+**Consequence.** Every pre-existing delete test needed the confirm step added.
+The double-click guard (one DELETE per confirmation, enforced by a synchronous
+ref) is tested by dispatching two DOM clicks in one evaluate — `locator.click()`
+re-checks actionability and refuses to click a button that disabled itself,
+which is the correct product behaviour making the naive test impossible.
+
+**Also learned here:** deriving a confirm dialog's button testids from the
+dialog's own id (`delete-dialog-confirm`) broke the one test I renamed with a
+blanket substitution. Rename by call site, not by pattern.
+
+---
+
+## ADR-096 — The exit animation animates `height`, legally
+
+**Context.** T-28.6 wants a deleted row to animate out rather than vanish, and
+`height: auto` is famously not animatable.
+
+**Decision.** Animate `height` to zero directly — legal here only because a
+Notebook row is a FIXED 72px (`h-row`), a token the skeleton shares. The margin
+goes with it, because the list is `space-y-2` and a collapsed row would
+otherwise leave its gap behind.
+
+The row plays out BEFORE the cache changes: the list is query-driven, so a row
+disappears the instant the data does, and there is no unmount transition to
+hook. Mark, wait one animation, then mutate.
+
+**Consequence.** A 200ms constant in the view (`ROW_EXIT_MS`) that must match
+the CSS duration; both point at each other in comments. If rows ever become
+variable-height, this becomes the grid-rows trick — noted in the stylesheet.
 
 ---
 

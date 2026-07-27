@@ -37,6 +37,11 @@ async function deleteFirstRow(page: Page): Promise<void> {
   await row.hover()
   await row.getByTestId('meeting-row-kebab').click()
   await page.getByTestId('meeting-row-delete').click()
+
+  // T-28.2 put a confirmation in front of this. The undo toast is still the
+  // safety net; the dialog is what stops the accident in the first place.
+  await expect(page.getByTestId('delete-dialog')).toBeVisible()
+  await page.getByTestId('delete-dialog-confirm').click()
 }
 
 test.describe('toasts · delete and undo', { tag: '@mutates' }, () => {
@@ -144,11 +149,15 @@ test.describe('notebook · deleting @mutates', () => {
     await row.getByTestId('meeting-row-kebab').click()
     await page.getByTestId('meeting-row-delete').click()
 
+    // Confirmed first (T-28.2): the dialog stops the accident, the undo toast
+    // catches the confirmed one.
+    await page.getByTestId('delete-dialog-confirm').click()
+
     await expect(page.getByTestId('toast').first()).toContainText('Meeting deleted')
     await expect(page.getByTestId('meeting-row')).toHaveCount(before - 1)
 
     // Put it back, so the next writer starts from the seeded state.
-    await page.getByTestId('toast-action').click()
+    await page.getByTestId('toast-action').first().click()
     await expect(page.getByTestId('meeting-row')).toHaveCount(before)
   })
 })
@@ -176,7 +185,7 @@ test.describe('bulk delete', { tag: '@mutates' }, () => {
     await expect(dialog).toBeVisible()
     await expect(dialog).toContainText('Delete 2 meetings?')
 
-    await page.getByTestId('confirm-dialog-confirm').click()
+    await page.getByTestId('bulk-confirm-confirm').click()
 
     await expect(page.getByTestId('toast').first()).toContainText('2 meetings deleted')
     await expect(page.getByTestId('meeting-row')).toHaveCount(before - 2)
@@ -194,7 +203,7 @@ test.describe('bulk delete', { tag: '@mutates' }, () => {
     await selectRow(page, 0)
     await selectRow(page, 1)
     await page.getByTestId('bulk-delete').click()
-    await page.getByTestId('confirm-dialog-confirm').click()
+    await page.getByTestId('bulk-confirm-confirm').click()
     await expect(page.getByTestId('meeting-row')).toHaveCount(before.length - 2)
 
     await page.getByTestId('toast-action').click()
@@ -211,7 +220,7 @@ test.describe('bulk delete', { tag: '@mutates' }, () => {
 
     await selectRow(page, 0)
     await page.getByTestId('bulk-delete').click()
-    await page.getByTestId('confirm-dialog-confirm').click()
+    await page.getByTestId('bulk-confirm-confirm').click()
 
     // Leaving ids selected after they are gone would let a second Delete act
     // on rows that no longer exist.
@@ -997,5 +1006,127 @@ test.describe('edit meeting', { tag: '@mutates' }, () => {
     await page.unrouteAll({ behavior: 'ignoreErrors' })
     await page.reload()
     await expect(page.getByTestId('notepad-title')).toHaveText(original, { timeout: 20_000 })
+  })
+})
+
+test.describe('delete meeting', { tag: '@mutates' }, () => {
+  async function openDeleteDialog(page: Page): Promise<string> {
+    await page.goto('/notebook')
+    await expect(page.getByTestId('meeting-list')).toBeVisible({ timeout: 20_000 })
+
+    const row = page.getByTestId('meeting-row').first()
+    const title = (await row.getByTestId('meeting-row-title').innerText()).trim()
+
+    await row.hover()
+    await row.getByTestId('meeting-row-kebab').click()
+    await page.getByTestId('meeting-row-delete').click()
+    await expect(page.getByTestId('delete-dialog')).toBeVisible()
+
+    return title
+  }
+
+  test('T28-D/E · confirming removes the row and offers Undo', async ({ page }) => {
+    await page.goto('/notebook')
+    await expect(page.getByTestId('meeting-list')).toBeVisible({ timeout: 20_000 })
+    const before = await page.getByTestId('meeting-row').count()
+
+    const title = await openDeleteDialog(page)
+    await page.getByTestId('delete-dialog-confirm').click()
+
+    await expect(page.getByTestId('toast').first()).toContainText('Meeting deleted')
+    await expect(page.getByTestId('meeting-row')).toHaveCount(before - 1)
+
+    // T28-E: Undo puts it back where it was.
+    await page.getByTestId('toast-action').first().click()
+    await expect(page.getByTestId('toast').first()).toContainText('Meeting restored', {
+      timeout: 15_000,
+    })
+    await expect(page.getByTestId('meeting-row')).toHaveCount(before)
+    await expect(page.getByTestId('meeting-row').first()).toContainText(title)
+  })
+
+  test('T28-H · a double-click fires exactly one DELETE', async ({ page }) => {
+    let deletes = 0
+    await page.route('**/api/v1/meetings/*', async (route) => {
+      if (route.request().method() !== 'DELETE') return route.continue()
+      deletes += 1
+      // Held open, so the second click lands while the first is in flight —
+      // the only window in which the guard matters.
+      await new Promise((resolve) => setTimeout(resolve, 800))
+      return route.continue()
+    })
+
+    await openDeleteDialog(page)
+
+    /*
+     * Both clicks dispatched in ONE evaluate.
+     *
+     * `locator.click()` re-checks actionability, and the button disables
+     * itself the moment the first click starts the request — so a second call
+     * waits for an element that is deliberately unavailable and the test times
+     * out instead of testing anything. Dispatching directly is also a truer
+     * double-click: two events in one frame, which is exactly what the
+     * synchronous `fired` ref exists to catch.
+     */
+    await page.getByTestId('delete-dialog-confirm').evaluate((button: HTMLElement) => {
+      button.click()
+      button.click()
+    })
+
+    await expect(page.getByTestId('toast').first()).toContainText('Meeting deleted', {
+      timeout: 15_000,
+    })
+    expect(deletes).toBe(1)
+
+    await page.getByTestId('toast-action').first().click()
+    await expect(page.getByTestId('toast').first()).toContainText('Meeting restored', {
+      timeout: 15_000,
+    })
+  })
+
+  test('T28-G · deleting from the Notepad returns to the Notebook', async ({ page, request }) => {
+    // A throwaway meeting, so the seeded eight are untouched.
+    const created = await request.post('http://127.0.0.1:8100/api/v1/meetings', {
+      data: { title: 'Meeting to delete from the notepad' },
+    })
+    const id = (await created.json()).id as number
+
+    await page.goto(`/meeting/${id}`)
+    await expect(page.getByTestId('notepad-header')).toBeVisible({ timeout: 20_000 })
+
+    await page.getByTestId('notepad-kebab').click()
+    await page.getByTestId('notepad-delete').click()
+    // The Notepad's dialog keeps the DEFAULT id — only the bulk bar names its
+    // own. A blanket rename here is how this test broke the first time.
+    await page.getByTestId('confirm-dialog-confirm').click()
+
+    // Back to the list, rather than sitting on a page whose subject is gone.
+    await page.waitForURL(/\/notebook/, { timeout: 20_000 })
+    await expect(page.getByTestId('meeting-list')).toBeVisible()
+    await expect(page.getByTestId('meeting-list')).not.toContainText(
+      'Meeting to delete from the notepad',
+    )
+  })
+
+  test('T28-I · a failed delete puts the row back and offers Retry', async ({ page }) => {
+    await page.goto('/notebook')
+    await expect(page.getByTestId('meeting-list')).toBeVisible({ timeout: 20_000 })
+    const before = await page.getByTestId('meeting-row').count()
+
+    await page.route('**/api/v1/meetings/*', (route) =>
+      route.request().method() === 'DELETE'
+        ? route.fulfill({
+            status: 500,
+            json: { error: { code: 'INTERNAL_ERROR', message: 'Boom', details: {} } },
+          })
+        : route.continue(),
+    )
+
+    await openDeleteDialog(page)
+    await page.getByTestId('delete-dialog-confirm').click()
+
+    // The row comes back, and the failure is reported with a way to try again.
+    await expect(page.getByTestId('meeting-row')).toHaveCount(before, { timeout: 15_000 })
+    await expect(page.getByTestId('toast-action').first()).toHaveText('Retry')
   })
 })
