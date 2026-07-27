@@ -41,6 +41,21 @@ type MeetingStmt = Select[tuple[Meeting]]
 
 
 @dataclass(frozen=True, slots=True)
+class TagSelection:
+    """Which tags to filter by, and how they combine (T-36.8).
+
+    The mode travels WITH the ids rather than as a sibling filter field: a
+    registered filter function receives exactly one value, and `or`/`and` is
+    not a filter of its own — alone it selects nothing. Ids, not names: names
+    are mutable (T-36.6 rename) and a shared URL should survive one.
+    """
+
+    ids: tuple[int, ...]
+    #: `or` (default): meetings carrying ANY selected tag. `and`: ALL of them.
+    mode: str = "or"
+
+
+@dataclass(frozen=True, slots=True)
 class MeetingFilters:
     """Everything `GET /meetings` can narrow by (T-11.1).
 
@@ -55,9 +70,8 @@ class MeetingFilters:
     to_date: date | None = None
     min_duration: int | None = None
     max_duration: int | None = None
-    #: Tag NAMES. Tags have no slug — the name is the identity, uniquely
-    #: constrained, and what the chip displays.
-    tags: tuple[str, ...] = ()
+    #: Tag ids plus the or/and mode, bundled — see `TagSelection`.
+    tags: TagSelection | None = None
     channel: str | None = None
     has_action_items: bool | None = None
     source: MeetingSource | None = None
@@ -154,15 +168,26 @@ def _filter_max_duration(stmt: MeetingStmt, value: int) -> MeetingStmt:
     return stmt.where(Meeting.duration_seconds <= value)
 
 
-def _filter_tags(stmt: MeetingStmt, value: tuple[str, ...]) -> MeetingStmt:
-    """ALL of the given tags, not any.
+def _filter_tags(stmt: MeetingStmt, value: TagSelection) -> MeetingStmt:
+    """ANY of the selected tags by default, ALL of them on the toggle (T-36.8).
 
-    Tags narrow. Selecting `#product` and `#q3` and getting back everything
-    tagged either one is the opposite of what two active chips imply.
+    This DELIBERATELY flips the pre-T-36 behaviour, which was AND-only. Tags
+    are categories, and two chips usually mean "show me sales AND ALSO urgent
+    stuff" — a union. The intersection reading is real too, which is why it is
+    a labelled toggle rather than a judgement call: ambiguous filter semantics
+    is a usability bug either way.
+
+    Both arms are `Meeting.tags.any(...)` EXISTS subqueries, never joins — a
+    join returns a meeting once per matching tag and silently corrupts both
+    the page and `total`.
     """
-    for name in value:
-        stmt = stmt.where(Meeting.tags.any(Tag.name == name))
-    return stmt
+    if not value.ids:
+        return stmt
+    if value.mode == "and":
+        for tag_id in value.ids:
+            stmt = stmt.where(Meeting.tags.any(Tag.id == tag_id))
+        return stmt
+    return stmt.where(Meeting.tags.any(Tag.id.in_(value.ids)))
 
 
 def _filter_channel(stmt: MeetingStmt, value: str) -> MeetingStmt:
@@ -269,12 +294,23 @@ def transcript_match_contexts(
 
 
 @dataclass(frozen=True, slots=True)
+class TagFacet:
+    """One tag for the chip cloud: id to filter by, colour to draw, count to
+    show (T-36.5). Mirrored by `schemas.meeting.TagFacet`."""
+
+    id: int
+    name: str
+    color_index: int | None
+    count: int
+
+
+@dataclass(frozen=True, slots=True)
 class Facets:
     """What the filter panel can offer, derived from real data (T-11.8)."""
 
     hosts: list[str] = field(default_factory=list)
     participants: list[str] = field(default_factory=list)
-    tags: list[str] = field(default_factory=list)
+    tags: list[TagFacet] = field(default_factory=list)
     channels: list[str] = field(default_factory=list)
     min_duration: int = 0
     max_duration: int = 0
@@ -300,7 +336,21 @@ def build_facets(db: Session) -> Facets:
         .distinct()
     ).scalars()
 
-    tags = db.execute(select(Tag.name).join(Tag.meetings).where(live).distinct()).scalars()
+    # Counts in ONE grouped query, not one per tag (T-36.1). An inner join on
+    # purpose, unlike the sidebar's channel counts: the panel must not offer a
+    # tag that matches nothing, so zero-count tags are excluded here — the
+    # settings page lists them via `GET /tags`, which outer-joins for exactly
+    # the opposite reason.
+    tag_rows = db.execute(
+        select(Tag.id, Tag.name, Tag.color_index, func.count(Meeting.id))
+        .join(Tag.meetings)
+        .where(live)
+        .group_by(Tag.id)
+        .order_by(func.lower(Tag.name), Tag.name)
+    ).all()
+    tags = [
+        TagFacet(id=row[0], name=row[1], color_index=row[2], count=int(row[3])) for row in tag_rows
+    ]
 
     channels = db.execute(
         select(Channel.slug).join(Meeting, Meeting.channel_id == Channel.id).where(live).distinct()
@@ -313,7 +363,7 @@ def build_facets(db: Session) -> Facets:
     return Facets(
         hosts=sorted(hosts),
         participants=sorted(participants),
-        tags=sorted(tags),
+        tags=tags,
         channels=sorted(channels),
         min_duration=int(bounds[0] or 0),
         max_duration=int(bounds[1] or 0),

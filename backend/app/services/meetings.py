@@ -57,6 +57,9 @@ from app.schemas.meeting import (
 from app.schemas.meeting import (
     MatchContext as MatchContextSchema,
 )
+from app.schemas.meeting import (
+    TagFacet as TagFacetSchema,
+)
 from app.schemas.summary import NoteGroup, OutlineEntry, SummaryOut
 from app.schemas.user import UserRef
 from app.services.comments import CommentService
@@ -181,7 +184,10 @@ class MeetingService:
         return FacetsSchema(
             hosts=raw.hosts,
             participants=raw.participants,
-            tags=raw.tags,
+            tags=[
+                TagFacetSchema(id=t.id, name=t.name, color_index=t.color_index, count=t.count)
+                for t in raw.tags
+            ],
             channels=raw.channels,
             min_duration=raw.min_duration,
             max_duration=raw.max_duration,

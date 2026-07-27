@@ -135,7 +135,7 @@ export function useQueryParams() {
  * filters to clear. `q` is excluded too — it has its own visible field, and
  * counting it twice overstates how narrowed the view is.
  */
-const NON_FILTERS = new Set(['sort', 'page', 'pageSize', 'q', 'tags', 'details'])
+const NON_FILTERS = new Set(['sort', 'page', 'pageSize', 'q', 'tags', 'tagsMode', 'details'])
 
 /**
  * Filter state for the Notebook, read from and written to the URL.
@@ -172,6 +172,9 @@ export function useNotebookParams() {
       // Repeated `?tags=a&tags=b`, not a comma-joined string: a tag containing
       // a comma would otherwise split into two filters that match nothing.
       tags: getAll('tags'),
+      // Only `and` is a state; `or` is the default and stays out of the URL,
+      // so the OR form of a filter is the same URL it was before T-36.8.
+      tagsMode: getParam('tags_mode') === 'and' ? ('and' as const) : undefined,
       /*
        * The two BUILT-IN views are filters over the same data, not stored
        * channels (see `BUILT_IN_CHANNELS` and the `/channels` docstring) — so
@@ -188,8 +191,7 @@ export function useNotebookParams() {
        * definition the rail's own count uses, so the badge and the list cannot
        * disagree. By NAME because that is what the API's `host` filter takes.
        */
-      host:
-        channelParam === 'my-meetings' && myName ? myName : (getParam('host') ?? undefined),
+      host: channelParam === 'my-meetings' && myName ? myName : (getParam('host') ?? undefined),
       hasActionItems: parseBool(getParam('has_action_items')),
       source: getParam('source') ?? undefined,
       // The details drawer's open meeting (T-15.12). Not a filter: it narrows

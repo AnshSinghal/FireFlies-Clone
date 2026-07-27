@@ -24,6 +24,16 @@ interface PopoverProps {
   className?: string
   testId?: string
   label: string
+  /**
+   * Close when focus merely LEAVES the panel (default true).
+   *
+   * A popover opened from a menu item must set this false: the menu closes on
+   * select and restores focus to its trigger, and that programmatic focus move
+   * reads as focus-outside — the panel would dismiss itself milliseconds after
+   * opening. Explicit dismissal (Escape, an outside CLICK) is unaffected,
+   * which is what a panel holding an uncommitted draft actually wants.
+   */
+  dismissOnFocusOutside?: boolean
 }
 
 export function Popover({
@@ -36,6 +46,7 @@ export function Popover({
   className,
   testId,
   label,
+  dismissOnFocusOutside = true,
 }: PopoverProps) {
   return (
     <Primitive.Root open={open} onOpenChange={onOpenChange}>
@@ -48,6 +59,7 @@ export function Popover({
           collisionPadding={8}
           aria-label={label}
           data-testid={testId}
+          onFocusOutside={dismissOnFocusOutside ? undefined : (event) => event.preventDefault()}
           className={cn(
             'z-popover w-flyout rounded-lg border border-subtle bg-surface-0 p-3 shadow-lg',
             className,

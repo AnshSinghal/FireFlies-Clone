@@ -29,6 +29,12 @@ export const TOAST_MESSAGES = {
   markdownCopied: 'Markdown copied to clipboard',
   exportReady: 'Export downloaded',
 
+  tagCreated: 'Tag created',
+  tagsUpdated: 'Tags updated',
+  tagDeleted: 'Tag deleted',
+  tagsMerged: 'Tags merged',
+  tagLimit: 'A meeting can have at most 10 tags',
+
   saveFailed: "Couldn't save changes. Please try again.",
   exportFailed: "Couldn't export. Please try again.",
   // The clipboard API refuses on an insecure origin and when the user has

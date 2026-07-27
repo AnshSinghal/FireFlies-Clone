@@ -126,6 +126,7 @@ export function draftFromFilters(filters: MeetingFilters, now: Date = new Date()
     to: filters.to,
     durationPreset: recognizeDurationPreset(filters.minDuration, filters.maxDuration),
     tags: filters.tags ?? [],
+    tagsMode: filters.tagsMode === 'and' ? 'and' : 'or',
     channel: filters.channel,
     hasActionItems: filters.hasActionItems === true,
   }
@@ -151,6 +152,9 @@ export function filtersFromDraft(
     min_duration: duration?.min !== undefined ? String(duration.min) : null,
     max_duration: duration?.max !== undefined ? String(duration.max) : null,
     tags: draft.tags.length > 0 ? draft.tags : null,
+    // `and` is the only value worth a URL parameter — OR is the default
+    // (T-36.8), and a mode with no tags to combine means nothing.
+    tags_mode: draft.tagsMode === 'and' && draft.tags.length > 0 ? 'and' : null,
     channel: draft.channel ?? null,
     // Only ever `true` or absent: `false` would filter to meetings with nothing
     // outstanding, which is not what an unchecked switch means.
@@ -213,8 +217,8 @@ export function activeFilterChips(
   }
 
   for (const tag of filters.tags ?? []) {
-    // Each tag is its own chip: they are independent ANDs, so removing one
-    // must not clear the rest.
+    // Each tag is its own chip — whichever way they combine (OR by default,
+    // AND behind `tags_mode`, T-36.8), removing one must not clear the rest.
     chips.push({ keys: [`tags:${tag}`], id: `tag-${tag}`, label: `#${tag}` })
   }
 

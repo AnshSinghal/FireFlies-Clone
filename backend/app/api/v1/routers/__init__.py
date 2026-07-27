@@ -20,6 +20,7 @@ from app.api.v1.routers import (
     search,
     soundbites,
     summaries,
+    tags,
     transcript,
     users,
 )
@@ -38,6 +39,7 @@ api_router.include_router(summaries.router)
 api_router.include_router(ask.router)
 api_router.include_router(users.router)
 api_router.include_router(comments.router)
+api_router.include_router(tags.router)
 api_router.include_router(soundbites.router)
 api_router.include_router(highlights.router)
 

@@ -39,3 +39,29 @@ export function useBulkRestore() {
     },
   })
 }
+
+/**
+ * Move every selected meeting to one channel (T-36.7).
+ *
+ * One PATCH per meeting — the update endpoint already exists and a meeting
+ * belongs to exactly one channel, so "move" is just setting `channel_id`.
+ * `allSettled`, because one 404 must not strand the rest mid-move.
+ */
+export function useBulkMove() {
+  const client = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ids, channelId }: { ids: number[]; channelId: number }) => {
+      const results = await Promise.allSettled(
+        ids.map((id) => api.patch(`/api/v1/meetings/${id}`, { channel_id: channelId })),
+      )
+      const moved = results.filter((r) => r.status === 'fulfilled').length
+      return { moved, failed: ids.length - moved }
+    },
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: qk.meetings.all })
+      // The sidebar's per-channel counts just changed.
+      void client.invalidateQueries({ queryKey: ['channels'] })
+    },
+  })
+}
