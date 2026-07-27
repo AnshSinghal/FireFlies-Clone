@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { API_BASE } from '../api-base'
+
 /**
  * Post-deploy smoke suite (T-40.13) — exactly 12 tests, tagged `@smoke`.
  *

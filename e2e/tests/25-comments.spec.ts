@@ -135,7 +135,15 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     await page.getByTestId('comment-composer-input').fill('<script>alert(1)</script>')
     await page.getByTestId('comment-submit').click()
 
-    await expect(page.getByText('<script>alert(1)</script>')).toBeVisible()
+    /*
+     * `.first()`, like T31-H below. The same text legitimately renders in two
+     * places once the comments flyout has been opened — the inline thread and
+     * the flyout entry — so a bare `getByText` is a strict-mode violation
+     * waiting for the run order that opens the panel first. What this case
+     * asserts is that the angle brackets are TEXT; how many places show them
+     * is not its business.
+     */
+    await expect(page.getByText('<script>alert(1)</script>').first()).toBeVisible()
   })
 
   test('T31-H · a flyout entry seeks the player to its segment', async ({ page }) => {

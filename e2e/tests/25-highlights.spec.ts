@@ -118,10 +118,23 @@ async function highlight(
   await expect(page.getByTestId('selection-toolbar')).toBeHidden()
 }
 
+/**
+ * What the SERVER currently holds, as a list.
+ *
+ * Guards the array-ness rather than assuming it: every one of these endpoints
+ * answers with the `{error: {...}}` envelope on 404/410, and a teardown that
+ * spreads that envelope dies with `rows is not iterable` — which reports the
+ * teardown as the failure and hides whatever actually went wrong.
+ */
+async function apiList<T>(page: Page, path: string): Promise<T[]> {
+  const response = await page.request.get(`${API_BASE}/api/v1/meetings/${HERO}/${path}`)
+  const body: unknown = await response.json()
+  return Array.isArray(body) ? (body as T[]) : []
+}
+
 /** How many bookmarks the SERVER currently holds for the hero meeting. */
 async function bookmarkCount(page: Page): Promise<number> {
-  const response = await page.request.get(`${API_BASE}/api/v1/meetings/${HERO}/bookmarks`)
-  return ((await response.json()) as unknown[]).length
+  return (await apiList(page, 'bookmarks')).length
 }
 
 async function clearHighlights(page: Page): Promise<void> {
@@ -136,10 +149,7 @@ async function clearHighlights(page: Page): Promise<void> {
    * depending on which test ran before them.
    */
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const rows = (await (
-      await page.request.get(`${API_BASE}/api/v1/meetings/${HERO}/highlights`)
-    ).json()) as { id: number }[]
-
+    const rows = await apiList<{ id: number }>(page, 'highlights')
     if (rows.length === 0) return
     for (const row of rows) {
       await page.request.delete(`${API_BASE}/api/v1/meetings/${HERO}/highlights/${row.id}`)
@@ -329,10 +339,7 @@ test.describe('bookmarks @mutates', () => {
      * file moved around instead of staying put.
      */
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const rows = (await (
-        await page.request.get(`${API_BASE}/api/v1/meetings/${HERO}/bookmarks`)
-      ).json()) as { segment_id: number }[]
-
+      const rows = await apiList<{ segment_id: number }>(page, 'bookmarks')
       if (rows.length === 0) return
 
       // Toggled off rather than DELETEd, so the teardown exercises the same

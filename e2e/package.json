@@ -3,7 +3,9 @@
   "private": true,
   "description": "Playwright end-to-end suite. Owns its own dependencies so Playwright never leaks into the app bundle.",
   "scripts": {
-    "test": "playwright test",
+    "test": "npm run test:read && npm run test:write",
+    "test:read": "E2E_WORKERS=4 playwright test --project=read-only",
+    "test:write": "playwright test --project=mutations",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "test:mobile": "playwright test --project=chromium-mobile --pass-with-no-tests",

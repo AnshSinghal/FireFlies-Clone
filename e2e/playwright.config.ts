@@ -44,7 +44,19 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : 4,
+
+  /*
+   * ONE worker unless told otherwise — safe by default, fast by intent.
+   *
+   * Playwright has no per-project worker count, and the two projects want
+   * different ones: the readers are safe at four, the writers share one
+   * database and are safe at one (see the note on `projects` below). Defaulting
+   * to four made a bare `npx playwright test` race its own writers, which is
+   * the failure mode this whole split exists to prevent — so the default is the
+   * safe number and `npm test` raises it for the read-only pass, which is the
+   * only pass that can take it.
+   */
+  workers: Number(process.env.E2E_WORKERS ?? 1),
 
   /*
    * 10s rather than Playwright's 5s default.
@@ -93,8 +105,19 @@ export default defineConfig({
    *
    * So tests that write are tagged `@mutates`, run in their own project, and
    * that project `dependsOn` the read-only one — Playwright finishes every
-   * reader before the first writer starts. `fullyParallel: false` then keeps
-   * the writers from racing each other.
+   * reader before the first writer starts.
+   *
+   * `fullyParallel: false` is NOT enough on its own, and the comment here used
+   * to claim it was. It serialises tests within a FILE; files still fan out
+   * across workers. That was harmless while `90-mutations` was the only writer,
+   * and stopped being true the moment T-31, T-32 and T-34 each brought their
+   * own `@mutates` spec: `deleteFirstRow` soft-deletes the hero meeting, so
+   * `25-comments` reloading `/meeting/1` got the deleted-meeting page and
+   * `25-highlights` got a 410 where it expected a list. The failures moved
+   * around with the scheduling, which is the signature.
+   *
+   * Only the worker count fixes that, and Playwright has no per-project one —
+   * hence the safe default above and the two-pass `npm test`.
    *
    * The alternative, a database per worker, needs a backend process per worker
    * too. That is the right answer for a suite ten times this size; here it
@@ -116,7 +139,16 @@ export default defineConfig({
     {
       name: 'mutations',
       grep: /@mutates/,
-      dependencies: ['read-only'],
+      /*
+       * No `dependencies: ['read-only']` any more. It existed to stop readers
+       * and writers overlapping, and `npm test` now does that by running them
+       * as two invocations — each with its own freshly seeded database. Keeping
+       * the dependency as well would make the second pass re-run all 300
+       * readers to satisfy it.
+       *
+       * A bare `npx playwright test` runs both projects at one worker, which is
+       * serial regardless of ordering, so nothing overlaps there either.
+       */
       fullyParallel: false,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
