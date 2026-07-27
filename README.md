@@ -244,6 +244,58 @@ curl localhost:8000/api/v1/meetings/1        # 404 unknown · 410 deleted (resto
 curl localhost:8000/api/health               # runs a real SELECT 1; 503 when the DB is down
 ```
 
+A worked example — this is the live demo's actual response, not an illustration:
+
+```http
+GET /api/v1/meetings?page_size=1
+```
+
+```jsonc
+{
+  "items": [
+    {
+      "id": 2,
+      "title": "Acme Corp — Discovery Call",
+      "started_at": "2026-07-27T15:30:00",
+      "duration_seconds": 433,
+      "host": { "id": 6, "name": "Tom Bradley", "avatar_url": "/avatars/tom-bradley.svg" },
+      "participants": [
+        { "id": 1767, "display_name": "Tom Bradley",    "avatar_url": null },
+        { "id": 1768, "display_name": "Elena Volkov",   "avatar_url": null },
+        { "id": 1769, "display_name": "Dana Whitfield", "avatar_url": null }
+      ],
+      "participant_count": 3,
+      "action_item_counts": { "open": 3, "completed": 0 },
+      "keywords": ["data residency", "compliance review", "retention policy"],
+      "tags": [
+        { "id": 1, "name": "sales",    "color_index": 3 },
+        { "id": 4, "name": "customer", "color_index": 5 }
+      ],
+      "overview_preview": "…",
+      "has_media": true,
+      "media_type": "audio",
+      "match_context": null    // populated only when the request carried ?q=
+    }
+  ],
+  // The same six keys on every list endpoint in the API.
+  "page": 1, "page_size": 1, "total": 8, "total_pages": 8, "has_next": true
+}
+```
+
+Three things in there are deliberate. `participant_count` ships alongside `participants` because the
+notebook row renders "+4" without needing the array. `action_item_counts` is pre-aggregated for the
+same reason — the alternative is an N+1 across every row of every page. And `color_index` is an
+**integer, not a hex code**: the server owns which speaker or tag gets which hue, the client owns what
+that hue *is* in the current theme, and neither can drift from the token layer.
+
+Errors use one envelope, including FastAPI's own:
+
+```jsonc
+// GET /api/v1/meetings/999999  →  404
+{ "error": { "code": "MEETING_NOT_FOUND", "message": "Meeting not found.",
+             "details": { "meeting_id": 999999 } } }
+```
+
 The TypeScript client at `frontend/src/types/api.d.ts` is generated from the schema — run
 `make types` after changing an endpoint, so a backend field rename surfaces as a frontend type error
 rather than a runtime `undefined`. A test fails the build if the committed schema falls behind.
