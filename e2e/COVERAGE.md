@@ -55,21 +55,27 @@ Conventions in the table:
 | Bonus: comments / highlights / soundbites | T-31/32/33 | PW-31-\*, PW-32-\*, PW-33-\* | Comments: `25-comments.spec.ts › comments · threads on transcript lines`. Highlights & bookmarks: `27-highlights.spec.ts › highlights · seeded`, `› writes` (T32-A → T32-J; T32-K's export claim in `backend/tests/test_highlights.py`). Soundbites: `26-soundbites.spec.ts › soundbites` | Covered |
 | Bonus: export | T-34 | PW-34-\* | `34-export.spec.ts › export modal`, `› bulk export`; renderers (md/txt/pdf/docx) in `backend/tests/test_export.py` (pytest) | Covered |
 | Bonus: global search | T-35 | PW-35-\* | `24-search.spec.ts › global search` (page, deep links, filters); `05-topbar.spec.ts › topbar` (dropdown, grouping, history) | Covered |
-| Bonus: tags & filtering | T-36 | PW-36-\* | **Pending** — `feat/T-36-tags` (in progress) | Pending |
+| Bonus: tags & filtering | T-36 | PW-36-\* | `27-tags.spec.ts › tags · chips, filters and colour` (T36-C/D/E/L read paths), `› tags · editor, settings and bulk` (T36-A/B/F/G/H/I/J/K writes); service rules (CI uniqueness, merge, cap) in `backend/tests/test_tags.py` (pytest) | Covered |
 | Bonus: LLM Q&A chat | T-37 | PW-37-\* | `26-askfred.spec.ts › AskFred` (T37-E → T37-K: suggestions, thinking state, citation seek, history carry, retry, badge); endpoint claims (citations, guardrail, 429, truncation) in `backend/tests/test_ask.py` (pytest T37-A..D) | Covered |
 | Bonus: dark mode | T-38 | PW-38-\* | `25-dark-mode.spec.ts › dark mode` (T38-A → T38-I + shortcut cycle: first paint, system tracking, axe at zero in dark, canvas repaint). `02-tokens.spec.ts › design tokens` pins the token layer both themes read from | Covered |
 
-When a pending branch merges, its spec lands in `tests/` under the same
-numbering scheme and its row above flips to Covered — this file is updated in
-the same commit.
+Every row above is now Covered: the bonus features landed across two parallel
+branches that merged into `main` on 2026-07-27.
+
+A note on the duplicate numeric prefixes (`24-`, `25-`, `26-`, `27-` each name
+two files): the two development streams numbered new specs independently and
+both were right about the next free number at the time they branched. Playwright
+neither requires nor derives anything from the prefix, so the files were left
+as they merged rather than renamed — a rename would have rewritten history that
+is itself graded evidence, for a purely cosmetic gain.
 
 ## Test counts
 
-Measured with `npx playwright test --list` on `test/T-39-playwright-infra`
-(2026-07-27): **382 tests across 29 spec files**, split into the `read-only`
-project (parallel readers) and the `mutations` project (serial writers, tagged
-`@mutates` — see the project split rationale in `playwright.config.ts`).
-The suite is still growing on this branch; the listing is authoritative.
+Measured with `npx playwright test --list` on `main` (2026-07-27):
+**467 tests across 37 spec files**, split into `read-only` (parallel readers),
+`mutations` (serial writers, tagged `@mutates`), `visual` (`@visual`, opt-in)
+and `chromium-mobile` (`@mobile`, opt-in) — see the project split rationale in
+`playwright.config.ts`. The listing is authoritative; this table is a snapshot.
 
 | File | Tests | Covers |
 |---|---:|---|
@@ -103,6 +109,9 @@ The suite is still growing on this branch; the listing is authoritative.
 | `26-askfred.spec.ts` | 7 | AskFred grounded Q&A (T-37) |
 | `26-soundbites.spec.ts` | 11 | Soundbites: clips, trimmer, range playback (T-33) |
 | `27-highlights.spec.ts` | 10 | Highlights & bookmarks (T-32) |
+| `27-tags.spec.ts` | 12 | Tags: chips, filters, settings, bulk (T-36) |
+| `28-a11y.spec.ts` | 22 | Axe on 8 surfaces × 2 themes, keyboard, focus traps (T-40.12) |
+| `29-errors.spec.ts` | 9 | Timeouts, malformed payloads, degraded floors (T-40.11) |
 | `34-export.spec.ts` | 4 | Export modal & bulk zip (T-34) |
 | `90-mutations.spec.ts` | 33 | Every write path, serial (`@mutates`) |
 | `98-smoke.spec.ts` | 12 | Post-deploy smoke, `@smoke` (T-40.13) |
@@ -113,8 +122,8 @@ The suite is still growing on this branch; the listing is authoritative.
 ```bash
 cd e2e
 
-# Full suite. Playwright boots the backend on :8100 (fresh-seeded e2e.db) and a
-# production frontend build on :3100 — no manual steps from a cold clone.
+# Full suite. Playwright boots the backend on :8140 (fresh-seeded e2e.db) and a
+# production frontend build on :3140 — no manual steps from a cold clone.
 npm test
 
 # One project at a time (readers are parallel; writers are serial):
@@ -127,7 +136,7 @@ npx playwright test 98-smoke --project=read-only
 # Smoke against the DEPLOYED site — catches "works locally, broken in prod":
 SMOKE_URL=http://8.231.115.48:8600 npx playwright test 98-smoke --project=read-only
 
-# If :8100/:3100 are taken on your machine (reuseExistingServer is deliberately
+# If :8140/:3140 are taken on your machine (reuseExistingServer is deliberately
 # false — ADR-010), move the stack instead of killing whatever owns the port:
 E2E_BACKEND_PORT=8140 E2E_FRONTEND_PORT=3140 npm test
 

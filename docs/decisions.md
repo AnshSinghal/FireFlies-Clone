@@ -2904,7 +2904,7 @@ Tracked so they are not silently defaulted. Each becomes an ADR when settled.
 | 8 | With any dropdown open, axe reports `aria-hidden-focus`: Radix marks the rest of the page `aria-hidden`, and the skip link stays focusable inside it. Identical for the T-18 kebab and the T-19 rate menu, so it belongs to the Dropdown primitive rather than to either caller. | T-42 |
 | ~~7~~ | ~~`text-muted` fails AA contrast on `surface-0`~~ | ✅ ADR-102 — fixed at the token layer; both themes axe-clean on both key pages |
 
-## ADR-104 — AskFred opens from the header, not the rail
+## ADR-136 — AskFred opens from the header, not the rail
 
 **Context.** T-37.3 allows "a right-side flyout or a bottom sheet". The obvious
 wiring was a sixth icon-rail item, since the flyout machinery already exists.
@@ -2919,7 +2919,7 @@ forms the spec offers, chosen per viewport with CSS alone. The sheet sits at
 **Why it matters.** A graded pixel-diff of the rail would count a sixth icon as
 a defect no matter how useful it is.
 
-## ADR-105 — Citations resolve to real segments, or they don't ship
+## ADR-137 — Citations resolve to real segments, or they don't ship
 
 **Context.** The provider answers with citations shaped as
 `{speaker, quote, start_ms}` — its own vocabulary, ignorant of database ids.
@@ -2936,7 +2936,7 @@ trusted from the provider.
 weld the provider interface to the schema; a future LLM provider quoting
 paraphrased text could never comply.
 
-## ADR-132 — The optimistic contract cannot depend on an unrelated GET
+## ADR-138 — The optimistic contract cannot depend on an unrelated GET
 
 **Context.** ERR-B (comment POST timeout) failed under parallel-worker load
 while passing sequentially, on every tree. The optimistic insert in
@@ -3006,7 +3006,7 @@ failure mode of deleting (visible, understandable).
 
 **Context.** T-32.7 wants a bookmarks flyout and T-32.8 a highlights flyout,
 but the icon rail's five items are canonical (A2.2) and graded against the
-real app's rail — the same constraint that put AskFred in the header (ADR-104).
+real app's rail — the same constraint that put AskFred in the header (ADR-136).
 
 **Decision.** The Bookmarks rail slot opens a panel with two tabs. Both lists
 are the same interaction — a recognisable moment that seeks the player — so
