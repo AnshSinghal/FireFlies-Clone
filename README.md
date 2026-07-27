@@ -51,6 +51,37 @@ schemas/          Pydantic — routers never return ORM objects
 Routers contain no ORM access. This is enforced by `scripts/check_layering.py`, which runs in
 `make lint`, the pre-commit hook and CI.
 
+### AI provider (T-29)
+
+Summaries, outlines, keywords, action items and Q&A all go through one interface
+(`app/ai/provider.py`) with two implementations:
+
+- **`MockProvider`** — the default (`AI_PROVIDER=mock`). Deterministic classical IR: TF-IDF
+  keywords, pause/speaker-turn topic segmentation for the outline, TextRank-style extractive
+  overview, regex commitment patterns for action items, term-overlap retrieval for Q&A. Same
+  transcript in, byte-identical output out — which is what makes it testable and safe for
+  visual-regression snapshots.
+- **`LLMProvider`** — OpenAI or Anthropic, selected by `AI_PROVIDER` + `AI_API_KEY`
+  (+ optional `AI_MODEL`). Structured output against JSON schemas derived from the same
+  pydantic types the rest of the app consumes, so parsing is validation, not regex-on-prose.
+
+Around them: prompts as versioned Markdown files (`app/ai/prompts/`), a response cache keyed on
+`hash(transcript + prompt versions + provider)` so identical input never re-bills, and a fallback
+chain — any LLM failure (timeout, rate limit, bad key) logs, degrades to the mock, and records
+`provider = "mock (llm fallback)"` so the UI's attribution line stays honest. The demo can never
+hard-fail because of an API key.
+
+**Chunking strategy for long transcripts (map-reduce).** LLM context is finite and cost scales
+with input, so transcripts over ~3,000 tokens are split on segment boundaries into ~3,000-token
+chunks with a ~200-token overlap (a commitment made in the last sentence of chunk *N* is the
+context for the first sentence of chunk *N+1*). Each chunk is summarised independently (map),
+then the chunk summaries are synthesised into one summary with the same prompt (reduce); notes
+keep the mapped, transcript-grounded versions. List-shaped extractions merge instead: keywords by
+max weight, outline entries by strictly-increasing timestamp (which also dedupes the overlap
+region), action items by normalised text. Q&A retrieves the single most relevant chunk
+client-side before asking. A token pre-check refuses absurd inputs (~350k tokens) before they
+cost money. The mock path doesn't need any of this, but the seam is where a real model plugs in.
+
 ---
 
 ## Database Schema
