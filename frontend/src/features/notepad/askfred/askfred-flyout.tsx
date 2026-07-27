@@ -9,10 +9,26 @@
  */
 
 import { X } from 'lucide-react'
+import dynamic from 'next/dynamic'
 
 import { IconButton } from '@/components/ui/icon-button'
+import { SkeletonText } from '@/components/ui/skeleton'
 
-import { AskFredPanel } from './askfred-panel'
+/**
+ * Loaded on demand (T-42.9).
+ *
+ * The panel is the chat transcript, its composer, the citation chips and the
+ * ask client — none of which a reader who never opens Fred should download.
+ * The flyout's own chrome stays static so the panel has somewhere to appear.
+ *
+ * `loading` is a real skeleton rather than `null`: opening a panel and seeing
+ * an empty box for a beat reads as broken, and this is the one place in the
+ * app where a chunk fetch is on the interaction path.
+ */
+const AskFredPanel = dynamic(
+  () => import('./askfred-panel').then((module) => module.AskFredPanel),
+  { ssr: false, loading: () => <SkeletonText lines={6} /> },
+)
 
 export function AskFredFlyout({ meetingId, onClose }: { meetingId: number; onClose: () => void }) {
   return (

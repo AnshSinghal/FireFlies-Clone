@@ -9,6 +9,7 @@
  * T-18.10 is written to prevent.
  */
 
+import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -31,7 +32,6 @@ import { notebookReturnUrl } from '@/lib/notebook-return'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 
 import { EditMeetingModal } from '@/features/edit/edit-meeting-modal'
-import { ExportModal } from '@/features/export/export-modal'
 
 import { AskFredFlyout } from './askfred/askfred-flyout'
 import { BookmarksPanel } from './bookmarks/bookmarks-panel'
@@ -44,6 +44,20 @@ import { CommentsPanel } from './comments/comments-panel'
 import { SmartSearchPanel } from './transcript/smart-search-panel'
 import { SummaryPanel } from './summary-panel'
 import { TranscriptPanel } from './transcript-panel'
+
+/**
+ * Loaded on demand (T-42.9).
+ *
+ * The export modal drags in the Markdown generator, the section registry and
+ * the size estimator — none of which a reader who never exports should pay
+ * for. `ssr: false` because it renders nothing until opened: there is no
+ * server markup to hydrate, so shipping it up front buys a blank element and
+ * costs its whole subtree.
+ */
+const ExportModal = dynamic(
+  () => import('@/features/export/export-modal').then((module) => module.ExportModal),
+  { ssr: false },
+)
 
 export const SPLIT_STORAGE_KEY = 'ff.notepad.split'
 

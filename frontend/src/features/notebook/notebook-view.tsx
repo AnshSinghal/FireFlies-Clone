@@ -9,6 +9,7 @@
  * reference before, the reference won (ADR-011, ADR-021). See ADR-036.
  */
 
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -39,7 +40,6 @@ import { RemovableChip } from '@/components/ui/chip'
 import { BulkBar } from './bulk-bar'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EditMeetingModalById } from '@/features/edit/edit-meeting-modal'
-import { ExportModal, ExportModalById } from '@/features/export/export-modal'
 
 import { DetailsDrawer } from './details-drawer'
 
@@ -55,6 +55,20 @@ import {
   type QuickFilterId,
 } from './notebook-toolbar'
 import { quickFilterParams, readQuickFilters } from './quick-filters'
+
+/**
+ * Loaded on demand (T-42.9) — see the note in `notepad-view.tsx`. Both entry
+ * points are split, because the bulk bar's export and a row's kebab export
+ * reach the same subtree.
+ */
+const ExportModal = dynamic(
+  () => import('@/features/export/export-modal').then((module) => module.ExportModal),
+  { ssr: false },
+)
+const ExportModalById = dynamic(
+  () => import('@/features/export/export-modal').then((module) => module.ExportModalById),
+  { ssr: false },
+)
 
 export const VIEW_STORAGE_KEY = 'ff.notebook.view'
 
