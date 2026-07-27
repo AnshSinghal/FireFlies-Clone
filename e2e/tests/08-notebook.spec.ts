@@ -54,7 +54,7 @@ test.describe('notebook', () => {
     expect(new Set(heights).size).toBe(1)
     // The card is pinned to the `row` token, which is the plan's 72px — so the
     // original assertion holds after all, just on a card rather than a table row.
-    expect(heights[0]).toBe(72)
+    expect(heights[0]).toBe(82)
   })
 
   test('T12-C · hovering a row reveals the checkbox and the kebab', async ({ page }) => {

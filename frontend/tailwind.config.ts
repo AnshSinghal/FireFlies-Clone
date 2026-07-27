@@ -233,7 +233,21 @@ const config: Config = {
         rail: '240px',
         'rail-collapsed': '64px',
         'icon-rail': '56px',
-        row: '72px',
+        /*
+         * 82px, taken from the reference (T-46.1) — was 72px, the plan's value.
+         *
+         * Measured on `docs/reference/fireflies/02.png`, their card is short
+         * against BOTH our anchors: 1.514 x their topbar where ours was 1.286,
+         * and 5.658 x their row-title glyph band where ours was 5.143. No
+         * single value satisfies both, because our own topbar:type ratio sits
+         * 7% off theirs (4.000 vs 3.737) — their capture is not a uniform zoom
+         * of ours, so the difference cannot be normalised away.
+         *
+         * 82 minimises the worst case: 3.3% under on the topbar anchor, 3.5%
+         * over on the type anchor, against 17% and 12% short before. Anchoring
+         * on either alone would have overshot the other by the full 7%.
+         */
+        row: '82px',
 
         /*
          * Notebook list rhythm, derived from `docs/reference/fireflies/02.png`

@@ -124,7 +124,7 @@ test.describe('states', () => {
     // default 5s can still expire before first paint.
     await expect(skeletons.first()).toBeVisible({ timeout: 15_000 })
     await expect(skeletons).toHaveCount(8)
-    expect((await skeletons.first().boundingBox())!.height).toBe(72)
+    expect((await skeletons.first().boundingBox())!.height).toBe(82)
 
     // The header and toolbar do not depend on data, so they render immediately.
     await expect(page.getByRole('heading', { name: 'Meetings', level: 1 })).toBeVisible()

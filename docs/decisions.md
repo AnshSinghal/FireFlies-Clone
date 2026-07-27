@@ -3444,3 +3444,49 @@ into one `space-y-2`, so once those diverged it would have stood in for a list
 taller than itself and the content would have jumped on load. That is the one
 thing a skeleton exists to prevent, and no test asserts inter-row gaps — only
 row height — so it would not have been caught.
+
+## ADR-150 — The notebook row is 82px, taken from the reference
+
+**Date:** 2026-07-28 · **Task:** T-46.1 · **Status:** Accepted · **Amends ADR-036**
+
+**Context.** ADR-036 adopted the reference's card layout but kept the plan's
+72px height, noting "as it turned out, the 72px height, which the card is pinned
+to via the `row` token". Measuring `docs/reference/fireflies/02.png` says
+otherwise: their card is short against both of our anchors, by 17% relative to
+the topbar and 12% relative to the row-title glyph band.
+
+This was the last open item in `docs/ui-audit.md`, and it stayed open for a day
+behind a reason that was **false** — that the virtualiser sizes its items from
+this token. It does not. The virtualiser is on the transcript list and estimates
+from its own `ESTIMATED_ROW_PX = 92`; the notebook is not virtualised. That
+claim was written once and repeated into three documents before anyone opened
+the file.
+
+**Why the target needed deciding rather than reading off.** The reference's
+capture is not a uniform zoom of ours. Solving for the implied scale gives three
+different answers — 1.268 via the topbar, 1.357 via the glyph band, 1.493 via
+the card — so their proportions genuinely differ and no normalisation removes
+the disagreement. Anchoring the card on their topbar gives 84.8px; on their type
+it gives 79.2px. The 7% spread between those is exactly our own topbar:type
+ratio differing from theirs (4.000 vs 3.737).
+
+**Decision.** 82px, the value that minimises the worst case rather than
+satisfying one anchor and abandoning the other.
+
+| | Before | After | Reference |
+|---|---|---|---|
+| card ÷ topbar | 1.286 (−15%) | **1.446 (−4.5%)** | 1.514 |
+| card ÷ title glyph | 5.143 (−9%) | **5.786 (+2.3%)** | 5.658 |
+
+**Consequences.** Three assertions moved with it — `08-notebook` on the row,
+`07-primitives` and `12-states` on the skeleton that mirrors it — plus
+`design.md:87`. Ten visual baselines: the notebook in two themes and four
+widths, and the component gallery in two, because the gallery renders real
+`MeetingRow`s. Nothing outside those surfaces moved, which is the evidence the
+token is used where it is documented to be used.
+
+Fewer meetings now fit above the fold. That is a real cost and it is the
+reference's own trade: Fireflies shows roughly four cards where we used to show
+six. Matching a design means matching its density, not just its parts.
+
+---

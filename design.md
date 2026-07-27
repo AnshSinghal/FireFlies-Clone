@@ -84,7 +84,7 @@ Page header:   H1 "Meetings"  (28px/700)   ·  subtitle "N meetings"  (13px/mute
 Toolbar row:   [🔍 Search meetings…            ]  [Filters ▾ (n)]  [Sort: Recent ▾]  [⊞|☰ view]
 Chip row:      [Hosted by me] [Shared with me] [Has action items]   ← toggle chips, pill radius
 Table header:  ☐ | TITLE | DATE | DURATION | PARTICIPANTS | ACTION ITEMS |   (sticky, text-label)
-Rows (h=72):   ☐ | ▶thumb  Title bold 15px   | Jul 24, 2026 | 42:18 | ●●●+3 | 4 open |  [⋯]
+Rows (h=82):   ☐ | ▶thumb  Title bold 15px   | Jul 24, 2026 | 42:18 | ●●●+3 | 4 open |  [⋯]
                         ↳ 13px muted preview of overview, 1 line, ellipsis
 Bulk bar:      appears bottom-centre when ≥1 checked — "3 selected · Move · Delete · Clear"
 Pagination:    "Showing 1–20 of 47"  [‹] [1][2][3] [›]

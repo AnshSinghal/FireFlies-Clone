@@ -310,7 +310,7 @@ test.describe('primitives', () => {
     // when data lands.
     const skeleton = page.getByTestId('meeting-row-skeleton')
     await skeleton.scrollIntoViewIfNeeded()
-    expect((await skeleton.boundingBox())!.height).toBe(72)
+    expect((await skeleton.boundingBox())!.height).toBe(82)
   })
 
   test('every icon-only control has an accessible name', async ({ page }) => {
