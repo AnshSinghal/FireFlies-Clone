@@ -485,6 +485,70 @@ does — the property cursor pagination exists for.
 
 ---
 
+## Decisions
+
+Every non-obvious choice in this repository is written down as it was made, with the alternative
+that was rejected and why: **[docs/decisions.md](docs/decisions.md)** — 147 ADRs.
+
+The ones worth reading first, because they are the ones an interviewer would push on:
+
+- **ADR-001 — client data over RSC.** URL-state plus optimistic mutations makes nearly every page
+  `"use client"`. That is a real cost, and it is the direct cause of the LCP number below.
+- **ADR-002 — Tailwind's palette is deleted.** `bg-blue-500` is a build error. Hex codes exist in
+  `styles/tokens.css` and nowhere else.
+- **ADR-103 — `cn()` deliberately does not resolve class conflicts.** Two utilities setting the same
+  property is a bug to fix at the call site, not something a merge helper should paper over.
+
+---
+
 ## What I'd Do Next
 
-_(Written in T-45.12.)_
+Five things, in the order I would actually do them. Each names the seam it attaches to, because
+"add feature X" is cheap to say and the interesting part is knowing where it goes.
+
+1. **Server-render the first page of the notebook.** This is the highest-value item and the only one
+   that is a measured defect rather than a missing feature: Lighthouse LCP is 4.0s against an FCP of
+   0.8s, because the shell paints immediately and then waits on a client fetch for the list. Fixing it
+   means revisiting ADR-001 for the *first* payload only — hydrate TanStack Query from a server
+   component and let every subsequent interaction stay client-side. I did not do it here because it
+   is an architectural change, and a half-done one would be worse than the honest number.
+
+2. **Real speech-to-text behind the existing provider seam.** `app/ai/provider.py` already proves the
+   pattern works — one interface, a deterministic default, a real implementation behind an env var,
+   and a fallback chain when the real one fails. A `TranscriptionProvider` with `WhisperProvider` and
+   the current paste/upload path as the mock is the same shape, and `parsers/` already handles the
+   output format. The work is the audio pipeline (chunking, diarisation, alignment), not the wiring.
+
+3. **Background jobs for anything AI.** Summarisation is currently synchronous, which is fine for a
+   mock that returns in milliseconds and unacceptable for a real model on a 90-minute transcript. The
+   `is_stale` flag on `summaries` was added with this in mind — it is already the signal a worker
+   would clear. Add a queue, return `202` with a job id, and let the existing stale-badge UI become a
+   progress state rather than inventing a new one.
+
+4. **Postgres with pgvector, replacing SQLite + FTS5.** FTS5 gives genuinely good ranked *lexical*
+   search — but "what did we decide about pricing?" only matches documents containing the word
+   "pricing". Embeddings would let AskFred retrieve by meaning instead of by term overlap, which is
+   the weakest part of the current Q&A. All search already goes through `app/db/search.py`, so this is
+   one module's implementation rather than a migration of every call site.
+
+5. **Real auth and RBAC.** `get_current_user` is a dependency that returns the seeded user, and it is
+   the single place this attaches — every service already takes a user rather than assuming one. The
+   schema is ready too: `participants.user_id` is nullable precisely because most attendees of a real
+   meeting have no account, which is the distinction row-level permissions would need.
+
+---
+
+## Original work
+
+The code in this repository is my own. I used AI assistants for scaffolding and for drafting seed
+transcript content — which the brief explicitly permits — and I have read, understood and often
+rewritten every line that survived. The commit history is deliberately granular (one commit per
+subtask, `T-NN.n:` prefixed) and `docs/decisions.md` records each non-obvious choice as it was made,
+including the ones that turned out to be wrong and were reversed. Both exist so that this claim is
+checkable rather than asserted: I can explain any line in this repository, and the history shows the
+reasoning that produced it.
+
+No third-party trademarked assets are included. The Fireflies wordmark and logo are not in this
+repository — the mark in the sidebar is drawn in SVG. `docs/reference/fireflies/` holds screenshots
+of the real product used solely as a fidelity target for the visual comparison the brief describes;
+`docs/ui-audit.md` records where this clone matches them, where it deliberately differs, and why.
