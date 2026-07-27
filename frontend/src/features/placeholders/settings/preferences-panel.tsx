@@ -12,6 +12,7 @@
  * - date format → stored nowhere yet, so it says `Soon` instead of lying
  */
 
+import { SettingCard, SettingGroup } from './setting-card'
 import { Badge } from '@/components/ui/chip'
 import { Select } from '@/components/ui/select'
 import { Switch } from '@/components/ui/controls'
@@ -52,73 +53,92 @@ export function PreferencesPanel() {
       </header>
 
       {/*
-        Each control in its own BLOCK wrapper.
+        Cards, not a flat form — the reference's anatomy (T-46.1 item 10). The
+        label moves into the card and the control renders bare via `hideLabel`
+        / `ariaLabel`, which both primitives already support.
 
-        `Select` renders an `inline-flex` span — deliberately, because the
-        Notebook toolbar's sort dropdown and the pagination size picker sit
-        inline beside other controls. Three of them as direct siblings
-        therefore flowed onto one line, and `space-y-*` (a `margin-top` rule)
-        does nothing about that: the labels butted together and read as
-        "Meetings per pagePlayback rate".
-
-        A `flex` class on the Select would be the obvious fix and the wrong
-        one — `inline-flex` and `flex` both set `display`, `cn` deliberately
-        does not resolve conflicts, and the winner would be Tailwind's class
-        order rather than this file's intent (ADR-103). A wrapper cannot lose
-        that argument.
+        This also retires the older hazard recorded here: `Select` renders an
+        `inline-flex` span, so three as direct siblings under `space-y-*` flowed
+        onto one line and read "Meetings per pagePlayback rate". A `flex` class
+        on the Select would have been the obvious fix and the wrong one —
+        `inline-flex` and `flex` both set `display` and `cn` does not resolve
+        conflicts (ADR-103). Each select now sits alone in a card, so the
+        collision cannot recur.
       */}
-      <div className="space-y-5">
-        <div>
-          <Select
-            label="Default sort"
-            value={defaultSort}
-            onValueChange={(value) => setDefaultSort(value as SortValue)}
-            options={SORT_OPTIONS.map((option) => ({ ...option }))}
-            testId="settings-default-sort"
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <Select
-            label="Meetings per page"
-            value={String(pageSize)}
-            onValueChange={(value) => setPageSize(Number(value) as PageSize)}
-            options={PAGE_SIZES.map((size) => ({ value: String(size), label: String(size) }))}
-            testId="settings-page-size"
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <Select
-            label="Playback rate"
-            value={String(rate)}
-            onValueChange={(value) => setRate(parseRate(value))}
-            options={RATES.map((value) => ({ value: String(value), label: `${value}×` }))}
-            testId="settings-playback-rate"
-            className="w-full"
-          />
-        </div>
-
-        <Switch
-          checked={autoplay}
-          onCheckedChange={setAutoplay}
-          label="Autoplay on open"
-          description="Start playback when you open a meeting."
-          testId="settings-autoplay"
+      <SettingGroup title="Notebook">
+        <SettingCard
+          title="Default sort"
+          description="How the meetings list is ordered when no sort is in the URL."
+          control={
+            <Select
+              label="Default sort"
+              hideLabel
+              value={defaultSort}
+              onValueChange={(value) => setDefaultSort(value as SortValue)}
+              options={SORT_OPTIONS.map((option) => ({ ...option }))}
+              testId="settings-default-sort"
+              className="w-full"
+            />
+          }
         />
 
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-body text-primary">Date format</p>
-            <p className="text-sm text-muted">Relative (“Yesterday”) or absolute dates.</p>
-          </div>
-          <Badge variant="neutral" testId="settings-date-format-soon">
-            Soon
-          </Badge>
-        </div>
-      </div>
+        <SettingCard
+          title="Meetings per page"
+          description="Rows per page before pagination."
+          control={
+            <Select
+              label="Meetings per page"
+              hideLabel
+              value={String(pageSize)}
+              onValueChange={(value) => setPageSize(Number(value) as PageSize)}
+              options={PAGE_SIZES.map((size) => ({ value: String(size), label: String(size) }))}
+              testId="settings-page-size"
+              className="w-full"
+            />
+          }
+        />
+
+        <SettingCard
+          title="Date format"
+          description="Relative (“Yesterday”) or absolute dates."
+          trailing={
+            <Badge variant="neutral" testId="settings-date-format-soon">
+              Soon
+            </Badge>
+          }
+        />
+      </SettingGroup>
+
+      <SettingGroup title="Player">
+        <SettingCard
+          title="Playback rate"
+          description="The speed a meeting starts at."
+          control={
+            <Select
+              label="Playback rate"
+              hideLabel
+              value={String(rate)}
+              onValueChange={(value) => setRate(parseRate(value))}
+              options={RATES.map((value) => ({ value: String(value), label: `${value}×` }))}
+              testId="settings-playback-rate"
+              className="w-full"
+            />
+          }
+        />
+
+        <SettingCard
+          title="Autoplay on open"
+          description="Start playback when you open a meeting."
+          trailing={
+            <Switch
+              checked={autoplay}
+              onCheckedChange={setAutoplay}
+              ariaLabel="Autoplay on open"
+              testId="settings-autoplay"
+            />
+          }
+        />
+      </SettingGroup>
     </section>
   )
 }

@@ -294,8 +294,11 @@ defect — three `Select`s are inline elements, and as direct siblings under
 `space-y-*` they lined up on one row with their labels butted together.
 Bounding the column fixed the break and stranded the panel.
 
-The measure and the symmetry are fixed. The **card anatomy** is not, and is
-worth doing next — read off `07.png`:
+**Both are now fixed.** The measure and symmetry landed first (547px, 57.4%,
+gutters 202/204); the card anatomy followed. Measured after the restructure the
+block is unchanged at 547px / 57.4% — the cards sit inside the same measure.
+
+The anatomy, read off `07.png` and confirmed on `08.png`, is what was built:
 
 - A section heading (`Recording`) above a group of bordered cards.
 - Each card: a small icon at the left, then title and one line of description.
@@ -308,9 +311,21 @@ That last point is where the first draft of this entry was wrong: it said
 selects. Building it that way would have produced a third layout matching
 neither document.
 
-Deferred out of a verification cycle rather than rushed — it changes how
-`Select` composes its own label, on a graded surface, with no test covering it.
-It is the first thing to pick up next.
+It needed no change to `Select` in the end. Both primitives already had the
+seam: `Select` takes `hideLabel` and `Switch` takes `ariaLabel`, so each renders
+bare while the visible label moves into the card and the accessible name
+survives. The Notebook toolbar's inline selects are untouched, which was the
+constraint that made this look risky.
+
+It also retired an older hazard. Three `Select`s as direct siblings under
+`space-y-*` used to flow onto one line — `Select` renders an `inline-flex` span
+— and read "Meetings per pagePlayback rate". Each now sits alone in a card, so
+the collision cannot recur rather than being suppressed by a wrapper.
+
+**Still different from the reference:** their cards carry a small product icon
+left of each title. Ours do not, because ours would be invented — there is no
+calendar integration behind a calendar glyph here. Structure, measure and
+control placement match; the iconography is the honest gap.
 
 ## Verified equivalent
 
