@@ -26,6 +26,8 @@ interface BulkBarProps {
   onSelectAllMatching: () => void
   onClear: () => void
   onDelete: () => Promise<void>
+  /** Opens the export modal in bulk mode (T-34.9). The view holds the ids. */
+  onExport: () => void
 }
 
 export function BulkBar({
@@ -35,6 +37,7 @@ export function BulkBar({
   onSelectAllMatching,
   onClear,
   onDelete,
+  onExport,
 }: BulkBarProps) {
   const toast = useToast()
   const [confirming, setConfirming] = useState(false)
@@ -81,7 +84,7 @@ export function BulkBar({
             variant="ghost"
             size="sm"
             leftIcon={<Download size={16} strokeWidth={1.75} />}
-            onClick={() => toast.info('Bulk export is not part of this build')}
+            onClick={onExport}
             data-testid="bulk-export"
           >
             Export

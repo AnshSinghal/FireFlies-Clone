@@ -47,8 +47,10 @@ const FILTERS: Array<{ value: Filter; label: string }> = [
 ]
 
 const DUE_TONE: Record<DueTone, string> = {
-  overdue: 'bg-danger-subtle text-danger',
-  today: 'bg-warning-subtle text-warning',
+  // The `-strong` text variants: these are TEXT on the subtle background, and
+  // the base hues only reach decoration-grade contrast there (T-38.5).
+  overdue: 'bg-danger-subtle text-danger-strong',
+  today: 'bg-warning-subtle text-warning-strong',
   upcoming: 'text-muted',
 }
 

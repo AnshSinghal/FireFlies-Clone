@@ -3309,6 +3309,110 @@
         ]
       }
     },
+    "/api/v1/meetings/export": {
+      "get": {
+        "description": "One file per meeting, all in the requested format (T-34.9). All-or-nothing: an unknown or deleted id fails the whole request with a 404 naming the offenders, rather than shipping a zip that silently misses files.",
+        "operationId": "export_meetings_api_v1_meetings_export_get",
+        "parameters": [
+          {
+            "description": "Comma-separated meeting ids.",
+            "in": "query",
+            "name": "ids",
+            "required": true,
+            "schema": {
+              "description": "Comma-separated meeting ids.",
+              "title": "Ids",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The file format to render.",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "description": "The file format to render.",
+              "enum": [
+                "pdf",
+                "md",
+                "txt",
+                "docx"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sections: `summary`, `transcript`, `actions`, `comments`, `highlights`. Omitted means all of them.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated sections: `summary`, `transcript`, `actions`, `comments`, `highlights`. Omitted means all of them.",
+              "title": "Include"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "A zip archive with one file per requested meeting."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "One or more ids are unknown or deleted; `details` lists them."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Export several meetings as a zip archive",
+        "tags": [
+          "export"
+        ]
+      }
+    },
     "/api/v1/meetings/facets": {
       "get": {
         "description": "Distinct hosts, participants, tags and channels across non-deleted meetings, plus the duration bounds. Derived from real data so the filter panel can never offer an option that matches nothing.",
@@ -4163,6 +4267,134 @@
         "summary": "Add a comment",
         "tags": [
           "comments"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/export": {
+      "get": {
+        "description": "The meeting rendered to `pdf`, `md`, `txt` or `docx`, streamed as a download (T-34.7). `include=` picks sections; the five canonical summary sections come from `summary` + `actions`.",
+        "operationId": "export_meeting_api_v1_meetings__meeting_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The file format to render.",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "description": "The file format to render.",
+              "enum": [
+                "pdf",
+                "md",
+                "txt",
+                "docx"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma-separated sections: `summary`, `transcript`, `actions`, `comments`, `highlights`. Omitted means all of them.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Comma-separated sections: `summary`, `transcript`, `actions`, `comments`, `highlights`. Omitted means all of them.",
+              "title": "Include"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/pdf": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The exported file, as an attachment. `Content-Disposition` carries the sanitised `<slug-of-title>-<date>.<ext>` filename."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Export a meeting as a file",
+        "tags": [
+          "export"
         ]
       }
     },

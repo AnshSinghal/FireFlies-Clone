@@ -25,8 +25,11 @@ export const TOAST_MESSAGES = {
   selectionCopied: 'Selection copied to clipboard',
   transcriptCopied: 'Transcript copied to clipboard',
   summaryCopied: 'Summary copied to clipboard',
+  markdownCopied: 'Markdown copied to clipboard',
+  exportReady: 'Export downloaded',
 
   saveFailed: "Couldn't save changes. Please try again.",
+  exportFailed: "Couldn't export. Please try again.",
   // The clipboard API refuses on an insecure origin and when the user has
   // denied permission. Both leave a button that appears to do nothing.
   copyFailed: "Couldn't copy — your browser blocked clipboard access",

@@ -11,9 +11,9 @@
  * from Next's router with nothing in it to explain the mistake.
  */
 
-import { API_BASE_URL } from '@/lib/api/client'
+import { resolveApiBase } from '@/lib/api/client'
 
 export function mediaSrc(meeting: { id: number; media_url?: string | null }): string | null {
   if (!meeting.media_url) return null
-  return new URL(`/api/v1/meetings/${meeting.id}/media`, API_BASE_URL).toString()
+  return new URL(`/api/v1/meetings/${meeting.id}/media`, resolveApiBase()).toString()
 }

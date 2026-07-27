@@ -22,9 +22,18 @@ const BACKEND_URL = process.env.E2E_API_URL ?? `http://localhost:${BACKEND_PORT}
 /** Pinned so "Today" means the same day the seeder anchored on. */
 export const ANCHOR_DATE = '2026-07-26T09:00:00Z'
 
+/**
+ * SMOKE_URL flips the whole config into deployed-target mode (T-40.13): the
+ * suite points at an already-running origin, so booting local servers and
+ * reseeding e2e.db would be wasted work — and reseeding is worse than wasted,
+ * because the deployed database is not ours to reset. Use with the smoke spec:
+ * `SMOKE_URL=http://host:8600 npx playwright test 98-smoke --project=read-only`.
+ */
+const SMOKE_URL = process.env.SMOKE_URL
+
 export default defineConfig({
   testDir: './tests',
-  globalSetup: path.resolve(__dirname, 'global-setup.ts'),
+  globalSetup: SMOKE_URL ? undefined : path.resolve(__dirname, 'global-setup.ts'),
 
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -43,12 +52,24 @@ export default defineConfig({
    */
   expect: { timeout: 10_000 },
 
+  /*
+   * 60s per test, doubling Playwright's default.
+   *
+   * Not because any test needs a minute — solo, the slowest is ~20s — but
+   * because four workers each rendering `/meeting/[id]` on demand contend for
+   * the same cores, and this machine also runs builds concurrently. The
+   * assertions are all event-driven, so a generous ceiling costs nothing when
+   * things are fast and stops the suite converting load into false failures
+   * when they are not.
+   */
+  timeout: 60_000,
+
   reporter: process.env.CI
     ? [['html', { open: 'never' }], ['list'], ['github']]
     : [['html', { open: 'never' }], ['list']],
 
   use: {
-    baseURL: FRONTEND_URL,
+    baseURL: SMOKE_URL ?? FRONTEND_URL,
     // A failing CI run must produce something you can actually debug from.
     trace: 'on-first-retry',
     video: 'retain-on-failure',
@@ -76,7 +97,14 @@ export default defineConfig({
   projects: [
     {
       name: 'read-only',
-      grepInvert: /@mutates/,
+      /*
+       * `@visual` and `@mobile` joined the invert when their projects arrived
+       * (T-39/T-41): those tags run ONLY in their own projects below. Without
+       * this, a `@visual` test would also run here and immediately fail —
+       * `toHaveScreenshot` names its baselines per project, and no read-only
+       * baselines exist. The read/write split itself is unchanged.
+       */
+      grepInvert: /@mutates|@visual|@mobile/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
     {
@@ -86,10 +114,38 @@ export default defineConfig({
       fullyParallel: false,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
+    {
+      /*
+       * Opt-in by tag: nothing untagged runs here, so the 349 desktop tests
+       * did not silently triple in count the day this project landed. A test
+       * earns `@mobile` by asserting something the 393px layout changes.
+       */
+      name: 'chromium-mobile',
+      grep: /@mobile/,
+      use: { ...devices['Pixel 7'] },
+    },
+    {
+      /*
+       * Screenshot baselines (T-41). Determinism over fidelity:
+       * `deviceScaleFactor: 1` so a baseline is pixel-for-CSS-pixel,
+       * `reducedMotion` so nothing is mid-transition when the shot is taken.
+       * `toHaveScreenshot` disables CSS animations by default, which covers
+       * the rest.
+       */
+      name: 'visual',
+      grep: /@visual/,
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 1,
+        contextOptions: { reducedMotion: 'reduce' },
+      },
+    },
   ],
 
   // Playwright owns the server lifecycle, so `npm test` works from a cold clone.
-  webServer: [
+  // In SMOKE_URL mode the target is already running remotely — no servers.
+  webServer: SMOKE_URL ? undefined : [
     {
       command: `cd ../backend && uv run uvicorn app.main:app --port ${BACKEND_PORT}`,
       url: `${BACKEND_URL}/api/health`,

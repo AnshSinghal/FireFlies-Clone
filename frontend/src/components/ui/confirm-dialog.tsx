@@ -119,7 +119,9 @@ export function ConfirmDialog({
         <p className="text-body text-secondary">
           {objectName && (
             <>
-              <span className="text-body-strong text-primary">{objectName}</span>{' '}
+              <span data-testid={`${testId}-object`} className="text-body-strong text-primary">
+                {objectName}
+              </span>{' '}
             </>
           )}
           {body}

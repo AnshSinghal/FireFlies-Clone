@@ -260,8 +260,9 @@ test.describe('primitives', () => {
     const dialog = page.getByTestId('confirm-dialog')
 
     // Bolded, so the user can see WHICH meeting rather than trusting the row
-    // selection.
-    await expect(dialog.locator('span.text-body-strong')).toHaveText('Q3 Product Roadmap Sync')
+    // selection. The object name carries its own testid — asserting the
+    // `text-body-strong` class coupled this test to the type scale (T-39.10).
+    await expect(dialog.getByTestId('confirm-dialog-object')).toHaveText('Q3 Product Roadmap Sync')
   })
 
   test('T10-K · a dropdown near the right edge flips to stay on screen', async ({ page }) => {

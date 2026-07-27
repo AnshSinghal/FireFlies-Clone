@@ -38,6 +38,7 @@ import { RemovableChip } from '@/components/ui/chip'
 import { BulkBar } from './bulk-bar'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EditMeetingModalById } from '@/features/edit/edit-meeting-modal'
+import { ExportModal, ExportModalById } from '@/features/export/export-modal'
 
 import { DetailsDrawer } from './details-drawer'
 
@@ -145,6 +146,10 @@ export function NotebookView() {
   const [deletingId, setDeletingId] = useState<number | null>(null)
   /** The row currently playing its exit animation. */
   const [exitingId, setExitingId] = useState<number | null>(null)
+  /** Which meeting the row kebab's export modal is open on (T-34). */
+  const [exportingId, setExportingId] = useState<number | null>(null)
+  /** The bulk bar's export modal — the ids come from the live selection. */
+  const [bulkExporting, setBulkExporting] = useState(false)
 
   const detailsId = filters.details ?? null
   const showDetails = useCallback(
@@ -360,6 +365,7 @@ export function NotebookView() {
           onDelete={setDeletingId}
           onShowDetails={showDetails}
           onEditDetails={setEditingId}
+          onExport={setExportingId}
           exitingId={exitingId}
           onPrefetch={(id) =>
             void client.prefetchQuery({
@@ -398,6 +404,14 @@ export function NotebookView() {
       )}
 
       <EditMeetingModalById meetingId={editingId} onClose={() => setEditingId(null)} />
+
+      <ExportModalById meetingId={exportingId} onClose={() => setExportingId(null)} />
+
+      <ExportModal
+        open={bulkExporting}
+        onOpenChange={setBulkExporting}
+        target={{ kind: 'bulk', ids: [...selection.selected] }}
+      />
 
       <ConfirmDialog
         open={deletingId !== null}
@@ -458,6 +472,7 @@ export function NotebookView() {
         }
         onClear={selection.clear}
         onDelete={removeSelected}
+        onExport={() => setBulkExporting(true)}
       />
     </div>
   )
@@ -480,6 +495,7 @@ interface GroupedListProps {
   onDelete: (id: number) => void
   onShowDetails: (id: number) => void
   onEditDetails: (id: number) => void
+  onExport: (id: number) => void
   onPrefetch: (id: number) => void
   /** The row playing its exit animation, if any. */
   exitingId: number | null
@@ -492,6 +508,7 @@ function GroupedList({
   onDelete,
   onShowDetails,
   onEditDetails,
+  onExport,
   onPrefetch,
   exitingId,
 }: GroupedListProps) {
@@ -573,6 +590,7 @@ function GroupedList({
                   exiting={meeting.id === exitingId}
                   onShowDetails={onShowDetails}
                   onEditDetails={onEditDetails}
+                  onExport={onExport}
                   onPrefetch={() => onPrefetch(meeting.id)}
                   tabIndex={meeting.id === activeId ? 0 : -1}
                   onFocus={() => setPreferredId(meeting.id)}

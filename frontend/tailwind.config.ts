@@ -83,10 +83,14 @@ const config: Config = {
       warning: {
         DEFAULT: 'var(--ff-warning)',
         subtle: 'var(--ff-warning-subtle)',
+        // TEXT on the subtle background — the badge pattern. The base hue is
+        // for icons and fills, where 3:1 suffices (T-38.5).
+        strong: 'var(--ff-warning-strong)',
       },
       danger: {
         DEFAULT: 'var(--ff-danger)',
         subtle: 'var(--ff-danger-subtle)',
+        strong: 'var(--ff-danger-strong)',
       },
       highlight: {
         DEFAULT: 'var(--ff-highlight)',

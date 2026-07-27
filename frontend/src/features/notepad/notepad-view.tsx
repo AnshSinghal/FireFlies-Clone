@@ -31,6 +31,7 @@ import { notebookReturnUrl } from '@/lib/notebook-return'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 
 import { EditMeetingModal } from '@/features/edit/edit-meeting-modal'
+import { ExportModal } from '@/features/export/export-modal'
 
 import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
 import { NotepadHeader } from './notepad-header'
@@ -73,6 +74,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
   )
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [tab, setTab] = useState('summary')
 
   //: The soundbite a `&clip=` link or a card interaction selected (T-33.9).
@@ -177,6 +179,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
               }
               onDelete={() => setConfirmingDelete(true)}
               onEditDetails={() => setEditing(true)}
+              onExport={() => setExporting(true)}
             />
 
             <div className="flex min-h-0 flex-1 flex-col md:flex-row">
@@ -249,6 +252,12 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
             <PlayerKeyboard />
 
             <EditMeetingModal meeting={meeting} open={editing} onOpenChange={setEditing} />
+
+            <ExportModal
+              open={exporting}
+              onOpenChange={setExporting}
+              target={{ kind: 'single', meeting }}
+            />
 
             <ConfirmDialog
               open={confirmingDelete}

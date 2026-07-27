@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from '../fixtures'
 
 /**
  * App shell and data layer (T-06, cases T06-F → T06-J).
@@ -40,13 +40,14 @@ test.describe('app shell', () => {
 
   test('the seeded anchor makes relative dates real', async ({ page }) => {
     /*
-     * The browser's clock is pinned to the same instant the seeder anchored on
-     * (T-39.6). Without this the test asserts "Today" against whatever day the
-     * suite happens to run — it passes on the day it was written and fails
-     * every day after, which is the most annoying kind of flake because it
-     * looks like a real regression.
+     * The browser's clock is pinned to the seeder's anchor instant by the
+     * `frozenClock` auto-fixture (T-39.6). Without that pin this test asserts
+     * "Today" against whatever day the suite happens to run — it passes on the
+     * day it was written and fails every day after, which is the most annoying
+     * kind of flake because it looks like a real regression. (An earlier
+     * version pinned noon inline here; date labels are calendar-day granular,
+     * so the fixture's morning anchor asserts exactly the same thing.)
      */
-    await page.clock.setFixedTime(new Date('2026-07-26T12:00:00Z'))
     await page.goto('/notebook')
     await expect(page.getByTestId('meeting-list')).toBeVisible()
 
