@@ -182,6 +182,38 @@ test('a collapsed item shows a tooltip; an expanded one does not', async ({ page
   await expect(page.getByTestId('sidebar-tooltip').first()).toContainText('Uploads')
 })
 
+test('below 1280px the rail is collapsed WITHOUT the toggle, and tooltips appear', async ({
+  page,
+}) => {
+  /*
+   * The regression test for a bug the suite could not have caught.
+   *
+   * The rail collapses two ways: the user's toggle, offered only at ≥1280px,
+   * and a CSS floor below it — `app-shell.tsx` pins `--rail-w` to 64px under
+   * `xl`. The test above covers the toggle at the default 1440px viewport.
+   * Nothing covered the CSS path, and `SidebarNav` was reading only the toggle,
+   * so between 768 and 1279px it rendered its expanded self into a 63px rail:
+   * the CHANNELS heading clipped to "CHANN", labels and Soon badges cut off,
+   * and — because `SidebarItem` suppresses its tooltip when it thinks the label
+   * is visible — six unlabelled icons with no way to identify them.
+   *
+   * Asserting the TOOLTIP rather than the pixels is deliberate. The visual
+   * baseline at this width passed before and after the fix: the clipped text
+   * was ~600px against a 13,824px tolerance, and the nav labels were clipped to
+   * invisibility either way, so the pixels were identical. The tooltip is the
+   * property a user actually depends on at this width.
+   */
+  await page.setViewportSize({ width: 1024, height: 900 })
+  await page.goto('/notebook')
+  await expect(page.getByTestId('meeting-list')).toBeVisible()
+
+  await expect(page.getByTestId('sidebar')).toHaveAttribute('data-collapsed', 'true')
+  await expect(page.getByRole('heading', { name: 'Channels' })).toHaveCount(0)
+
+  await page.getByTestId('sidebar-item-uploads').hover()
+  await expect(page.getByTestId('sidebar-tooltip').first()).toContainText('Uploads')
+})
+
 // ── T07-I · placeholder routes are navigable ────────────────────────────────
 
 test('a Soon item still navigates rather than sitting dead', async ({ page }) => {
