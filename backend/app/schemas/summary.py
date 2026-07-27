@@ -28,8 +28,12 @@ class OutlineEntry(BaseModel):
 class NoteGroup(BaseModel):
     """Bullet notes, grouped under their outline chapter."""
 
-    chapter: str | None = None
-    bullets: list[str] = Field(default_factory=list)
+    # No defaults, for the reason spelled out on `SummaryOut` below: a default
+    # makes the field optional in OpenAPI, and the generated client then types
+    # `bullets` as possibly-undefined for an absence the API never produces.
+    # `chapter` is nullable but always PRESENT, which is a different claim.
+    chapter: str | None
+    bullets: list[str]
 
 
 class SummaryOut(BaseModel):
@@ -50,7 +54,6 @@ class SummaryOut(BaseModel):
     model: str | None = None
     generated_at: datetime | None = None
     is_stale: bool = Field(
-        default=False,
         description=(
             "True when the transcript changed after generation — drives the "
             "Outdated badge in the UI."

@@ -849,6 +849,10 @@
             "title": "Chapter"
           }
         },
+        "required": [
+          "chapter",
+          "bullets"
+        ],
         "title": "NoteGroup",
         "type": "object"
       },
@@ -1259,7 +1263,6 @@
             "title": "Generated At"
           },
           "is_stale": {
-            "default": false,
             "description": "True when the transcript changed after generation \u2014 drives the Outdated badge in the UI.",
             "title": "Is Stale",
             "type": "boolean"
@@ -1322,7 +1325,8 @@
           "keywords",
           "outline",
           "notes",
-          "provider"
+          "provider",
+          "is_stale"
         ],
         "title": "SummaryOut",
         "type": "object"

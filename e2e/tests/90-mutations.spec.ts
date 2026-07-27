@@ -267,3 +267,60 @@ test.describe('details drawer', { tag: '@mutates' }, () => {
     await expect(page.getByTestId('details-privacy-select')).toContainText(before!)
   })
 })
+
+test.describe('summary · regenerate', { tag: '@mutates' }, () => {
+  const HERO = 1
+
+  test('T23-I · regenerating replaces the summary and re-enables the button', async ({ page }) => {
+    await page.goto(`/meeting/${HERO}`)
+    await expect(page.getByTestId('summary-overview')).toBeVisible({ timeout: 20_000 })
+
+    const button = page.getByTestId('summary-regenerate')
+    await button.click()
+
+    await expect(page.getByTestId('toast')).toContainText('Summary regenerated', {
+      timeout: 15_000,
+    })
+
+    // Re-enabled and still showing a summary — not left spinning, and not
+    // blanked while the new one arrives.
+    await expect(button).toBeEnabled()
+    await expect(page.getByTestId('summary-overview')).toBeVisible()
+    await expect(page.getByTestId('summary-outline')).toBeVisible()
+  })
+
+  test('T23-L · regenerating clears the Outdated badge', async ({ page, request }) => {
+    /*
+     * The stale flag is set by EDITING A SEGMENT, which has no UI yet — the
+     * segment editor is a later task. Driving it through the API is the honest
+     * way to reach the state from here, and it exercises the same path the
+     * editor will: edit, badge appears; regenerate, badge clears.
+     */
+    const transcript = await request.get(
+      `http://127.0.0.1:8100/api/v1/meetings/${HERO}/transcript`,
+    )
+    const segment = (await transcript.json()).segments[0]
+
+    const edit = await request.patch(
+      `http://127.0.0.1:8100/api/v1/meetings/segments/${segment.id}`,
+      { data: { text: `${segment.text} ` } },
+    )
+    expect(edit.ok()).toBe(true)
+
+    await page.goto(`/meeting/${HERO}`)
+    await expect(page.getByTestId('summary-stale-badge')).toBeVisible({ timeout: 20_000 })
+
+    await page.getByTestId('summary-regenerate').click()
+    await expect(page.getByTestId('toast')).toContainText('Summary regenerated', {
+      timeout: 15_000,
+    })
+
+    await expect(page.getByTestId('summary-stale-badge')).toBeHidden()
+
+    // Put the segment back the way the seed left it.
+    await request.patch(
+      `http://127.0.0.1:8100/api/v1/meetings/segments/${segment.id}`,
+      { data: { text: segment.text } },
+    )
+  })
+})

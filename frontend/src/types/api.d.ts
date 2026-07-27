@@ -806,9 +806,9 @@ export interface components {
      */
     NoteGroup: {
       /** Bullets */
-      bullets?: string[]
+      bullets: string[]
       /** Chapter */
-      chapter?: string | null
+      chapter: string | null
     }
     /**
      * OutlineEntry
@@ -992,7 +992,6 @@ export interface components {
       /**
        * Is Stale
        * @description True when the transcript changed after generation — drives the Outdated badge in the UI.
-       * @default false
        */
       is_stale: boolean
       /** Keywords */

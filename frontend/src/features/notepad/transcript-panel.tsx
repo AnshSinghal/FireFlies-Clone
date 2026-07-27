@@ -97,6 +97,22 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
   const search = useTranscriptSearch(segments)
 
   /*
+   * A keyword clicked in the SUMMARY opens this bar on that term (T-23.2).
+   *
+   * Driven by a nonce so clicking the same keyword twice works — after the
+   * reader has closed the bar, asking for "pricing" again has to reopen it,
+   * and a plain `term` comparison would see no change.
+   */
+  const { findRequest } = useNotepadCommands()
+  const appliedFind = useRef(0)
+  useEffect(() => {
+    if (findRequest.nonce === 0 || findRequest.nonce === appliedFind.current) return
+    appliedFind.current = findRequest.nonce
+    search.openBar()
+    search.setQuery(findRequest.term)
+  }, [findRequest, search])
+
+  /*
    * ⌘F opens THIS bar, not the browser's (T-22.1).
    *
    * Overriding a browser shortcut needs a reason, and there is one: native find

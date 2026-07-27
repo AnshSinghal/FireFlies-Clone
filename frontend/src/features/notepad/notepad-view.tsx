@@ -33,6 +33,7 @@ import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
 import { NotepadHeader } from './notepad-header'
 import { ShortcutsModal } from './player/shortcuts-modal'
+import { IndexPanel } from './summary/index-panel'
 import { SmartSearchPanel } from './transcript/smart-search-panel'
 import { SummaryPanel } from './summary-panel'
 import { TranscriptPanel } from './transcript-panel'
@@ -69,13 +70,14 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
   }, [meeting])
 
   const src = meeting ? mediaSrc(meeting) : null
+  const meetingTitle = meeting?.title ?? ''
 
   const panels = useMemo(
     () => ({
-      summary: <SummaryPanel meetingId={meetingId} />,
+      summary: <SummaryPanel meetingId={meetingId} title={meetingTitle} />,
       transcript: <TranscriptPanel meetingId={meetingId} mediaSrc={src} />,
     }),
-    [meetingId, src],
+    [meetingId, src, meetingTitle],
   )
 
   if (isError) {
@@ -140,9 +142,11 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
 
               {openPanel && (
                 <RailFlyout item={openPanel} onClose={() => setOpenPanel(null)}>
-                  {/* Smart Search is real (T-22.10); the other four rail items
-                    are still placeholders, and the flyout says so itself. */}
+                  {/* Smart Search (T-22.10) and Index (T-23.13) are real; the
+                    other three rail items are still placeholders, and the
+                    flyout says so itself. */}
                   {openPanel === 'search' ? <SmartSearchPanel meetingId={meetingId} /> : undefined}
+                  {openPanel === 'index' ? <IndexPanel meetingId={meetingId} /> : undefined}
                 </RailFlyout>
               )}
 
