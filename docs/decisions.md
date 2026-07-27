@@ -3242,3 +3242,78 @@ real app's rail — the same constraint that put AskFred in the header (ADR-136)
 **Decision.** The Bookmarks rail slot opens a panel with two tabs. Both lists
 are the same interaction — a recognisable moment that seeks the player — so
 the pairing reads as organisation, not as a squeeze.
+
+## ADR-148 — A meeting's length is labelled `30 min`, not `7:13`
+
+**Date:** 2026-07-27 · **Task:** T-46 (fidelity sweep) · **Status:** Accepted
+
+**Context.** Comparing `docs/screenshots/02-meetings-list.png` against
+`docs/reference/fireflies/02.png` side by side, the metadata line under every
+title differs in a way no one had noticed in five tasks of work on that row:
+
+    reference:  Jul 25 · 9:00 AM · 30 min · Goyal
+    ours:       Today  · 3:30 PM · 7:13   · Tom Bradley
+
+The row was rendering `formatDuration`, which produces `M:SS`.
+
+Three separate places in this repository already *claimed* the reference
+format while the code did something else:
+
+- `design.md` §2.2 quotes the reference line verbatim, `30 min` included.
+- `meeting-row.tsx` carries the comment *"One metadata line, as the reference
+  has it: date · time · duration · host"* directly above the `formatDuration`
+  call.
+- Most damning, `format.test.ts` had a test **named** `matches the reference
+  screenshots` asserting `formatMeetingMeta(…, 1800) === 'Jul 24 · 9:00 AM ·
+  30:00'`. 1800 seconds is precisely the reference's `30 min` row. The test
+  named the artifact, used its exact number, and asserted the wrong string.
+
+That is the interesting part of this ADR. The defect was not that nobody
+compared against the reference — three people did, and wrote it down. It is
+that "duration" was read as one concept when it is two.
+
+**Decision.** Split the concept.
+
+- `formatDuration(ms)` → `42:18`, `1:05:32`. A **position or a span you compare
+  against another span**: the player's elapsed/remaining, transcript stamps,
+  soundbite clip lengths, per-speaker talk time. Second-level precision is the
+  point — `4:12` vs `3:58` of talking is a real difference that `4 min vs 4 min`
+  erases.
+- `formatDurationLabel(ms)` → `30 min`, `1 hr 5 min`, `< 1 min`. **How long a
+  meeting was**, as a headline figure. Nobody answers "how long was that
+  meeting" in seconds, and the reference doesn't either.
+
+Applied to the notebook row, the grid card, the notepad header and
+`formatMeetingMeta`. Deliberately NOT applied to talk time, clip lengths or
+transcript positions — those are the first concept.
+
+**The details drawer is the deliberate exception**, and it is the one place the
+split is genuinely arguable. Its total duration sits in the same block as
+per-person talk time, and the value of showing them together is that the parts
+visibly sum to the whole: `4:12` and `3:58` against `8:36`. Labelling the total
+`9 min` destroys that check to gain nothing, because the reference has no
+drawer for it to match. The first attempt DID change it, and `T15-B` caught it
+— which is the argument for that assertion existing.
+
+**On overriding T12-K.** The plan's T12-K states *"Duration cell text matches
+`/^\d{1,2}:\d{2}$/`"*. That criterion describes the **duration column of the
+table layout**, and ADR-036 already replaced that table with the reference's
+date-grouped cards. There is no duration cell for it to constrain; what
+survives is design.md's instruction for this row, which is that the screenshot
+wins. This is the fourth time the plan's unsampled values have lost to the
+reference, after the accent (ADR-011), the rail metrics (ADR-021) and the
+layout itself (ADR-036) — and, as in ADR-036, the adapted assertions carry
+their reasoning inline in the spec rather than being quietly rewritten.
+
+The property T12-K actually protected — that a raw seconds count never reaches
+the screen — is preserved: `433` fails the new regex as surely as the old one.
+
+**Consequences.** Rounding to the minute means two rows can tie in the label
+where their raw seconds differ, so `T13-M`'s descending-order check parses
+minutes and accepts equal neighbours. Sub-minute meetings read `< 1 min`
+rather than `0 min`, which would look like a bug rather than a short meeting.
+A unit test asserts `formatDurationLabel` never emits a colon, because the two
+functions are easy to confuse at a call site and confusing them is precisely
+the defect recorded here.
+
+---

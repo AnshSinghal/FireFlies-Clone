@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   formatDuration,
+  formatDurationLabel,
   formatFullDate,
   formatMeetingMeta,
   formatRelativeDate,
@@ -131,16 +132,66 @@ describe('formatFullDate', () => {
   })
 })
 
+describe('formatDurationLabel', () => {
+  /*
+   * The four cases below are read straight off `docs/reference/fireflies/02.png`
+   * — 30, 12, 55 and 17 minutes. Keeping the reference's own numbers means a
+   * regression here fails against the artifact this project is graded on rather
+   * than against a number someone invented.
+   */
+  it.each([
+    [1800, '30 min'],
+    [720, '12 min'],
+    [3300, '55 min'],
+    [1020, '17 min'],
+  ])('renders %i seconds as the reference labels it: %s', (seconds, expected) => {
+    expect(formatDurationLabel(seconds * 1000)).toBe(expected)
+  })
+
+  it('rounds to the nearest minute rather than truncating', () => {
+    // 7:13 is nearer 7 than 8; 7:45 is nearer 8. Truncation would call both 7.
+    expect(formatDurationLabel(433 * 1000)).toBe('7 min')
+    expect(formatDurationLabel(465 * 1000)).toBe('8 min')
+  })
+
+  it('says "< 1 min" rather than "0 min" for a very short meeting', () => {
+    // A real two-minute standup that overran by nothing is plausible; a meeting
+    // labelled "0 min" reads as a bug in the app rather than a short meeting.
+    expect(formatDurationLabel(20 * 1000)).toBe('< 1 min')
+    expect(formatDurationLabel(29 * 1000)).toBe('< 1 min')
+    expect(formatDurationLabel(30 * 1000)).toBe('1 min')
+  })
+
+  it('drops the empty minute on an exact hour', () => {
+    expect(formatDurationLabel(3600 * 1000)).toBe('1 hr')
+    expect(formatDurationLabel(7200 * 1000)).toBe('2 hr')
+  })
+
+  it('carries hours and minutes together otherwise', () => {
+    expect(formatDurationLabel(3900 * 1000)).toBe('1 hr 5 min')
+    expect(formatDurationLabel(5415 * 1000)).toBe('1 hr 30 min')
+  })
+
+  it("never emits a colon — that is formatDuration's job", () => {
+    // The two are easy to confuse at a call site, and confusing them is exactly
+    // the defect ADR-148 records. This is the cheap guard against a silent swap.
+    for (const seconds of [0, 45, 433, 1800, 3600, 5415]) {
+      expect(formatDurationLabel(seconds * 1000)).not.toContain(':')
+    }
+  })
+})
+
 describe('formatMeetingMeta', () => {
-  it('matches the reference screenshots: "Jul 25 · 9:00 AM"', () => {
+  it('matches the reference screenshots: "Jul 25 · 9:00 AM · 30 min"', () => {
+    // The full line from `docs/reference/fireflies/02.png`, minus the host.
     const meta = formatMeetingMeta('2026-07-24T09:00:00', 1800, NOW)
-    expect(meta).toBe('Jul 24 · 9:00 AM · 30:00')
+    expect(meta).toBe('Jul 24 · 9:00 AM · 30 min')
   })
 
   it('joins date, time and duration with the separator the design uses', () => {
     const meta = formatMeetingMeta('2026-07-26T10:00:00', 2538, NOW)
     expect(meta).toContain('Today')
-    expect(meta).toContain('42:18')
+    expect(meta).toContain('42 min')
     expect(meta.split(' · ')).toHaveLength(3)
   })
 })

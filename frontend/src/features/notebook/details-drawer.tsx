@@ -33,6 +33,14 @@ import type { MeetingDetail, ParticipantDetail } from '@/lib/api/types'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { cn } from '@/lib/utils/cn'
 import {
+  /*
+   * The drawer keeps `formatDuration` for BOTH its total and its per-person
+   * talk time, and is the deliberate exception to ADR-148. Those two numbers
+   * sit in the same block, and the whole value of showing them together is
+   * that the parts visibly sum to the whole — `4:12` and `3:58` against a
+   * total of `8:36`. Label the total `9 min` and that check is gone, for no
+   * gain: the reference has no drawer, so nothing here is being matched.
+   */
   formatDuration,
   formatFullDate,
   formatRelativeDate,

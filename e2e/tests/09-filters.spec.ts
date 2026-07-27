@@ -313,10 +313,11 @@ test.describe('sorting', () => {
     await page.goto('/notebook?sort=-duration_seconds')
     await expect(page.getByTestId('meeting-list')).toBeVisible()
 
-    const seconds = (await page.getByTestId('meeting-row-duration').allTextContents()).map(
-      toSeconds,
+    const minutes = (await page.getByTestId('meeting-row-duration').allTextContents()).map(
+      toMinutes,
     )
-    expect(seconds).toEqual([...seconds].sort((a, b) => b - a))
+    expect(minutes.length).toBeGreaterThan(1)
+    expect(minutes).toEqual([...minutes].sort((a, b) => b - a))
   })
 
   test('T13-N · Title A–Z is alphabetical, case-insensitively', async ({ page }) => {
@@ -336,8 +337,19 @@ test.describe('sorting', () => {
   })
 })
 
-/** `42:18` → 2538. */
-function toSeconds(text: string): number {
-  const parts = text.trim().split(':').map(Number)
-  return parts.reduce((total, part) => total * 60 + part, 0)
+/**
+ * `1 hr 5 min` → 65, `30 min` → 30, `< 1 min` → 0.
+ *
+ * The row labels a meeting's length the way the reference does (ADR-148), so
+ * the ordering assertion parses minutes rather than `M:SS`. Rounding to the
+ * minute can make two rows tie where their raw seconds differ — which is fine
+ * for the claim under test, since a descending check accepts equal neighbours.
+ */
+function toMinutes(text: string): number {
+  const label = text.trim()
+  if (label === '< 1 min') return 0
+
+  const hours = /(\d+)\s*hr/.exec(label)?.[1]
+  const minutes = /(\d+)\s*min/.exec(label)?.[1]
+  return Number(hours ?? 0) * 60 + Number(minutes ?? 0)
 }

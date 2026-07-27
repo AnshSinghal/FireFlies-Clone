@@ -44,7 +44,12 @@ import { useUpdateMeeting } from '@/lib/api/meetings'
 import type { MeetingListItem } from '@/lib/api/types'
 import { rememberNotebookUrl } from '@/lib/notebook-return'
 import { cn } from '@/lib/utils/cn'
-import { formatDuration, formatFullDate, formatRelativeDate, formatTime } from '@/lib/utils/format'
+import {
+  formatDurationLabel,
+  formatFullDate,
+  formatRelativeDate,
+  formatTime,
+} from '@/lib/utils/format'
 
 interface MeetingRowProps {
   meeting: MeetingListItem
@@ -244,7 +249,7 @@ export function MeetingRow({
             <Separator />
             {/* tnum so durations line up down the list even unaligned. */}
             <span className="tnum" data-testid="meeting-row-duration">
-              {formatDuration(meeting.duration_seconds * 1000)}
+              {formatDurationLabel(meeting.duration_seconds * 1000)}
             </span>
             <Separator />
             <span className="truncate">{meeting.host.name}</span>

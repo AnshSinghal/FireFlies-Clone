@@ -30,11 +30,26 @@ test.describe('app shell', () => {
     }
   })
 
-  test('durations render as MM:SS, never raw seconds', async ({ page }) => {
+  test('durations render as a labelled length, never raw seconds', async ({ page }) => {
+    /*
+     * Same change as T12-K in `08-notebook.spec.ts`, same reason (ADR-148):
+     * the row labels a meeting's length the way the reference does, `30 min`.
+     *
+     * The `waitFor` is the second fix here and the more important one. This
+     * test read `allTextContents()` straight after `goto` with nothing to wait
+     * on, so it collected an empty array and looped zero times — it asserted
+     * NOTHING and passed for it. The non-empty guard below is what caught that;
+     * a for-loop over an empty list is the quietest way a test can lie.
+     */
     await page.goto('/notebook')
+    await expect(page.getByTestId('meeting-list')).toBeVisible()
+    await page.getByTestId('meeting-row-duration').first().waitFor()
 
-    for (const text of await page.getByTestId('meeting-row-duration').allTextContents()) {
-      expect(text.trim()).toMatch(/^\d{1,2}:\d{2}$|^\d{1,2}:\d{2}:\d{2}$/)
+    const texts = await page.getByTestId('meeting-row-duration').allTextContents()
+    expect(texts.length).toBeGreaterThan(0)
+
+    for (const text of texts) {
+      expect(text.trim()).toMatch(/^(< 1 min|\d{1,2} min|\d{1,2} hr( \d{1,2} min)?)$/)
     }
   })
 

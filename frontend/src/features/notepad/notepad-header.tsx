@@ -44,7 +44,7 @@ import type { MeetingDetail } from '@/lib/api/types'
 import { notebookReturnUrl } from '@/lib/notebook-return'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { cn } from '@/lib/utils/cn'
-import { formatDuration, formatFullDate, pluralize } from '@/lib/utils/format'
+import { formatDurationLabel, formatFullDate, pluralize } from '@/lib/utils/format'
 
 interface NotepadHeaderProps {
   meeting: MeetingDetail
@@ -283,7 +283,7 @@ function MetadataLine({
     <div className="flex min-w-0 items-center gap-2 text-sm text-muted" data-testid="notepad-meta">
       <span className="truncate">{formatFullDate(meeting.started_at)}</span>
       <Separator />
-      <span className="tnum">{formatDuration(meeting.duration_seconds * 1000)}</span>
+      <span className="tnum">{formatDurationLabel(meeting.duration_seconds * 1000)}</span>
       <Separator />
 
       <Popover

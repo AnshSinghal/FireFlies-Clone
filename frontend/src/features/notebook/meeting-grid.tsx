@@ -15,7 +15,7 @@ import { AvatarGroup } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/chip'
 import { Highlighter } from '@/components/ui/highlighter'
 import type { MeetingListItem } from '@/lib/api/types'
-import { formatDuration, formatRelativeDate } from '@/lib/utils/format'
+import { formatDurationLabel, formatRelativeDate } from '@/lib/utils/format'
 
 export function MeetingGrid({
   meetings,
@@ -67,7 +67,7 @@ export function MeetingGrid({
                   {formatRelativeDate(meeting.started_at)}
                 </span>
                 <span aria-hidden="true">·</span>
-                <span className="tnum">{formatDuration(meeting.duration_seconds * 1000)}</span>
+                <span className="tnum">{formatDurationLabel(meeting.duration_seconds * 1000)}</span>
               </span>
 
               <span className="mt-auto flex items-center justify-between gap-2">

@@ -156,9 +156,23 @@ test.describe('notebook', () => {
     expect(label).toBeTruthy()
   })
 
-  test('T12-K · durations are MM:SS, never raw seconds', async ({ page }) => {
-    for (const text of await page.getByTestId('meeting-row-duration').allTextContents()) {
-      expect(text.trim()).toMatch(/^\d{1,2}:\d{2}$|^\d{1,2}:\d{2}:\d{2}$/)
+  test('T12-K · durations read as a labelled length, never raw seconds', async ({ page }) => {
+    /*
+     * ADAPTED, deliberately — the plan's T12-K reads "Duration cell text
+     * matches /^\d{1,2}:\d{2}$/". That regex describes the duration COLUMN of
+     * the table layout, and ADR-036 replaced that table with the reference's
+     * date-grouped cards. There is no duration cell to assert against.
+     *
+     * What the row has instead is the reference's metadata line, which labels
+     * a meeting's length as `30 min` (ADR-148). So the assertion moves to the
+     * new format while keeping the property the original protected — that a
+     * raw seconds count never reaches the screen. `433` fails both regexes.
+     */
+    const texts = await page.getByTestId('meeting-row-duration').allTextContents()
+    expect(texts.length).toBeGreaterThan(0)
+
+    for (const text of texts) {
+      expect(text.trim()).toMatch(/^(< 1 min|\d{1,2} min|\d{1,2} hr( \d{1,2} min)?)$/)
     }
   })
 

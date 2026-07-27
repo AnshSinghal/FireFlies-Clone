@@ -40,6 +40,37 @@ export function formatDuration(ms: number): string {
 }
 
 /**
+ * How long a meeting was, as the reference screenshots label it: `30 min`,
+ * `1 hr 5 min`, `1 hr`.
+ *
+ * NOT the same thing as `formatDuration`, and the distinction is the point.
+ * `M:SS` answers "where am I in this recording" — it is a position, it belongs
+ * next to a scrubber, and it needs second-level precision. "How long was that
+ * meeting" is a different question, nobody answers it in seconds, and
+ * `docs/reference/fireflies/02.png` answers it as `30 min` on every row of the
+ * list this project is graded against (see ADR-148).
+ *
+ * Rounds to the nearest minute, because a label claiming `7 min` for 7:13 is
+ * right and one claiming `7:13` is answering a question nobody asked. Anything
+ * under a minute reads `< 1 min` rather than `0 min`, which would look broken
+ * on a legitimately short meeting.
+ */
+export function formatDurationLabel(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return '0 min'
+
+  const totalMinutes = Math.round(ms / MS_PER_SECOND / SECONDS_PER_MINUTE)
+  if (totalMinutes < 1) return '< 1 min'
+
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  if (hours === 0) return `${minutes} min`
+  // `1 hr` on the exact hour — "1 hr 0 min" is how a machine says it.
+  if (minutes === 0) return `${hours} hr`
+  return `${hours} hr ${minutes} min`
+}
+
+/**
  * A position within a recording, as the transcript shows it.
  *
  * Always `MM:SS` under an hour — `04:32`, not `4:32` — because these sit in a
@@ -154,12 +185,12 @@ export function formatFullDate(iso: string): string {
   return `${FULL_FORMAT.format(date)} at ${TIME_FORMAT.format(date)}`
 }
 
-/** `Jul 24, 2026 · 10:00 am · 42:18` — the Notepad's metadata line. */
+/** `Jul 25 · 9:00 AM · 30 min` — the metadata line, exactly as the reference has it. */
 export function formatMeetingMeta(iso: string, durationSeconds: number, now?: Date): string {
   return [
     formatRelativeDate(iso, now),
     formatTime(iso),
-    formatDuration(durationSeconds * MS_PER_SECOND),
+    formatDurationLabel(durationSeconds * MS_PER_SECOND),
   ]
     .filter(Boolean)
     .join(' · ')
