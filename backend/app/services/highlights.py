@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import delete as sql_delete
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.core.exceptions import (
     BookmarkNotFoundError,
@@ -161,40 +162,60 @@ class HighlightService:
         `(segment_id, created_by)` is what makes this safe to call twice.
         """
         segment = self._segment_in(meeting_id, segment_id)
+        existing = self._bookmark_for(segment_id, user.id)
 
-        existing = self.db.execute(
-            select(Bookmark).where(
-                Bookmark.segment_id == segment_id, Bookmark.created_by == user.id
-            )
-        ).scalar_one_or_none()
+        if existing is None:
+            try:
+                bookmark = Bookmark(
+                    meeting_id=meeting_id,
+                    segment_id=segment_id,
+                    created_by=user.id,
+                    is_active=True,
+                )
+                self.db.add(bookmark)
+                self.db.commit()
+            except IntegrityError:
+                # Another request created the row between the SELECT above and
+                # this INSERT. Real, and reachable from the UI: `B` is a
+                # keypress, the client is optimistic, and two fast presses put
+                # two POSTs on the wire at once — which is what the `B`-toggles
+                # end-to-end case does, and what turned this from a theoretical
+                # race into a 500.
+                #
+                # Falling through to the flip below rather than answering
+                # "already bookmarked" is what makes the pair behave like two
+                # toggles: the winner stars it, the loser unstars it, and the
+                # final state matches the second keypress. Returning
+                # `bookmarked: true` twice would leave a star on screen that the
+                # user had just pressed off.
+                self.db.rollback()
+                existing = self._bookmark_for(segment_id, user.id)
+            else:
+                self.db.refresh(bookmark)
+                return BookmarkToggleOut(
+                    segment_id=segment_id,
+                    bookmarked=True,
+                    bookmark=self._to_bookmark(bookmark, segment, self._speaker(segment)),
+                )
 
-        if existing is not None and existing.is_active:
-            # Flipped rather than deleted: the row is the natural place to hang
-            # "un-star then undo" from, and the unique constraint means a delete
-            # followed by a re-star would churn ids for no benefit.
-            existing.is_active = False
-            self.db.commit()
-            return BookmarkToggleOut(segment_id=segment_id, bookmarked=False, bookmark=None)
+        if existing is None:  # pragma: no cover — the row cannot vanish again
+            raise BookmarkNotFoundError(details={"segment_id": segment_id})
 
-        if existing is not None:
-            existing.is_active = True
-            bookmark = existing
-        else:
-            bookmark = Bookmark(
-                meeting_id=meeting_id,
-                segment_id=segment_id,
-                created_by=user.id,
-                is_active=True,
-            )
-            self.db.add(bookmark)
-
+        # Flipped rather than deleted: the row is the natural place to hang
+        # "un-star then undo" from, and the unique constraint means a delete
+        # followed by a re-star would churn ids for no benefit.
+        existing.is_active = not existing.is_active
         self.db.commit()
-        self.db.refresh(bookmark)
+        self.db.refresh(existing)
 
         return BookmarkToggleOut(
             segment_id=segment_id,
-            bookmarked=True,
-            bookmark=self._to_bookmark(bookmark, segment, self._speaker(segment)),
+            bookmarked=existing.is_active,
+            bookmark=(
+                self._to_bookmark(existing, segment, self._speaker(segment))
+                if existing.is_active
+                else None
+            ),
         )
 
     def delete_bookmark(self, meeting_id: int, bookmark_id: int, user: User) -> None:
@@ -251,6 +272,13 @@ class HighlightService:
             self.db.execute(sql_delete(Highlight).where(Highlight.id.in_(doomed)))
 
     # ── Internals ───────────────────────────────────────────────────────────
+
+    def _bookmark_for(self, segment_id: int, user_id: int) -> Bookmark | None:
+        return self.db.execute(
+            select(Bookmark).where(
+                Bookmark.segment_id == segment_id, Bookmark.created_by == user_id
+            )
+        ).scalar_one_or_none()
 
     def _segment_in(self, meeting_id: int, segment_id: int) -> TranscriptSegment:
         segment = self.db.get(TranscriptSegment, segment_id)

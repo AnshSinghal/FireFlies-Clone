@@ -11,9 +11,10 @@ from __future__ import annotations
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Highlight, Meeting, TranscriptSegment
+from app.models import Bookmark, Highlight, Meeting, TranscriptSegment, User
 from app.services.highlights import HighlightService
 from tests.factories import make_meeting, make_segments, make_speaker, make_user
 
@@ -309,6 +310,41 @@ def test_toggling_twice_returns_to_unstarred_without_a_unique_violation(
     assert third.json()["bookmarked"] is True
 
     assert len(client.get(url).json()) == 1
+
+
+def test_two_toggles_racing_each_other_resolve_to_the_second_press(
+    db: Session, meeting: Meeting, segment: TranscriptSegment, monkeypatch: pytest.MonkeyPatch
+):
+    """The `B` key is a keypress and the client is optimistic.
+
+    Two fast presses put two POSTs on the wire at once; both read "not
+    bookmarked", both INSERT, and one hits the unique constraint. Before this
+    was handled that surfaced as a 500 in the middle of an ordinary double-tap.
+
+    The race is simulated by making the lookup miss ONCE — which is precisely
+    what the losing request sees — rather than by threading a second session
+    through the test, which would prove less and cost more.
+    """
+    user = db.execute(select(User).order_by(User.id)).scalars().first()
+    assert user is not None
+    service = HighlightService(db)
+
+    service.toggle_bookmark(meeting.id, user, segment.id)
+
+    original = HighlightService._bookmark_for
+    seen = {"calls": 0}
+
+    def missing_once(self: HighlightService, segment_id: int, user_id: int) -> Bookmark | None:
+        seen["calls"] += 1
+        return None if seen["calls"] == 1 else original(self, segment_id, user_id)
+
+    monkeypatch.setattr(HighlightService, "_bookmark_for", missing_once)
+
+    result = service.toggle_bookmark(meeting.id, user, segment.id)
+
+    # The loser unstars rather than reporting a star the user pressed off.
+    assert result.bookmarked is False
+    assert db.query(Bookmark).filter_by(segment_id=segment.id).count() == 1
 
 
 def test_bookmarks_come_back_in_recording_order(client: TestClient, meeting: Meeting):
