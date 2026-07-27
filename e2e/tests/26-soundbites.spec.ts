@@ -78,6 +78,23 @@ async function selectAcross(page: Page, fromNth: number, toNth: number): Promise
   await expect(from).toBeVisible()
   await expect(to).toBeVisible()
 
+  /*
+   * Scrolled into view BEFORE the selection is made.
+   *
+   * The toolbar is `position: fixed`, anchored to the selection's viewport
+   * rect — so a selection below the fold puts its buttons below the fold too,
+   * and a fixed element cannot be scrolled into view afterwards. Playwright
+   * reports that as an eternal "element is outside of the viewport" on the
+   * `selection-soundbite` click, which is what T33-D and T33-J were hitting.
+   *
+   * `toBeVisible()` does not cover it: it means rendered, not on screen. These
+   * rows only fall below the fold once an earlier `@mutates` spec has added
+   * height above them — comment threads do exactly that to meeting 1 — which
+   * is why this passed run alone and failed in the suite.
+   */
+  await to.scrollIntoViewIfNeeded()
+  await from.scrollIntoViewIfNeeded()
+
   const handles = [await from.elementHandle(), await to.elementHandle()] as const
   await page.evaluate(([start, end]) => {
     const range = document.createRange()
