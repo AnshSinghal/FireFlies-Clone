@@ -8,10 +8,12 @@
  * the modal can open on the right one without this component changing.
  */
 
-import { ChevronDown, FilePlus2, Plus, PlusCircle, Upload } from 'lucide-react'
+import { ChevronDown, FilePlus2, Plus, PlusCircle, Radio, Upload } from 'lucide-react'
+import { useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { MenuItem, MenuPanel } from '@/components/ui/menu'
+import { CaptureLiveModal } from '@/features/placeholders/capture-live-modal'
 import { usePopover } from '@/lib/hooks/use-popover'
 
 const OPTIONS = [
@@ -22,6 +24,9 @@ const OPTIONS = [
 
 export function NewMenu() {
   const { open, toggle, close, ref } = usePopover()
+  // Modal state lives OUTSIDE the popover: selecting the entry closes the
+  // menu, and a modal owned by the closed menu would unmount with it.
+  const [captureOpen, setCaptureOpen] = useState(false)
 
   return (
     <div ref={ref} className="relative">
@@ -52,8 +57,20 @@ export function NewMenu() {
               {option.label}
             </MenuItem>
           ))}
+          <MenuItem
+            icon={Radio}
+            onSelect={() => {
+              close()
+              setCaptureOpen(true)
+            }}
+            testId="new-capture-live"
+          >
+            Capture live meeting
+          </MenuItem>
         </MenuPanel>
       )}
+
+      <CaptureLiveModal open={captureOpen} onOpenChange={setCaptureOpen} />
     </div>
   )
 }
