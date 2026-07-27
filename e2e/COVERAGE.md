@@ -115,7 +115,8 @@ and `chromium-mobile` (`@mobile`, opt-in) — see the project split rationale in
 | `34-export.spec.ts` | 4 | Export modal & bulk zip (T-34) |
 | `90-mutations.spec.ts` | 33 | Every write path, serial (`@mutates`) |
 | `98-smoke.spec.ts` | 12 | Post-deploy smoke, `@smoke` (T-40.13) |
-| `99-capture.spec.ts` | 9 | Screenshot capture harness |
+| `97-visual.spec.ts` | 36 | Visual baselines, `@visual` (T-41) — 68 snapshots |
+| `99-capture.spec.ts` | 16 | Screenshot capture harness, `@visual` (T-41.7) |
 
 ## How to run
 
@@ -151,3 +152,42 @@ design (shape and count assertions, never exact strings — except the five
 canonical summary section names, which are spec). Behind nginx only `/api/*` is
 proxied, so the FastAPI `/docs` assertion runs only against a directly reachable
 backend.
+
+## Visual baselines (T-41)
+
+68 PNGs live in `tests/__screenshots__/`, named
+`{snapshot}-{project}-{platform}.png` by the `snapshotPathTemplate` in
+`playwright.config.ts`. They only ever run in the `visual` project, which pins
+`deviceScaleFactor: 1` and `reducedMotion` — the tag keeps them out of every
+other project, and out of the 382-test desktop count above.
+
+```bash
+cd e2e
+
+# Compare against the committed baselines.
+npm run test:visual
+
+# Re-record them. NOT a way to make CI green (T-41.8).
+npm run test:update-snapshots
+
+# Refresh the side-by-side comparison harness (docs/visual-comparison.html).
+CAPTURE=1 npx playwright test tests/99-capture.spec.ts --project=visual
+```
+
+**The update workflow, in order:**
+
+1. Make the UI change and let `npm run test:visual` FAIL.
+2. Open `playwright-report/` and read every diff image. Each one is a
+   question — "did I mean to move this?" — and a diff you cannot explain is a
+   regression you have not noticed yet.
+3. Only then `npm run test:update-snapshots`, and commit the PNGs in the SAME
+   commit as the change that justifies them. A snapshot update on its own is
+   unreviewable.
+
+Never blanket-update to clear a red build. The baselines are the only
+evidence in this repo that a token change did not quietly reshape six screens,
+and a reflexive `--update-snapshots` deletes exactly that evidence.
+
+Baselines are platform-stamped because font hinting differs between macOS and
+Linux; CI records and compares its own Linux set, so a macOS laptop and a Linux
+runner never fight over the same file.

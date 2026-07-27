@@ -9,9 +9,10 @@
 
   Open this file directly (file:// works — images are plain relative <img>
   loads, no fetch()). References live in docs/reference/fireflies/01..08.png;
-  our captures land in docs/screenshots/<key>.png via:
+  our captures land in docs/screenshots/<key>.png (light) and
+  docs/screenshots/<key>-dark.png (dark, since T-38 merged) via:
 
-      cd e2e && CAPTURE=1 npx playwright test tests/99-capture.spec.ts
+      cd e2e && CAPTURE=1 npx playwright test tests/99-capture.spec.ts --project=visual
 
   Standalone doc, not an app component — the tokens.css hex rule governs
   frontend/src, so this page carries its own minimal palette.
@@ -123,8 +124,10 @@
     </p>
     <p>
       Refresh captures with
-      <code>cd e2e &amp;&amp; CAPTURE=1 npx playwright test tests/99-capture.spec.ts</code>.
-      Dark-theme slots stay placeholders until T-38 (dark-mode audit) merges.
+      <code>cd e2e &amp;&amp; CAPTURE=1 npx playwright test tests/99-capture.spec.ts --project=visual</code>.
+      Each surface is captured in <strong>both themes</strong> since T-38 landed; the dark shot
+      sits under its pair. The references are light-theme only, so dark is shown for our own
+      audit rather than compared against anything.
     </p>
   </header>
 
@@ -145,7 +148,8 @@
 <script>
 'use strict';
 
-var CAPTURE_CMD = 'cd e2e && CAPTURE=1 npx playwright test tests/99-capture.spec.ts';
+var CAPTURE_CMD =
+  'cd e2e && CAPTURE=1 npx playwright test tests/99-capture.spec.ts --project=visual';
 
 var PAIRS = [
   {
@@ -155,8 +159,8 @@ var PAIRS = [
   },
   {
     n: '02', key: '02-meetings-list', surface: 'Meetings list',
-    route: '/notebook?channel=all-meetings',
-    note: 'The All Meetings channel view — the notebook as a list: rows, toolbar, filters, pagination.'
+    route: '/notebook?channel=customer-calls',
+    note: 'A channel-scoped notebook — rows, toolbar, filters, and the rail item active. Scoped to a real channel rather than the built-in &ldquo;All Meetings&rdquo;: that pseudo-channel links to <code>?channel=all-meetings</code>, which the API resolves as a literal channel slug and therefore matches nothing. Photographing it would publish a bug as a design.'
   },
   {
     n: '03', key: '03-meeting-status', surface: 'Meeting Status',
@@ -268,13 +272,16 @@ function darkSlot(card, key) {
   card.appendChild(slot);
   probe('screenshots/' + key + '-dark.png', function (src) {
     if (src) {
-      slot.innerHTML = '<strong>Dark theme capture:</strong>';
+      slot.innerHTML =
+        '<strong>Dark theme (T-38):</strong> our capture only — the reference set is light-theme, ' +
+        'so there is nothing to compare it against.';
       var img = el('img', 'shot');
       img.src = src; img.alt = key + ' — dark theme'; img.loading = 'lazy';
       img.style.maxWidth = '480px';
       slot.appendChild(img);
     } else {
-      slot.innerHTML = 'Dark theme: <span class="badge miss">not captured yet</span> — pending T-38 (dark-mode audit).';
+      slot.innerHTML =
+        'Dark theme: <span class="badge miss">not captured yet</span> — run the capture command above.';
     }
   });
 }
