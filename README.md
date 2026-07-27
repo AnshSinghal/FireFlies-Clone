@@ -433,7 +433,7 @@ out of time:
 
 ## Testing
 
-**440 backend tests** across 27 files and **548 end-to-end tests** across 44 spec files, all green.
+**440 backend tests** across 27 files and **566 end-to-end tests** across 44 spec files, all green.
 
 | Suite | Tests | Runs in | Covers |
 |---|---|---|---|
@@ -583,7 +583,7 @@ does — the property cursor pagination exists for.
 │  ├─ media/              One generated audio file (see its README — it is noise)
 │  └─ tests/              440 pytest tests
 ├─ e2e/                 Playwright suite — owns its own package.json
-│  ├─ tests/            44 spec files, 548 tests
+│  ├─ tests/            44 spec files, 566 tests
 │  └─ COVERAGE.md       Every brief bullet → the test that proves it
 ├─ docs/
 │  ├─ decisions.md      147 ADRs, written as the decisions were made
