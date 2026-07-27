@@ -130,6 +130,28 @@ cannot fail cleanly is not a check. `head -14` silently converts "I did not
 look" into "it is not there", and the resulting claim reads exactly like a
 finding.
 
+## Console hygiene, checked against the deployment
+
+Eight routes loaded in a real browser against the live origin — `/notebook`,
+`/meeting/1`, `/meeting/1?t=45`, `/search?q=pricing`, `/settings?tab=preferences`,
+`/settings/tags`, `/upload`, `/analytics`. **Zero console errors and zero
+warnings on every one.** That is T-46.2's claim, verified where it matters
+rather than against a local build — the same place the `/dev/*` soft-404 and
+the audio gzip were found, neither of which is visible locally.
+
+**One thing that looks alarming and is not.** The same check reports "failed
+requests": 8 on `/notebook`, 22 on `/search?q=pricing`, 0 on the settings
+routes. Every one is `net::ERR_ABORTED` on a `…?_rsc=` URL — Next's route
+prefetches for the links on the page, cancelled when the page settles or the
+prefetch queue trims. Nothing 404s (`e2e/tests/35-network.spec.ts` asserts
+exactly that on these routes), nothing is missing, and the count tracks the
+number of links, which is why a search-results page shows the most and a
+settings tab shows none.
+
+Recorded because a bare count of 22 failed requests reads like a defect, and
+the step that distinguishes them is one line — capture `failure().errorText`,
+not just the count.
+
 ## First-time install (already done; recorded for reproducibility)
 
 ```bash
