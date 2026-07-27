@@ -4,6 +4,7 @@
   "description": "Playwright end-to-end suite. Owns its own dependencies so Playwright never leaks into the app bundle.",
   "scripts": {
     "test": "playwright test",
+    "test:crossbrowser": "playwright test --project=firefox --project=webkit",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "test:mobile": "playwright test --project=chromium-mobile --pass-with-no-tests",
