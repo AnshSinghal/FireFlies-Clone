@@ -18,6 +18,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
 import { useChannels } from '@/lib/api/channels'
+import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import {
   BUILT_IN_CHANNELS,
   FOOTER_NAV,
@@ -72,8 +73,27 @@ function SidebarNavInner({ collapsed = false, inDrawer = false, onNavigate }: Si
   const activeChannel = searchParams.get('channel')
   const { data: channels } = useChannels()
 
-  // Inside the drawer there is room for labels, so never collapse there.
-  const isCollapsed = collapsed && !inDrawer
+  /*
+   * The rail collapses for TWO reasons and this has to cover both.
+   *
+   * `collapsed` is the user's toggle, which only exists at ≥1280px. Below that
+   * `app-shell.tsx` pins the width to 64px in CSS
+   * (`[--rail-w:64px] xl:[--rail-w:var(--rail-expanded)]`) and the toggle is
+   * not offered. Reading only the toggle meant that between 768 and 1279px the
+   * sidebar rendered its expanded self into a 63px rail: the CHANNELS heading
+   * showed as "CHANN", every label and Soon badge was clipped out of sight, and
+   * — worst — `SidebarItem` suppresses its tooltip when it believes the label
+   * is visible, so the whole rail became six unlabelled icons with no way to
+   * discover what they were.
+   *
+   * `useMediaQuery` is the same hook the responsive layouts already use, and it
+   * server-snapshots `false`, i.e. "wide" — so SSR emits the expanded rail and
+   * hydration corrects it before paint, which is the existing convention here.
+   *
+   * Inside the drawer there is room for labels, so never collapse there.
+   */
+  const isWide = useMediaQuery('(min-width: 1280px)')
+  const isCollapsed = (collapsed || !isWide) && !inDrawer
 
   return (
     <Tooltip.Provider>
@@ -114,9 +134,7 @@ function SidebarNavInner({ collapsed = false, inDrawer = false, onNavigate }: Si
             would need a media-query hook and a hydration story for a label.
           */}
           {!isCollapsed && (
-            <h2 className="hidden px-5 pb-2 pt-2 text-label uppercase text-muted xl:block">
-              Channels
-            </h2>
+            <h2 className="px-5 pb-2 pt-2 text-label uppercase text-muted">Channels</h2>
           )}
 
           {/*
