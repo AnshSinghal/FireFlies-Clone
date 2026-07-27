@@ -26,7 +26,9 @@ from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models import (
     ActionItem,
+    Bookmark,
     Channel,
+    Highlight,
     Keyword,
     Meeting,
     Participant,
@@ -41,6 +43,7 @@ from app.models import (
 from app.models.enums import (
     ActionItemSource,
     ActionItemStatus,
+    HighlightColor,
     MediaType,
     MeetingSource,
     ParticipantRole,
@@ -156,6 +159,8 @@ def _clear_meeting_children(db: Session, meeting: Meeting) -> None:
     is simpler and correct, and the cascade tests in T-03 already prove the
     children go with the parent.
     """
+    db.execute(delete(Highlight).where(Highlight.meeting_id == meeting.id))
+    db.execute(delete(Bookmark).where(Bookmark.meeting_id == meeting.id))
     db.execute(delete(TranscriptSegment).where(TranscriptSegment.meeting_id == meeting.id))
     db.execute(delete(ActionItem).where(ActionItem.meeting_id == meeting.id))
     db.execute(delete(Keyword).where(Keyword.meeting_id == meeting.id))
@@ -271,17 +276,18 @@ def _seed_meeting(
     db.flush()
 
     # ── Transcript ──────────────────────────────────────────────────────────
+    segment_rows: list[TranscriptSegment] = []
     for segment in timeline:
-        db.add(
-            TranscriptSegment(
-                meeting_id=meeting.id,
-                speaker_id=speakers[segment.speaker].id,
-                start_ms=segment.start_ms,
-                end_ms=segment.end_ms,
-                sequence=segment.sequence,
-                text=segment.text,
-            )
+        row = TranscriptSegment(
+            meeting_id=meeting.id,
+            speaker_id=speakers[segment.speaker].id,
+            start_ms=segment.start_ms,
+            end_ms=segment.end_ms,
+            sequence=segment.sequence,
+            text=segment.text,
         )
+        db.add(row)
+        segment_rows.append(row)
     stats.segments += len(timeline)
 
     # ── Summary ─────────────────────────────────────────────────────────────
@@ -380,6 +386,38 @@ def _seed_meeting(
                 auto_generated=clip.get("auto_generated", False),
             )
         )
+
+    # ── Highlights & bookmarks ──────────────────────────────────────────────
+    if spec.get("highlights") or spec.get("bookmarks"):
+        # Offsets are located by PHRASE, never hand-written: a copy edit to a
+        # transcript line moves every character after it, and a stale offset
+        # is exactly the garbled render T-32.11 exists to prevent.
+        db.flush()
+        for mark in spec.get("highlights", []):
+            row = segment_rows[mark["segment"]]
+            start = row.text.find(mark["phrase"])
+            if start < 0:
+                msg = f"seed highlight phrase not in segment {mark['segment']}"
+                raise ValueError(msg)
+            db.add(
+                Highlight(
+                    meeting_id=meeting.id,
+                    segment_id=row.id,
+                    created_by=host.id,
+                    start_offset=start,
+                    end_offset=start + len(mark["phrase"]),
+                    color=HighlightColor(mark.get("color", "amber")),
+                    note=mark.get("note"),
+                )
+            )
+        for mark in spec.get("bookmarks", []):
+            db.add(
+                Bookmark(
+                    meeting_id=meeting.id,
+                    segment_id=segment_rows[mark["segment"]].id,
+                    created_by=host.id,
+                )
+            )
 
     # ── Tags ────────────────────────────────────────────────────────────────
     meeting.tags = list(db.execute(select(Tag).where(Tag.name.in_(spec.get("tags", [])))).scalars())
