@@ -72,20 +72,54 @@ neither requires nor derives anything from the prefix, so the files were left
 as they merged rather than renamed — a rename would have rewritten history that
 is itself graded evidence, for a purely cosmetic gain.
 
-## The clock fixture is not yet universal — 24 specs still run on the wall clock
+## The clock fixture is not yet universal — 14 specs still run on the wall clock
 
 Worth stating precisely, because a commit message in the history says `10-bulk`
 "was the last spec importing `test` from Playwright rather than `../fixtures`".
-It was not. Counted after that change landed, **24 spec files still import the
-bare `test`** and therefore never get `fixtures.ts`'s auto-fixture that pins
-`Date.now()` to `SEED_ANCHOR` — among them `04-sidebar`, `16-sync`, `12-states`,
-`24-search` and `25-dark-mode`. Only `99-capture` has a reason to (it is a
-camera, and pins the clock itself).
+It was not. Counted after that change landed, **24 spec files still imported the
+bare `test`** and therefore never got `fixtures.ts`'s auto-fixture that pins
+`Date.now()` to `SEED_ANCHOR`.
 
-**Why this is not currently a defect.** The specs that assert anything
+**Ten have since been converted, in two batches read one failure at a time.**
+Batch 1 took the four with the most timing surface — `12-states`, `14-player`,
+`16-sync`, `17-find` — and was clean, 55/55 first run. Batch 2 took the six
+mutation specs — `20-transcript-edit`, `21-create`, `22-edit`, `23-delete`,
+`25-comments`, `26-soundbites` — and was also clean.
+
+Fourteen still import the bare `test`: `00-smoke`, `02-tokens`, `04-sidebar`,
+`05-topbar`, `06-toasts`, `07-primitives`, `11-details`, `24-placeholders`,
+`24-search`, `25-dark-mode`, `27-tags`, `34-export`, `98-smoke`, `99-capture`.
+Two of those have a positive reason to stay: `99-capture` is a camera and pins
+the clock itself, and `27-tags` is the case below.
+
+Count these by import SOURCE, not by prefix — `grep "^import { expect, test"`
+matches the converted form too, and reports 37 of 38 files as unconverted.
+
+### `27-tags` is held back deliberately
+
+Converted, exactly two assertions fail — T36-B and T36-J, both the same line:
+after clicking the `Meetings` heading to dismiss the row tag editor by clicking
+away, the editor stays `data-state="open"`.
+
+Probed rather than argued about. The clock is the only variable: the same probe,
+identical apart from which module `test` comes from, dismisses on the wall clock
+and does not with `Date.now()` pinned — at the same popover geometry, so it is
+not a scroll-into-view race. It is not the heading either; a bare
+`mouse.click(5, 400)` on empty background also fails to dismiss. The pointerdown
+does land outside (a capture-phase listener reports `target=H1`) and a
+MutationObserver shows the editor never leaves `open`, so Radix is not being
+asked to close rather than asking and being refused. Escape still dismisses.
+`performance.now()` still advances under the fixture (388ms measured across a
+300ms sleep, against 0 for `Date.now()`), so React's scheduler is not it.
+
+**The mechanism is not established.** What follows from the evidence is only the
+decision: leave the spec on the wall clock. T36-B and T36-J assert real
+behaviour, a user's `Date.now()` never stops advancing, and weakening a genuine
+assertion to accommodate a test-only artefact costs coverage to buy tidiness.
+
+**Why the remainder is not currently a defect.** The specs that assert anything
 date-relative were audited: only `19-action-items` and `33-colour-vision`, and
-both use the fixture now. The other 24 assert structure and behaviour, not
-dates.
+both use the fixture now. The rest assert structure and behaviour, not dates.
 
 **Why it is still worth doing.** Pinning is not only about dates. Converting
 `10-bulk` immediately failed *"selection survives paging"* — the test waited for
@@ -93,13 +127,16 @@ the meeting list to be VISIBLE after clicking page 2, which is instantly true of
 page 1 because the list element never unmounts, so it selected a row that was
 already selected, toggled it off, and asserted against a bulk bar that had
 unmounted. The race predated the conversion; real-clock timing had been hiding
-it. That is one genuine bug per spec converted, from a sample of two.
+it.
 
-**Not done here** because it is 24 files of churn immediately before a final
-verification run, and because the payoff is unknown per file — the `10-bulk`
-result argues it is worth trying, not that every file hides something. Convert
-in small batches and read each failure, rather than converting all 24 and
-triaging a wall of red.
+**What the ten conversions actually returned.** One real race (`10-bulk`), one
+test-only artefact left alone (`27-tags`), and ten files that no longer depend
+on when the suite happens to run. The early "one genuine bug per spec converted"
+rate did not survive a larger sample — from twelve it is one. That is the
+argument for converting in small batches and reading each failure rather than
+all at once: the yield is real but low, so a wall of red would cost more to
+triage than the findings are worth. The remaining twelve are worth doing on the
+same terms, and are not worth doing in one push.
 ## On the plan's test-case IDs
 
 PLAN.md names 497 case IDs (`T12-A`, `T21-N`, …). Grepping the whole test tree

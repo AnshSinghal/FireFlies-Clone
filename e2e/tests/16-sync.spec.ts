@@ -1,4 +1,6 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
+
+import { expect, test } from '../fixtures'
 
 /**
  * Transcript ↔ player sync (T-21, cases T21-A → T21-N).
