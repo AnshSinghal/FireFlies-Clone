@@ -31,6 +31,18 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 2 : 4,
 
+  /*
+   * 10s rather than Playwright's 5s default.
+   *
+   * `/meeting/[id]` is the one route rendered ON DEMAND, so the first
+   * assertion after navigating to it waits for a server render as well as for
+   * the data — and with four workers competing, five seconds is genuinely
+   * tight. Raising it here rather than sprinkling per-assertion timeouts
+   * keeps the intent in one place: this suite tolerates a slow machine, it
+   * does not tolerate a wrong answer.
+   */
+  expect: { timeout: 10_000 },
+
   reporter: process.env.CI
     ? [['html', { open: 'never' }], ['list'], ['github']]
     : [['html', { open: 'never' }], ['list']],

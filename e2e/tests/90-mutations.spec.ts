@@ -669,3 +669,204 @@ test.describe('transcript · editing', { tag: '@mutates' }, () => {
       .toBe(original)
   })
 })
+
+test.describe('create meeting', { tag: '@mutates' }, () => {
+  /**
+   * Every case here CREATES a meeting and then deletes it, so the seeded
+   * counts the rest of the suite asserts against still hold.
+   */
+  async function cleanUp(page: Page, id: number): Promise<void> {
+    await page.request.delete(`http://127.0.0.1:8100/api/v1/meetings/${id}`)
+  }
+
+  async function openCreate(page: Page, tab = 'upload'): Promise<void> {
+    await page.goto(`/upload?tab=${tab}`)
+    await expect(page.getByTestId('create-modal')).toBeVisible({ timeout: 20_000 })
+  }
+
+  async function attach(page: Page, name: string, body: string): Promise<void> {
+    await page.getByTestId('create-file-input').setInputFiles({
+      name,
+      mimeType: 'text/plain',
+      buffer: Buffer.from(body),
+    })
+  }
+
+  /** Creates from the current preview and returns the new meeting's id. */
+  async function createAndOpen(page: Page): Promise<number> {
+    await page.getByTestId('create-submit').click()
+    await page.waitForURL(/\/meeting\/\d+/, { timeout: 20_000 })
+    return Number(new URL(page.url()).pathname.split('/').pop())
+  }
+
+  test('T26-A · a .vtt becomes a meeting with its transcript', async ({ page }) => {
+    await openCreate(page)
+
+    await attach(
+      page,
+      'roadmap.vtt',
+      `WEBVTT
+
+00:00:00.000 --> 00:00:04.000
+<v Ada Lovelace>Morning everyone, shall we start?
+
+00:00:04.000 --> 00:00:09.000
+<v Alan Turing>Yes — I have the numbers ready.
+
+00:00:09.000 --> 00:00:14.000
+<v Ada Lovelace>Good. Let's take pricing first.
+`,
+    )
+
+    await expect(page.getByTestId('create-preview')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('create-preview-count')).toContainText('3 segments')
+    await expect(page.getByTestId('create-preview-strategy')).toContainText('WebVTT')
+    // The title came from the filename, tidied.
+    await expect(page.getByTestId('create-title')).toHaveValue('roadmap')
+
+    const id = await createAndOpen(page)
+
+    await expect(page.getByTestId('transcript-list')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('transcript-count')).toContainText('3 segments')
+    await expect(page.getByTestId('transcript-list')).toContainText('shall we start?')
+    await expect(page.getByTestId('speaker-legend')).toContainText('Ada Lovelace')
+
+    await cleanUp(page, id)
+  })
+
+  test('T26-B · an .srt is parsed with comma separators', async ({ page }) => {
+    await openCreate(page)
+
+    await attach(
+      page,
+      'standup.srt',
+      `1
+00:00:02,500 --> 00:00:06,000
+Grace Hopper: Standup, quickly.
+
+2
+00:00:06,000 --> 00:00:11,250
+Ada Lovelace: Nothing blocking on my side.
+`,
+    )
+
+    await expect(page.getByTestId('create-preview')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('create-preview-strategy')).toContainText('SubRip')
+    // 2.5s in, which only parses correctly if the comma is handled.
+    await expect(page.getByTestId('create-preview-segment-0')).toContainText('00:02')
+
+    const id = await createAndOpen(page)
+    await expect(page.getByTestId('transcript-count')).toContainText('2 segments', {
+      timeout: 20_000,
+    })
+    await cleanUp(page, id)
+  })
+
+  test('T26-C/D · .txt timings are honoured when present and synthesised when not', async ({
+    page,
+  }) => {
+    await openCreate(page)
+    await attach(page, 'timed.txt', '[00:14] Ada: Morning.\n[00:30] Alan: Morning.\n')
+
+    await expect(page.getByTestId('create-preview')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByTestId('create-preview-strategy')).toContainText('[00:14]')
+    // HONOURED: 14 seconds, not a synthesised zero.
+    await expect(page.getByTestId('create-preview-segment-0')).toContainText('00:14')
+
+    const timedId = await createAndOpen(page)
+    await cleanUp(page, timedId)
+
+    await openCreate(page)
+    await attach(page, 'untimed.txt', 'Ada: Morning everyone.\nAlan: Morning — ready when you are.\n')
+
+    await expect(page.getByTestId('create-preview')).toBeVisible({ timeout: 15_000 })
+    // And it SAYS the timings were estimated, rather than presenting a guess
+    // as a fact.
+    await expect(page.getByTestId('create-preview-strategy')).toContainText('estimated')
+    await expect(page.getByTestId('create-preview-segment-0')).toContainText('00:00')
+
+    const untimedId = await createAndOpen(page)
+    await expect(page.getByTestId('transcript-count')).toContainText('2 segments', {
+      timeout: 20_000,
+    })
+    await cleanUp(page, untimedId)
+  })
+
+  test('T26-E · a .json transcript imports its speakers and segments', async ({ page }) => {
+    await openCreate(page)
+
+    await attach(
+      page,
+      'export.json',
+      JSON.stringify({
+        title: 'Imported from JSON',
+        segments: [
+          { speaker: 'Ada', start: 0, end: 4, text: 'From JSON.' },
+          { speaker: 'Alan', start_ms: 4000, end_ms: 8000, text: 'And in milliseconds.' },
+        ],
+      }),
+    )
+
+    await expect(page.getByTestId('create-preview')).toBeVisible({ timeout: 15_000 })
+    // The file's own title wins over the filename.
+    await expect(page.getByTestId('create-title')).toHaveValue('Imported from JSON')
+    await expect(page.getByTestId('create-preview-segment-1')).toContainText('00:04')
+
+    const id = await createAndOpen(page)
+    await expect(page.getByTestId('transcript-list')).toContainText('And in milliseconds.', {
+      timeout: 20_000,
+    })
+    await cleanUp(page, id)
+  })
+
+  test('T26-J/M · the sample creates, with a renamed speaker applied throughout', async ({
+    page,
+  }) => {
+    await openCreate(page, 'paste')
+
+    await page.getByTestId('create-load-sample').click()
+    await expect(page.getByTestId('create-preview')).toBeVisible({ timeout: 15_000 })
+
+    await page.getByTestId('create-title').fill('Sample import')
+    // Renamed BEFORE the meeting exists, which is when it is cheap.
+    await page.getByTestId('create-speaker-0').fill('Renamed Person')
+
+    const id = await createAndOpen(page)
+
+    await expect(page.getByTestId('speaker-legend')).toContainText('Renamed Person', {
+      timeout: 20_000,
+    })
+    await expect(page.getByTestId('speaker-legend')).not.toContainText('Sarah Chen')
+    // Applied to every line that speaker had, not just the first.
+    await expect(page.getByTestId('transcript-list')).toContainText('Renamed Person')
+
+    await cleanUp(page, id)
+  })
+
+  test('T26-N/O · a manual meeting is empty, and appears at the top of the Notebook', async ({
+    page,
+  }) => {
+    await page.goto('/notebook')
+    await expect(page.getByTestId('meeting-list')).toBeVisible({ timeout: 20_000 })
+    const before = await page.getByTestId('meeting-row').count()
+
+    await openCreate(page, 'manual')
+    await page.getByTestId('create-title').fill('Manually created meeting')
+    const id = await createAndOpen(page)
+
+    // The empty states from T-23.12 and T-20.12, on a real meeting.
+    await expect(page.getByTestId('transcript-empty')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('summary-empty')).toBeVisible()
+
+    await page.goto('/notebook')
+    await expect(page.getByTestId('meeting-row')).toHaveCount(before + 1, { timeout: 20_000 })
+    // Most recent first, and it was created just now.
+    await expect(page.getByTestId('meeting-row').first()).toContainText(
+      'Manually created meeting',
+    )
+
+    await cleanUp(page, id)
+    await page.goto('/notebook')
+    await expect(page.getByTestId('meeting-row')).toHaveCount(before, { timeout: 20_000 })
+  })
+})

@@ -176,6 +176,48 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/import': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Create a meeting with a transcript
+     * @description Takes the segments the user confirmed in the preview. Speakers are created from the distinct names in first-appearance order, the duration is derived from the last segment, and anyone who spoke is added as a participant. All in one transaction: a meeting with half a transcript looks successful and is not.
+     */
+    post: operations['import_meeting_api_v1_meetings_import_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/parse': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Parse a transcript without saving anything
+     * @description Backs the upload and paste previews (T-26.7). Nothing is written — this answers 'what would we create', so the user can confirm it or correct the speakers first.
+     *
+     *     The EXTENSION chooses the parser; it does not certify the content. A binary file renamed to `.txt` reaches the text parser and is refused on what it actually contains.
+     */
+    post: operations['parse_transcript_preview_api_v1_meetings_parse_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/meetings/segments/{segment_id}': {
     parameters: {
       query?: never
@@ -497,6 +539,25 @@ export interface components {
       /** Text */
       text?: string | null
     }
+    /** Body_parse_transcript_preview_api_v1_meetings_parse_post */
+    Body_parse_transcript_preview_api_v1_meetings_parse_post: {
+      /**
+       * Extension
+       * @description Which parser to use for pasted text.
+       * @default txt
+       */
+      extension: string
+      /**
+       * File
+       * @description A .txt, .vtt, .srt or .json file.
+       */
+      file?: string | null
+      /**
+       * Text
+       * @description Pasted transcript text.
+       */
+      text?: string | null
+    }
     /** BulkDeleteRequest */
     BulkDeleteRequest: {
       /** Ids */
@@ -649,6 +710,20 @@ export interface components {
       version: string
     }
     /**
+     * ImportedSegment
+     * @description One line of a transcript being imported (T-26.7).
+     */
+    ImportedSegment: {
+      /** End Ms */
+      end_ms: number
+      /** Speaker */
+      speaker: string
+      /** Start Ms */
+      start_ms: number
+      /** Text */
+      text: string
+    }
+    /**
      * MatchContext
      * @description Why a meeting matched, when the reason is not visible in the row (T-11.3).
      *
@@ -782,6 +857,41 @@ export interface components {
       started_at: string
       /** Title */
       title: string
+    }
+    /**
+     * MeetingImport
+     * @description A meeting created WITH a transcript (T-26.7).
+     *
+     *     The segments are the ones the user confirmed in the preview, sent back
+     *     rather than re-parsed: the preview is a contract, and re-reading the file
+     *     would let a second parse disagree with what was on screen. They are
+     *     re-validated here, because the client is still the client.
+     */
+    MeetingImport: {
+      /** Channel Id */
+      channel_id?: number | null
+      /** Description */
+      description?: string | null
+      /**
+       * Language
+       * @default en
+       */
+      language: string
+      /** Participant Names */
+      participant_names?: string[]
+      /** Segments */
+      segments: components['schemas']['ImportedSegment'][]
+      /** @default manual */
+      source: components['schemas']['MeetingSource']
+      /**
+       * Started At
+       * @description Defaults to now when omitted.
+       */
+      started_at?: string | null
+      /** Title */
+      title: string
+      /** @default private */
+      visibility: components['schemas']['Visibility']
     }
     /**
      * MeetingListItem
@@ -1122,6 +1232,24 @@ export interface components {
       speakers: components['schemas']['SpeakerRef'][]
       /** Total */
       total: number
+    }
+    /**
+     * TranscriptPreview
+     * @description What the parser found, before anything is created (T-26.7).
+     */
+    TranscriptPreview: {
+      /** Duration Ms */
+      duration_ms: number
+      /** Participants */
+      participants: string[]
+      /** Segments */
+      segments: components['schemas']['ImportedSegment'][]
+      /** Speakers */
+      speakers: string[]
+      /** Strategy */
+      strategy: string
+      /** Title */
+      title: string | null
     }
     /**
      * UserOut
@@ -1616,6 +1744,90 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['Facets']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  import_meeting_api_v1_meetings_import_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MeetingImport']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['MeetingDetail']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  parse_transcript_preview_api_v1_meetings_parse_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: {
+      content: {
+        'multipart/form-data': components['schemas']['Body_parse_transcript_preview_api_v1_meetings_parse_post']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TranscriptPreview']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */

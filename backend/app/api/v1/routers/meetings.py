@@ -11,12 +11,15 @@ T-11 and T-17 extend this with the full filter set and the transcript endpoints.
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Request, Response, status
+from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile, status
 
 from app.api.responses import NOT_FOUND_OR_GONE, VALIDATION
+from app.core.config import get_settings
 from app.core.deps import CurrentUser, DbSession, Pagination
+from app.core.exceptions import ValidationError
 from app.core.http import NotModified, weak_etag
 from app.schemas.common import Page
 from app.schemas.meeting import (
@@ -27,14 +30,18 @@ from app.schemas.meeting import (
     BulkDeleteResponse,
     BulkRestoreResponse,
     Facets,
+    ImportedSegment,
     MeetingCreate,
     MeetingDetail,
+    MeetingImport,
     MeetingListItem,
     MeetingSource,
     MeetingUpdate,
+    TranscriptPreview,
 )
 from app.services.meeting_filters import MeetingFilters
 from app.services.meetings import SORTABLE, MeetingService
+from app.services.transcript_import import TranscriptParseError, parse_transcript
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
 
@@ -145,6 +152,95 @@ def meeting_facets(db: DbSession) -> Facets:
 def create_meeting(db: DbSession, user: CurrentUser, payload: MeetingCreate) -> MeetingDetail:
     service = MeetingService(db)
     return service.to_detail(service.create(payload, host=user))
+
+
+@router.post(
+    "/import",
+    response_model=MeetingDetail,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a meeting with a transcript",
+    description=(
+        "Takes the segments the user confirmed in the preview. Speakers are "
+        "created from the distinct names in first-appearance order, the "
+        "duration is derived from the last segment, and anyone who spoke is "
+        "added as a participant. All in one transaction: a meeting with half a "
+        "transcript looks successful and is not."
+    ),
+    responses=VALIDATION,
+)
+def import_meeting(db: DbSession, user: CurrentUser, payload: MeetingImport) -> MeetingDetail:
+    service = MeetingService(db)
+    return service.to_detail(service.create_with_transcript(payload, host=user))
+
+
+@router.post(
+    "/parse",
+    response_model=TranscriptPreview,
+    summary="Parse a transcript without saving anything",
+    description=(
+        "Backs the upload and paste previews (T-26.7). Nothing is written — "
+        "this answers 'what would we create', so the user can confirm it or "
+        "correct the speakers first.\n\n"
+        "The EXTENSION chooses the parser; it does not certify the content. A "
+        "binary file renamed to `.txt` reaches the text parser and is refused "
+        "on what it actually contains."
+    ),
+    responses=VALIDATION,
+)
+async def parse_transcript_preview(
+    file: Annotated[
+        UploadFile | None, File(description="A .txt, .vtt, .srt or .json file.")
+    ] = None,
+    text: Annotated[str | None, Form(description="Pasted transcript text.")] = None,
+    extension: Annotated[str, Form(description="Which parser to use for pasted text.")] = "txt",
+) -> TranscriptPreview:
+    if file is not None:
+        raw = await file.read()
+        if len(raw) > get_settings().max_upload_bytes:
+            raise ValidationError(
+                f"That file is larger than {get_settings().max_upload_mb} MB.",
+                details={"size": len(raw)},
+            )
+        try:
+            content = raw.decode("utf-8")
+        except UnicodeDecodeError as error:
+            # Not text at all. Caught here so the message names the problem
+            # rather than surfacing a decode traceback.
+            raise ValidationError(
+                "That file isn't text — export the transcript as .txt, .vtt, .srt or .json.",
+                details={"filename": file.filename},
+            ) from error
+
+        suffix = Path(file.filename or "").suffix or ".txt"
+    elif text is not None:
+        content = text
+        suffix = f".{extension}"
+    else:
+        raise ValidationError("Send either a file or some text.")
+
+    try:
+        parsed = parse_transcript(content, extension=suffix)
+    except TranscriptParseError as error:
+        raise ValidationError(
+            error.message, details={"hint": error.hint} if error.hint else {}
+        ) from error
+
+    return TranscriptPreview(
+        strategy=parsed.strategy,
+        segments=[
+            ImportedSegment(
+                speaker=segment.speaker,
+                start_ms=segment.start_ms,
+                end_ms=segment.end_ms,
+                text=segment.text,
+            )
+            for segment in parsed.segments
+        ],
+        speakers=parsed.speakers,
+        duration_ms=parsed.duration_ms,
+        title=parsed.title,
+        participants=parsed.participants,
+    )
 
 
 @router.get(

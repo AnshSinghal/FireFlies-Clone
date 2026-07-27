@@ -23,7 +23,15 @@ from app.core.exceptions import (
     MeetingDeletedError,
     MeetingNotFoundError,
 )
-from app.models import ActionItem, Meeting, Participant, Summary, TranscriptSegment, User
+from app.models import (
+    ActionItem,
+    Meeting,
+    Participant,
+    Speaker,
+    Summary,
+    TranscriptSegment,
+    User,
+)
 from app.models.enums import ActionItemSource, ActionItemStatus, MediaType, SummarySectionKind
 from app.schemas.meeting import (
     ActionItemCounts,
@@ -32,6 +40,7 @@ from app.schemas.meeting import (
     ActionItemUpdate,
     ChannelRef,
     MeetingDetail,
+    MeetingImport,
     MeetingListItem,
     ParticipantDetail,
     ParticipantRef,
@@ -632,6 +641,65 @@ class MeetingService:
 
         for name in dict.fromkeys(n.strip() for n in payload.participant_names if n.strip()):
             self.db.add(Participant(meeting_id=meeting.id, display_name=name))
+
+        self.db.commit()
+        self.db.refresh(meeting)
+        return meeting
+
+    def create_with_transcript(self, payload: MeetingImport, *, host: User) -> Meeting:
+        """A meeting and its transcript, in one transaction (T-26.7).
+
+        Everything or nothing: a meeting that exists with half a transcript is
+        worse than a failed upload, because it looks successful.
+        """
+        meeting = self.create(payload, host=host)
+
+        # One speaker per distinct name, in first-appearance order — which is
+        # what makes the colour indices match the order they are read in.
+        speakers: dict[str, Speaker] = {}
+        for segment in payload.segments:
+            if segment.speaker in speakers:
+                continue
+            speaker = Speaker(
+                meeting_id=meeting.id,
+                label=segment.speaker,
+                color_index=len(speakers),
+            )
+            self.db.add(speaker)
+            speakers[segment.speaker] = speaker
+
+        self.db.flush()
+
+        for sequence, segment in enumerate(payload.segments):
+            self.db.add(
+                TranscriptSegment(
+                    meeting_id=meeting.id,
+                    speaker_id=speakers[segment.speaker].id,
+                    sequence=sequence,
+                    start_ms=segment.start_ms,
+                    # A zero-length segment breaks the player's active-line
+                    # resolution, so a line that ends before it starts is
+                    # given a floor rather than rejected — the timings came
+                    # from a file we did not write.
+                    end_ms=max(segment.end_ms, segment.start_ms + 1),
+                    text=segment.text,
+                )
+            )
+
+        # DERIVED, never accepted from the client (the same rule `create` uses
+        # for an empty meeting).
+        meeting.duration_seconds = round(max(segment.end_ms for segment in payload.segments) / 1000)
+
+        # Anyone who spoke was in the meeting, whether or not they were listed.
+        existing = {
+            name
+            for (name,) in self.db.execute(
+                select(Participant.display_name).where(Participant.meeting_id == meeting.id)
+            )
+        }
+        for name in speakers:
+            if name not in existing:
+                self.db.add(Participant(meeting_id=meeting.id, display_name=name))
 
         self.db.commit()
         self.db.refresh(meeting)

@@ -230,6 +230,43 @@
         "title": "ActionItemUpdate",
         "type": "object"
       },
+      "Body_parse_transcript_preview_api_v1_meetings_parse_post": {
+        "properties": {
+          "extension": {
+            "default": "txt",
+            "description": "Which parser to use for pasted text.",
+            "title": "Extension",
+            "type": "string"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A .txt, .vtt, .srt or .json file.",
+            "title": "File"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Pasted transcript text.",
+            "title": "Text"
+          }
+        },
+        "title": "Body_parse_transcript_preview_api_v1_meetings_parse_post",
+        "type": "object"
+      },
       "BulkDeleteRequest": {
         "properties": {
           "ids": {
@@ -504,6 +541,41 @@
           "ai_provider"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "ImportedSegment": {
+        "description": "One line of a transcript being imported (T-26.7).",
+        "properties": {
+          "end_ms": {
+            "minimum": 0.0,
+            "title": "End Ms",
+            "type": "integer"
+          },
+          "speaker": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Speaker",
+            "type": "string"
+          },
+          "start_ms": {
+            "minimum": 0.0,
+            "title": "Start Ms",
+            "type": "integer"
+          },
+          "text": {
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "speaker",
+          "start_ms",
+          "end_ms",
+          "text"
+        ],
+        "title": "ImportedSegment",
         "type": "object"
       },
       "MatchContext": {
@@ -790,6 +862,87 @@
           "matches"
         ],
         "title": "MeetingHit",
+        "type": "object"
+      },
+      "MeetingImport": {
+        "description": "A meeting created WITH a transcript (T-26.7).\n\nThe segments are the ones the user confirmed in the preview, sent back\nrather than re-parsed: the preview is a contract, and re-reading the file\nwould let a second parse disagree with what was on screen. They are\nre-validated here, because the client is still the client.",
+        "properties": {
+          "channel_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "language": {
+            "default": "en",
+            "title": "Language",
+            "type": "string"
+          },
+          "participant_names": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Participant Names",
+            "type": "array"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/ImportedSegment"
+            },
+            "maxItems": 10000,
+            "title": "Segments",
+            "type": "array"
+          },
+          "source": {
+            "$ref": "#/components/schemas/MeetingSource",
+            "default": "manual"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Defaults to now when omitted.",
+            "title": "Started At"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility",
+            "default": "private"
+          }
+        },
+        "required": [
+          "title",
+          "segments"
+        ],
+        "title": "MeetingImport",
         "type": "object"
       },
       "MeetingListItem": {
@@ -1637,6 +1790,61 @@
           "total"
         ],
         "title": "TranscriptPage",
+        "type": "object"
+      },
+      "TranscriptPreview": {
+        "description": "What the parser found, before anything is created (T-26.7).",
+        "properties": {
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "participants": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Participants",
+            "type": "array"
+          },
+          "segments": {
+            "items": {
+              "$ref": "#/components/schemas/ImportedSegment"
+            },
+            "title": "Segments",
+            "type": "array"
+          },
+          "speakers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Speakers",
+            "type": "array"
+          },
+          "strategy": {
+            "title": "Strategy",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "strategy",
+          "segments",
+          "speakers",
+          "duration_ms",
+          "title",
+          "participants"
+        ],
+        "title": "TranscriptPreview",
         "type": "object"
       },
       "UserOut": {
@@ -2501,6 +2709,109 @@
           }
         },
         "summary": "Available filter values",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
+    "/api/v1/meetings/import": {
+      "post": {
+        "description": "Takes the segments the user confirmed in the preview. Speakers are created from the distinct names in first-appearance order, the duration is derived from the last segment, and anyone who spoke is added as a participant. All in one transaction: a meeting with half a transcript looks successful and is not.",
+        "operationId": "import_meeting_api_v1_meetings_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Create a meeting with a transcript",
+        "tags": [
+          "meetings"
+        ]
+      }
+    },
+    "/api/v1/meetings/parse": {
+      "post": {
+        "description": "Backs the upload and paste previews (T-26.7). Nothing is written \u2014 this answers 'what would we create', so the user can confirm it or correct the speakers first.\n\nThe EXTENSION chooses the parser; it does not certify the content. A binary file renamed to `.txt` reaches the text parser and is refused on what it actually contains.",
+        "operationId": "parse_transcript_preview_api_v1_meetings_parse_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_parse_transcript_preview_api_v1_meetings_parse_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TranscriptPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Parse a transcript without saving anything",
         "tags": [
           "meetings"
         ]
