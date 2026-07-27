@@ -73,6 +73,14 @@ would be invented numbers on a surface whose whole job is to tell you who you
 are signed in as. Ours shows name, email, `Profile` (Soon), `Settings`, the
 light/dark/system control (T-38.3 puts it here) and `Sign out`.
 
+The structural difference is bigger than the row list and this audit had
+understated it: Fireflies' menu is **two columns**, with a left panel of
+Mobile App and Chrome Extension promo cards (App Store and Play badges, an
+Install button) beside the account column. Ours is a single column. Those
+cards advertise products that exist; we have no mobile app and no extension,
+and drawing the cards anyway would be the one thing on this surface that is
+straightforwardly untrue.
+
 An earlier draft of this audit listed the profile menu under *Verified
 equivalent* with "name, plan, storage meter" — the screenshots do not support
 that, and the reason they do not is this decision rather than an omission.
