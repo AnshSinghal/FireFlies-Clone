@@ -226,6 +226,19 @@ for (const theme of THEMES) {
       await page.locator('[data-testid^="transcript-segment-"]').first().waitFor()
       await expect(page.getByTestId('transcript-count')).toBeVisible()
 
+      /*
+       * The header's suggested-tag strip (T-36.4) is fetched separately from
+       * everything above, and it lands LAST. Without this wait the dark capture
+       * caught the header before the strip arrived while the light one caught
+       * it after — two files differing by 7,362 pixels in a 20px-tall band, for
+       * a screen nobody had touched.
+       *
+       * That is worse than an ugly screenshot. The whole premise of
+       * `docs/screenshots/` is that a diff means the UI changed; a capture that
+       * varies between runs on its own makes every future diff unreadable.
+       */
+      await expect(page.getByTestId('tag-suggestions')).toBeVisible()
+
       await capture(page, '09-notepad', theme)
     })
   })

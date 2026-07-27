@@ -22,9 +22,7 @@ export function AppearancePanel() {
   const [theme, setTheme] = useThemePref()
 
   return (
-    // Same measure as the other panels — a settings column that changes width
-    // per tab reads as a layout bug (docs/ui-audit.md item 10).
-    <section className="mx-auto w-full max-w-settings space-y-4" data-testid="settings-appearance">
+    <section className="space-y-4" data-testid="settings-appearance">
       <header className="space-y-1">
         <h2 className="text-h3 text-primary">Appearance</h2>
         <p className="text-sm text-secondary">How the app looks. Applies immediately.</p>

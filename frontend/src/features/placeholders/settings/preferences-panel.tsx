@@ -42,7 +42,7 @@ export function PreferencesPanel() {
   const [autoplay, setAutoplay] = useAutoplayPref()
 
   return (
-    <section className="mx-auto w-full max-w-settings space-y-6" data-testid="settings-preferences">
+    <section className="space-y-6" data-testid="settings-preferences">
       <header className="space-y-1">
         <h2 className="text-h3 text-primary">Preferences</h2>
         <p className="text-sm text-secondary">
@@ -67,7 +67,7 @@ export function PreferencesPanel() {
         order rather than this file's intent (ADR-103). A wrapper cannot lose
         that argument.
       */}
-      <div className="w-full space-y-5">
+      <div className="space-y-5">
         <div>
           <Select
             label="Default sort"
