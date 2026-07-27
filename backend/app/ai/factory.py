@@ -75,8 +75,9 @@ class FallbackProvider(AIProvider):
         except ProviderError as error:
             # Log-and-degrade is the contract: the demo must answer even with
             # a dead key. The cause is in the log, not in the user's face.
-            logger.warning("%s failed, falling back to %s: %s",
-                           self.primary.name, self.backup.name, error)
+            logger.warning(
+                "%s failed, falling back to %s: %s", self.primary.name, self.backup.name, error
+            )
             return backup_call(), True
 
     def generate_summary(self, transcript: Transcript) -> SummaryResult:

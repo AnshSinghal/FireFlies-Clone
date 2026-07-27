@@ -109,9 +109,7 @@ def chunk_transcript(
     for segment in transcript.segments:
         segment_tokens = estimate_tokens(segment.text)
         if current and current_tokens + segment_tokens > token_budget:
-            chunks.append(
-                Transcript(segments=current, reference_date=transcript.reference_date)
-            )
+            chunks.append(Transcript(segments=current, reference_date=transcript.reference_date))
             # Seed the next chunk with the tail of this one, up to the overlap.
             tail: list[SegmentInput] = []
             tail_tokens = 0
@@ -206,8 +204,7 @@ class LLMProvider(AIProvider):
             # Map-reduce (T-29.5): summarise each chunk, then synthesise the
             # chunk summaries with the same prompt. Two passes, bounded cost.
             partials = [
-                self._complete(prompt, render_transcript(chunk), _SummaryBody)
-                for chunk in chunks
+                self._complete(prompt, render_transcript(chunk), _SummaryBody) for chunk in chunks
             ]
             synthesis_input = "\n\n".join(
                 f"Part {i + 1} summary:\n{partial.overview or ''}"
@@ -374,9 +371,7 @@ class LLMProvider(AIProvider):
                 if data.get("stop_reason") == "refusal":
                     raise ProviderError("anthropic declined the request")
                 return next(
-                    str(block["text"])
-                    for block in data["content"]
-                    if block.get("type") == "text"
+                    str(block["text"]) for block in data["content"] if block.get("type") == "text"
                 )
             content = data["choices"][0]["message"]["content"]
             if content is None:
