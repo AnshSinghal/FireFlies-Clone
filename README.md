@@ -95,8 +95,54 @@ Each of these is a surface in the app that says so honestly, rather than a dead 
 
 ## Architecture
 
-_(Mermaid diagram added in T-45.5: browser → Next.js → FastAPI → services → SQLAlchemy → SQLite,
-with the AI provider as a swappable box.)_
+```mermaid
+flowchart LR
+    subgraph browser["Browser"]
+        UI["React components<br/>features/ · components/ui/"]
+        RQ["TanStack Query<br/>cache · optimistic writes"]
+        URL["URL as state<br/>filters · search · sort · ?t="]
+        UI <--> RQ
+        UI <--> URL
+    end
+
+    subgraph next["Next.js 16 · App Router"]
+        RT["Routes<br/>app/ — no business logic"]
+    end
+
+    subgraph api["FastAPI"]
+        R["api/v1/routers/<br/>parse → call → return a schema"]
+        SVC["services/<br/>ALL business logic"]
+        SCH["schemas/<br/>Pydantic, split by direction"]
+        R --> SVC
+        SVC --> SCH
+        SCH -.->|"response"| R
+    end
+
+    subgraph data["Persistence"]
+        ORM["SQLAlchemy 2.0<br/>models/"]
+        DB[("SQLite + FTS5<br/>WAL · foreign_keys=ON")]
+        ORM --> DB
+    end
+
+    AIP{{"ai/provider.py<br/>one interface"}}
+    MOCK["MockProvider<br/>deterministic · default"]
+    LLM["LLMProvider<br/>OpenAI · Anthropic"]
+
+    UI --> RT
+    RQ -->|"JSON over HTTP"| R
+    SVC --> ORM
+    SVC --> AIP
+    AIP --> MOCK
+    AIP --> LLM
+    LLM -.->|"any failure degrades to"| MOCK
+
+    classDef swappable stroke-dasharray: 5 5
+    class AIP,MOCK,LLM swappable
+```
+
+The dashed boxes are the swappable ones. `services/` depends on the **interface**, never on either
+implementation, which is why `AI_PROVIDER` is a one-variable change and why any LLM failure can fall
+back to the mock without a caller knowing.
 
 The backend is strictly layered:
 
