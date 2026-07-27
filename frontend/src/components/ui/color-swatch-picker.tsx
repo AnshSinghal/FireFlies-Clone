@@ -25,9 +25,20 @@ interface ColorSwatchPickerProps {
   testId?: string
 }
 
-export function ColorSwatchPicker({ colors, value, onChange, label, testId }: ColorSwatchPickerProps) {
+export function ColorSwatchPicker({
+  colors,
+  value,
+  onChange,
+  label,
+  testId,
+}: ColorSwatchPickerProps) {
   return (
-    <div role="radiogroup" aria-label={label} data-testid={testId} className="flex items-center gap-1.5">
+    <div
+      role="radiogroup"
+      aria-label={label}
+      data-testid={testId}
+      className="flex items-center gap-1.5"
+    >
       {colors.map((color, index) => {
         const selected = value === index
         return (

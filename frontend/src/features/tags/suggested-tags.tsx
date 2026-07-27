@@ -50,8 +50,7 @@ export function SuggestedTags({ meetingId, currentTags, size = 'md' }: Suggested
   const applied = new Set(currentTags.map((tag) => tag.name.toLowerCase()))
   const visible = (data?.items ?? []).filter(
     (proposal) =>
-      !applied.has(proposal.name.toLowerCase()) &&
-      !dismissed.includes(proposal.name.toLowerCase()),
+      !applied.has(proposal.name.toLowerCase()) && !dismissed.includes(proposal.name.toLowerCase()),
   )
 
   if (visible.length === 0) return null
@@ -62,8 +61,7 @@ export function SuggestedTags({ meetingId, currentTags, size = 'md' }: Suggested
       return
     }
     try {
-      const tagId =
-        proposal.tag_id ?? (await createTag.mutateAsync({ name: proposal.name })).id
+      const tagId = proposal.tag_id ?? (await createTag.mutateAsync({ name: proposal.name })).id
       await setTags.mutateAsync([...currentTags.map((tag) => tag.id), tagId])
       toast.success(TOAST_MESSAGES.tagsUpdated)
     } catch (error) {

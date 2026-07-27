@@ -27,8 +27,7 @@ export function SettingsView() {
   const requested = searchParams.get('tab')
   // An unknown ?tab= falls back to the first tab rather than a blank panel.
   // Route-backed tabs (Tags) are never active here — they render elsewhere.
-  const activeTab =
-    SETTINGS_TABS.find((tab) => tab.id === requested && !tab.href) ?? APPEARANCE_TAB
+  const activeTab = SETTINGS_TABS.find((tab) => tab.id === requested && !tab.href) ?? APPEARANCE_TAB
   const active = activeTab.id
 
   return (

@@ -73,6 +73,8 @@ class CommentNotFoundError(NotFoundError):
 class TagNotFoundError(NotFoundError):
     code = "TAG_NOT_FOUND"
     message = "Tag not found."
+
+
 class SoundbiteNotFoundError(NotFoundError):
     code = "SOUNDBITE_NOT_FOUND"
     message = "Soundbite not found."

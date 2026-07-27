@@ -72,7 +72,10 @@ export function TagsSettingsView() {
         )}
 
         {tags.length > 0 && (
-          <ul className="divide-y divide-subtle rounded-lg border border-subtle" data-testid="tags-settings-list">
+          <ul
+            className="divide-y divide-subtle rounded-lg border border-subtle"
+            data-testid="tags-settings-list"
+          >
             {tags.map((tag) => (
               <TagRow
                 key={tag.id}
@@ -222,8 +225,7 @@ function MergeDialog({
   const [survivorId, setSurvivorId] = useState<number | null>(null)
 
   const others = tags.filter((tag) => tag.id !== source?.id)
-  const survivor =
-    others.find((tag) => tag.id === survivorId) ?? others[0]
+  const survivor = others.find((tag) => tag.id === survivorId) ?? others[0]
 
   return (
     <ConfirmDialog

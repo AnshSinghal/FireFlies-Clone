@@ -91,7 +91,7 @@ export function NotebookToolbar({
           the page never overflows — which is precisely why that check needs a
           snapshot next to it.
         */}
-        <div className="min-w-0 basis-full sm:basis-auto sm:flex-1 sm:max-w-search">
+        <div className="min-w-0 basis-full sm:max-w-search sm:flex-1 sm:basis-auto">
           <SearchInput
             ref={searchRef}
             value={query}

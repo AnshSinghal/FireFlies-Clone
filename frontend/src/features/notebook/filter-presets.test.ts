@@ -187,9 +187,9 @@ describe('draft ↔ filters round trip', () => {
   it('keeps AND out of the URL when it has nothing to combine (T-36.8)', () => {
     // OR is the default and never serialises; AND without tags means nothing.
     expect(filtersFromDraft({ ...EMPTY_DRAFT, tagsMode: 'and' }, NOW).tags_mode).toBeNull()
-    expect(
-      filtersFromDraft({ ...EMPTY_DRAFT, tags: ['q3'], tagsMode: 'and' }, NOW).tags_mode,
-    ).toBe('and')
+    expect(filtersFromDraft({ ...EMPTY_DRAFT, tags: ['q3'], tagsMode: 'and' }, NOW).tags_mode).toBe(
+      'and',
+    )
     expect(filtersFromDraft({ ...EMPTY_DRAFT, tags: ['q3'] }, NOW).tags_mode).toBeNull()
   })
 })
