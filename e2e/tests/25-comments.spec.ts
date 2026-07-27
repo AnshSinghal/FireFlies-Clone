@@ -44,6 +44,17 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     await expect(page.getByText('Strong opening point.').first()).toBeVisible()
     await expect(page.getByTestId(`comment-gutter-${segmentId}`)).toHaveText('1')
 
+    /*
+     * Both assertions above are satisfied by the OPTIMISTIC row alone — they
+     * pass while the POST is still on the wire. Reloading at that instant
+     * aborts the request and the comment never persists, which is exactly
+     * what happened under post-suite load (the run's access log had NO
+     * comment POST during this test). The pending marker clearing is the
+     * signal that the SERVER row replaced the placeholder; only then does
+     * "survives reload" test persistence rather than a race.
+     */
+    await expect(page.locator('[data-pending]')).toHaveCount(0)
+
     await page.reload()
     await expect(page.getByTestId('notepad-header')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByText('Strong opening point.')).toBeVisible()
@@ -60,6 +71,10 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     await page.getByTestId('comment-submit').last().click()
 
     await expect(page.getByText('Agreed — and the numbers back it up.').first()).toBeVisible()
+    // T31-F later deletes this thread expecting a REPLY to exist in the DB —
+    // closing this page while the POST is in flight would abort it (the same
+    // race T31-A guards against before its reload).
+    await expect(page.locator('[data-pending]')).toHaveCount(0)
   })
 
   test('T31-C/D · @ lists only participants; a pick becomes an accent token', async ({
@@ -136,6 +151,9 @@ test.describe('comments · threads on transcript lines', { tag: '@mutates' }, ()
     await page.getByTestId('comment-submit').click()
 
     await expect(page.getByText('<script>alert(1)</script>')).toBeVisible()
+    // T31-H clicks this thread's flyout entry next test — it must be a real
+    // row, not an optimistic one an unload would abort.
+    await expect(page.locator('[data-pending]')).toHaveCount(0)
   })
 
   test('T31-H · a flyout entry seeks the player to its segment', async ({ page }) => {
