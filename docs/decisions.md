@@ -248,6 +248,31 @@ justification. If accessibility is later prioritised over fidelity, the single-t
 `#6C7481` is all that is required. The trade-off is enforced by a test
 (`src/styles/tokens.test.ts`), so silently regressing past 3:1 breaks the build.
 
+> **SUPERSEDED in practice, and nobody wrote it down — noticed 2026-07-28.**
+> The shipped value is `#667085`, which is **4.97:1 on white — full AA**. Not
+> `#8992A2` (3.14:1) as decided above, and not even the `#6C7481` this entry
+> named as the accessibility option. Dark mode likewise ships `#8B93A5` at
+> 5.66:1. So the conflict this ADR agonised over was resolved, in favour of
+> accessibility, and three artifacts still describe the losing side:
+>
+> - this entry, which reads as though the app knowingly fails AA on metadata
+> - `design.md` §3.2, whose table and footnote still specify `#8992A2`
+> - `tokens.test.ts`, which asserts `>= 3` with a comment calling this "the one
+>   known axe exception in T-42"
+>
+> The interesting part is which way the drift went. The app is **better** than
+> its documentation, which is the harmless direction for users and the worst
+> one for a document whose whole purpose is that every claim in it survives
+> being asked about. An interviewer reading this ADR would be told the product
+> knowingly ships inaccessible metadata text. It does not.
+>
+> **The improvement is also unprotected.** A test asserting a 3:1 floor cannot
+> notice a regression from 4.97 back to 3.14 — the value it was written to
+> defend. Tightening it to 4.5:1 is queued; that is what makes this a decision
+> rather than an accident, and it is why the ADR is annotated here rather than
+> quietly edited. What was decided is still what is recorded; what happened
+> instead is now recorded next to it.
+
 ---
 
 ## ADR-013 · Speaker colour is authoritative in the database
