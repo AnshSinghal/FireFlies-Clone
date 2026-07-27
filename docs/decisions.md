@@ -1718,6 +1718,57 @@ figures, which is the correct answer rather than a bug to tune away.
 
 ---
 
+## ADR-072 — A memo comparator that skips callbacks makes those callbacks a contract
+
+**Context.** `SegmentRow` is memoised with a comparator that compares only what
+the row draws, deliberately ignoring `onSeek` and the copy handlers. CI then
+found that clicking a transcript line while playing jumped the display to the
+right time and snapped back a tenth of a second later; while paused it looked
+correct and silently left the audio behind.
+
+**Cause.** `seekTo` depended on the player, and the player changes ten times a
+second with the clock — so `seekTo` did too. Rows therefore held the closure
+from the render they mounted on, which was BEFORE the audio metadata had
+loaded. In that closure `usingMedia` was false, so seeking moved a number and
+never touched the media element. The clock's next tick re-read the element,
+which had not moved, and the position snapped back.
+
+**Decision.** Make the callback genuinely stable rather than widen the
+comparator: `seekTo` now reads the player through a ref updated in an effect,
+and has no dependencies. Widening the comparator would have "fixed" it by
+never memoising anything, which is the cost the memo exists to avoid.
+
+**Consequence.** Skipping callbacks in a comparator is now a stated
+REQUIREMENT on the call site, written at both ends. Three things made this hard
+to see: it needed playback (a paused test passes), it needed the media path
+(the virtual clock has no element to disagree with), and the symptom was a
+correct-looking value that lasted 100ms.
+
+---
+
+## ADR-073 — Performance budgets are measured as a difference
+
+**Context.** T21-K budgets long-task time while following the playhead. The
+same code measured 222ms running alone and 549ms with three copies of the test
+competing for the machine — so the assertion was measuring the runner, and the
+test both failed on CI when nothing was wrong and would pass on a quiet machine
+when something was.
+
+**Decision.** Measure an idle window and a playing window of the same length,
+and assert on the DIFFERENCE. Whatever else the runner is doing, it is doing it
+during both.
+
+**Consequence.** The number the test asserts is now the cost of the feature
+rather than the cost of the machine. Eight-second windows rather than fifteen,
+so the whole test fits inside the per-test timeout — eighty clock commits is
+already far more than enough to see a per-tick cost.
+
+Worth recording as a method: an earlier fix (memoising the list) was a real
+improvement that did not move this measurement at all, and that was the signal
+the measurement was wrong, not the code.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

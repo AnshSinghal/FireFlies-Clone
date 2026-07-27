@@ -14,7 +14,7 @@
  * nothing, and that failure is much harder to find than a thrown error.
  */
 
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 
 import { usePlayer as usePlayerEngine, type PlayerApi } from './use-player'
 
@@ -27,7 +27,38 @@ interface PlayerProviderProps {
 }
 
 export function PlayerProvider({ durationMs, src, children }: PlayerProviderProps) {
-  const { mediaRef, ...player } = usePlayerEngine({ durationMs, src })
+  const { mediaRef, ...engine } = usePlayerEngine({ durationMs, src })
+
+  /*
+   * MEMOISED on the values it actually carries.
+   *
+   * The spread above builds a new object on every render, and the clock renders
+   * ten times a second — so without this, every effect in the app that depends
+   * on `player` re-ran ten times a second, whatever it was watching for.
+   */
+  const player = useMemo(
+    () => engine,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the fields ARE the identity
+    [
+      engine.currentMs,
+      engine.durationMs,
+      engine.isPlaying,
+      engine.rate,
+      engine.volume,
+      engine.muted,
+      engine.bufferedMs,
+      engine.hasMedia,
+      engine.mediaFailed,
+      engine.seek,
+      engine.play,
+      engine.pause,
+      engine.toggle,
+      engine.skip,
+      engine.setRate,
+      engine.setVolume,
+      engine.toggleMute,
+    ],
+  )
 
   return (
     <PlayerContext.Provider value={player}>

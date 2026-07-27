@@ -14,7 +14,16 @@
  * So there is exactly one: `seekTo`.
  */
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 
 import { usePlayer } from '@/lib/player/player-context'
 
@@ -47,14 +56,35 @@ export function NotepadCommandsProvider({ children }: { children: ReactNode }) {
   const player = usePlayer()
   const [revealNonce, setRevealNonce] = useState(0)
 
-  const seekTo = useCallback(
-    (ms: number, options?: SeekOptions) => {
-      player.seek(ms)
-      if (options?.play && !player.isPlaying) player.play()
-      if (options?.reveal) setRevealNonce((current) => current + 1)
-    },
-    [player],
-  )
+  /*
+   * The player is read through a REF so `seekTo` can have no dependencies.
+   *
+   * Depending on `player` looks harmless and is not: the player changes ten
+   * times a second with the clock, so `seekTo` did too — and the transcript
+   * rows are memoised with a comparator that deliberately ignores callbacks.
+   * Every row therefore kept the `seekTo` from the render it mounted on, which
+   * was before the audio metadata had loaded, whose `seek` only moved the
+   * virtual clock and never touched the media element.
+   *
+   * The visible symptom: clicking a line while playing jumped the display to
+   * the right time and then snapped back a tenth of a second later, as the
+   * clock re-read the element that had never been asked to move. While paused
+   * it looked correct and silently left the audio behind.
+   *
+   * Updated in an effect rather than during render, and only ever read from an
+   * event handler — by which time the effect has run.
+   */
+  const playerRef = useRef(player)
+  useEffect(() => {
+    playerRef.current = player
+  }, [player])
+
+  const seekTo = useCallback((ms: number, options?: SeekOptions) => {
+    const current = playerRef.current
+    current.seek(ms)
+    if (options?.play && !current.isPlaying) current.play()
+    if (options?.reveal) setRevealNonce((value) => value + 1)
+  }, [])
 
   const value = useMemo(() => ({ seekTo, revealNonce }), [seekTo, revealNonce])
 

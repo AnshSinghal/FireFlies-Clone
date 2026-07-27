@@ -207,10 +207,15 @@ export const SegmentRow = memo(SegmentRowImpl, (previous, next) => {
   /*
    * Re-render only when something VISIBLE changed.
    *
-   * The callbacks are excluded deliberately: they are `useCallback`-stable at
-   * the call site, and including them would make this comparator a no-op the
-   * first time one of them was rebuilt — which is exactly the kind of silent
-   * regression memoisation is supposed to prevent.
+   * The callbacks are excluded, which puts a REQUIREMENT on the call site: they
+   * must be genuinely stable, because a row will hold the first one it is given
+   * for as long as nothing visible about it changes.
+   *
+   * `seekTo` was not, once — it depended on the player, which changes with the
+   * clock — and rows kept a closure from before the audio had loaded, in which
+   * seeking moved a number and not the audio. See the note in
+   * `lib/notepad/commands.tsx`; the fix belongs there, not here, because a
+   * comparator that included the callbacks would simply never memoise anything.
    */
   return (
     previous.segment.id === next.segment.id &&

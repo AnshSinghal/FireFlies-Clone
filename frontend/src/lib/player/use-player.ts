@@ -125,9 +125,21 @@ export function usePlayer({ durationMs, src }: UsePlayerOptions): PlayerEngine {
   )
   const [muted, setMutedState] = usePref(PREF_KEYS.muted, parseMuted, serialiseBoolean, false)
 
-  // The live clock, kept in a ref so the animation loop never reads a stale
-  // closure and never has to re-subscribe when the time changes.
+  // The live clock, kept in a ref so the loop never reads a stale closure and
+  // never has to re-subscribe when the time changes.
   const positionRef = useRef(0)
+
+  /**
+   * Where a seek is HEADING, while the element is still getting there.
+   *
+   * Setting `currentTime` starts an asynchronous seek. Until it completes the
+   * element keeps reporting the OLD time — so a clock that trusts
+   * `currentTime` on its next tick overwrites the new position with the stale
+   * one, and the playhead visibly snaps back. Clicking a transcript line while
+   * playing did exactly that, and only while playing, because a stopped clock
+   * has no tick to undo it with.
+   */
+  const pendingSeekMs = useRef<number | null>(null)
   const usingMedia = Boolean(src) && mediaReady && !mediaFailed
 
   const commit = useCallback(
@@ -154,7 +166,13 @@ export function usePlayer({ durationMs, src }: UsePlayerOptions): PlayerEngine {
 
       const media = mediaRef.current
       if (usingMedia && media) {
-        positionRef.current = media.currentTime * 1000
+        if (pendingSeekMs.current !== null && media.seeking) {
+          // Mid-seek: the target is the truth, not what the element reports.
+          positionRef.current = pendingSeekMs.current
+        } else {
+          pendingSeekMs.current = null
+          positionRef.current = media.currentTime * 1000
+        }
       } else {
         // Scaled by rate, so 2× really does cover the meeting in half the time.
         positionRef.current += delta * rate
@@ -255,6 +273,7 @@ export function usePlayer({ durationMs, src }: UsePlayerOptions): PlayerEngine {
     if (isPlaying && media.paused) {
       // Hand the virtual clock's position over, so taking control mid-playback
       // continues from where the user actually is.
+      pendingSeekMs.current = positionRef.current
       media.currentTime = positionRef.current / 1000
       void media.play().catch(() => setMediaFailed(true))
     } else if (!isPlaying && !media.paused) {
@@ -286,7 +305,10 @@ export function usePlayer({ durationMs, src }: UsePlayerOptions): PlayerEngine {
     (ms: number) => {
       const target = commit(ms)
       const media = mediaRef.current
-      if (usingMedia && media) media.currentTime = target / 1000
+      if (usingMedia && media) {
+        pendingSeekMs.current = target
+        media.currentTime = target / 1000
+      }
     },
     [commit, usingMedia],
   )
