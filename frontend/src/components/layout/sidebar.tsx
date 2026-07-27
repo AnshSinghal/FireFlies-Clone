@@ -99,10 +99,24 @@ function SidebarNavInner({ collapsed = false, inDrawer = false, onNavigate }: Si
 
         {/* ── Channels ────────────────────────────────────────────────── */}
         <div className="mt-4 flex min-h-0 flex-col" data-testid="sidebar-section-channels">
-          {/* The label disappears when collapsed — an uppercase micro-label in a
-              64px rail is unreadable and just adds noise. */}
+          {/*
+            Hidden two ways, because the rail collapses two ways.
+
+            `!isCollapsed` covers the USER toggle, which only exists at ≥1280px.
+            Below that the rail is pinned to 64px by CSS (`app-shell.tsx`:
+            `[--rail-w:64px] xl:[--rail-w:var(--rail-expanded)]`) while
+            `collapsed` stays false — so at 1024px this label rendered into a
+            63px rail and read "CHANN", clipped mid-word by the nav's
+            `overflow-hidden`.
+
+            `hidden xl:block` is the CSS half, matching the exact breakpoint the
+            width uses. Passing an "effective collapsed" boolean down instead
+            would need a media-query hook and a hydration story for a label.
+          */}
           {!isCollapsed && (
-            <h2 className="px-5 pb-2 pt-2 text-label uppercase text-muted">Channels</h2>
+            <h2 className="hidden px-5 pb-2 pt-2 text-label uppercase text-muted xl:block">
+              Channels
+            </h2>
           )}
 
           {/*
