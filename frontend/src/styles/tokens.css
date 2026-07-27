@@ -157,6 +157,21 @@
      Amber-600's RGB at a wash opacity. [D] */
   --ff-soundbite-band: rgba(247, 144, 9, 0.32);
 
+  /* ── User highlights (T-32.3) ───────────────────────────────────────────── */
+  /* Four colours, each a light wash plus a saturated underline. Distinct from
+     the SEARCH mark tokens above, because T32-C puts both on one segment and
+     they must read as two different systems. Every wash clears AA against
+     --ff-text-primary in its theme (14.3:1+ light, 9.8:1+ dark — computed,
+     not eyeballed). [D] */
+  --ff-hl-amber-bg: #fdeeb8;
+  --ff-hl-amber-line: #d9930d;
+  --ff-hl-green-bg: #d4f5e5;
+  --ff-hl-green-line: #12965a;
+  --ff-hl-blue-bg: #d6e9ff;
+  --ff-hl-blue-line: #2f7cd6;
+  --ff-hl-pink-bg: #fde0ee;
+  --ff-hl-pink-line: #d6459a;
+
   /* ── Typography ─────────────────────────────────────────────────────────── */
   --ff-font-sans: Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
@@ -243,6 +258,18 @@
      track, where the light theme's deep amber wash would vanish. Same hue as
      the lifted dark amber (speaker-2's #fbbf4a). */
   --ff-soundbite-band: rgba(251, 191, 74, 0.35);
+
+  /* User highlights invert like the search marks: deep washes under light
+     text (9.8:1 to 13.6:1 against --ff-text-primary — computed), lines lifted
+     to stay saturated on dark. */
+  --ff-hl-amber-bg: #4a3c10;
+  --ff-hl-amber-line: #f5b93c;
+  --ff-hl-green-bg: #113b2a;
+  --ff-hl-green-line: #37d399;
+  --ff-hl-blue-bg: #14304d;
+  --ff-hl-blue-line: #58a6ff;
+  --ff-hl-pink-bg: #43172e;
+  --ff-hl-pink-line: #f472b6;
 
   /* Speaker hues lift ~15% and desaturate ~10% so names stay legible. */
   --ff-speaker-0: #9b7bff;

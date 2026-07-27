@@ -97,6 +97,17 @@ const config: Config = {
         active: 'var(--ff-highlight-active)',
       },
 
+      /* User highlights (T-32.3): `bg-hl-amber` washes, `decoration-hl-amber-line`
+         underlines. Kept flat so every class names its colour in full. */
+      'hl-amber': 'var(--ff-hl-amber-bg)',
+      'hl-amber-line': 'var(--ff-hl-amber-line)',
+      'hl-green': 'var(--ff-hl-green-bg)',
+      'hl-green-line': 'var(--ff-hl-green-line)',
+      'hl-blue': 'var(--ff-hl-blue-bg)',
+      'hl-blue-line': 'var(--ff-hl-blue-line)',
+      'hl-pink': 'var(--ff-hl-pink-bg)',
+      'hl-pink-line': 'var(--ff-hl-pink-line)',
+
       /* Soundbite bands on the seekbar (T-33.7). The token carries its own
          alpha, so it is used as `bg-soundbite-band` with no opacity modifier. */
       'soundbite-band': 'var(--ff-soundbite-band)',
