@@ -76,6 +76,40 @@ function distinctiveWord(title: string): string {
 }
 
 test.describe('smoke', { tag: '@smoke' }, () => {
+  /*
+   * Wait for the origin to answer before asserting anything about it.
+   *
+   * This suite's whole job is to run right after a deploy, and the deploy it
+   * follows is a container rebuild: CD polls every 90s and swaps both
+   * containers. Run inside that window the twelve tests fail on a restarting
+   * server and report a broken product — which is the one thing a smoke suite
+   * must never do, because the next person stops believing it.
+   *
+   * Measured: five consecutive deployed runs where the first hit a rebuild
+   * (4 failed, 25.4s) and the next four were clean (12 passed, ~6s each).
+   *
+   * Deployed mode only. Locally, `webServer` has already waited on the health
+   * endpoint before any test starts, so this would be dead weight.
+   */
+  test.beforeAll(async ({ request }) => {
+    if (!SMOKE_URL) return
+    const deadline = Date.now() + 90_000
+    for (;;) {
+      const ok = await request
+        .get(`${API_URL}/api/health`, { timeout: 5_000 })
+        .then((r) => r.ok())
+        .catch(() => false)
+      if (ok) return
+      if (Date.now() > deadline) {
+        throw new Error(
+          `${SMOKE_URL} did not become healthy within 90s — the deploy is genuinely down, ` +
+            'not merely mid-restart.',
+        )
+      }
+      await new Promise((resolve) => setTimeout(resolve, 3_000))
+    }
+  })
+
   test('notebook renders seeded meeting rows', async ({ page }) => {
     await openNotebook(page)
 
