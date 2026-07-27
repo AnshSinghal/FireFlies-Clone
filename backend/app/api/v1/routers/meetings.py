@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, File, Form, Query, Request, Response, UploadFile, status
 
@@ -39,11 +39,31 @@ from app.schemas.meeting import (
     MeetingUpdate,
     TranscriptPreview,
 )
-from app.services.meeting_filters import MeetingFilters
+from app.services.meeting_filters import MeetingFilters, TagSelection
 from app.services.meetings import SORTABLE, MeetingService
 from app.services.transcript_import import TranscriptParseError, parse_transcript
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
+
+
+def _parse_tag_selection(raw: str | None, mode: str) -> TagSelection | None:
+    """`?tags=3,7` → ids, or None when nothing usable was sent.
+
+    Ids rather than names, because names are mutable (T-36.6 rename) and a
+    shared URL should survive one. A non-numeric entry is a 422 naming the
+    parameter, not a silently empty filter that looks like "no results".
+    """
+    if raw is None or not raw.strip():
+        return None
+    try:
+        ids = tuple(int(part) for part in (piece.strip() for piece in raw.split(",")) if part)
+    except ValueError as error:
+        raise ValidationError(
+            "`tags` must be a comma-separated list of tag ids.", details={"tags": raw}
+        ) from error
+    if not ids:
+        return None
+    return TagSelection(ids=ids, mode=mode)
 
 
 @router.get(
@@ -80,7 +100,19 @@ def list_meetings(
     to: Annotated[date | None, Query(description="Inclusive END date (UTC).")] = None,
     min_duration: Annotated[int | None, Query(ge=0, description="Seconds.")] = None,
     max_duration: Annotated[int | None, Query(ge=0, description="Seconds.")] = None,
-    tags: Annotated[list[str] | None, Query(description="Tag names. ALL must match.")] = None,
+    tags: Annotated[
+        str | None,
+        Query(description="Tag ids, comma-separated. `tags_mode` decides how they combine."),
+    ] = None,
+    tags_mode: Annotated[
+        Literal["or", "and"],
+        Query(
+            description=(
+                "`or` (default): meetings carrying ANY selected tag. "
+                "`and`: only meetings carrying ALL of them."
+            )
+        ),
+    ] = "or",
     channel: Annotated[str | None, Query(description="Channel slug.")] = None,
     has_action_items: Annotated[
         bool | None, Query(description="True = has OPEN action items.")
@@ -98,7 +130,7 @@ def list_meetings(
         to_date=to,
         min_duration=min_duration,
         max_duration=max_duration,
-        tags=tuple(tags or ()),
+        tags=_parse_tag_selection(tags, tags_mode),
         channel=channel,
         has_action_items=has_action_items,
         source=source,
