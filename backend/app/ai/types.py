@@ -114,3 +114,20 @@ class ChatTurn(BaseModel):
 
     role: Literal["user", "assistant"]
     text: str
+
+
+class SoundbiteProposalResult(BaseModel):
+    """One auto-clip candidate ("Magic Soundbites", T-33.8).
+
+    The range snaps to real segment boundaries and always satisfies the same
+    3s-3min bounds the trimmer and the DB check constraints enforce — a
+    proposal the user cannot save would be worse than no proposal. Proposals
+    are never persisted; accepting one becomes a `POST /soundbites` with
+    `auto_generated=true`.
+    """
+
+    title: str
+    start_ms: int
+    end_ms: int
+    #: Relative keyword density in [0, 1], 1.0 for the strongest clip.
+    score: float

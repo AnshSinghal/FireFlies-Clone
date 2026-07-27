@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         ChatTurn,
         KeywordResult,
         OutlineEntryResult,
+        SoundbiteProposalResult,
         SummaryResult,
         Transcript,
     )
@@ -89,3 +90,7 @@ class AIProvider(ABC):
         history: Sequence[ChatTurn] = (),
     ) -> AnswerResult:
         """Grounded answer with segment citations (AskFred, T-37)."""
+
+    @abstractmethod
+    def propose_soundbites(self, transcript: Transcript) -> list[SoundbiteProposalResult]:
+        """Up to 3 non-overlapping clip candidates (Magic Soundbites, T-33.8)."""

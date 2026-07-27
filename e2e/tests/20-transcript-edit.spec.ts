@@ -104,7 +104,7 @@ test.describe('transcript editing', () => {
     await editor.blur()
 
     await expect(editor).toHaveValue(original)
-    await expect(page.locator('text=A line cannot be empty')).toBeVisible()
+    await expect(page.getByText('A line cannot be empty')).toBeVisible()
     // Nothing was sent: an empty line is not an edit.
     expect(patched).toBe(0)
   })

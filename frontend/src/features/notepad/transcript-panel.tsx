@@ -28,8 +28,9 @@ import { cn } from '@/lib/utils/cn'
 import { formatTimestamp, pluralize } from '@/lib/utils/format'
 
 import { PlayerCard } from './player/player-card'
+import { SoundbiteModal, type SoundbiteDraft } from './soundbites/soundbite-modal'
 import { FindBar } from './transcript/find-bar'
-import { SelectionToolbar } from './transcript/selection-toolbar'
+import { SelectionToolbar, type SoundbiteSelection } from './transcript/selection-toolbar'
 import { SpeakerLegend } from './transcript/speaker-legend'
 import { TranscriptList } from './transcript/transcript-list'
 import { useEditSession } from './transcript/use-edit-session'
@@ -102,6 +103,29 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
   const [speakerFilter, setSpeakerFilter] = useState<number | null>(null)
   //: Which segment has the inline comment composer open (T-31.3).
   const [commentingSegmentId, setCommentingSegmentId] = useState<number | null>(null)
+
+  //: The pending create-soundbite modal, pre-filled from a selection (T-33.2).
+  const [soundbiteDraft, setSoundbiteDraft] = useState<SoundbiteDraft | null>(null)
+
+  /*
+   * The DOM only carries segment IDS (`data-segment-id`); the milliseconds live
+   * in the transcript cache. The range runs from the start segment's start to
+   * the end segment's end, and the selected text is the suggested title.
+   */
+  const onSoundbite = useCallback(
+    ({ startSegmentId, endSegmentId, text }: SoundbiteSelection) => {
+      const byId = new Map(segments.map((segment) => [segment.id, segment]))
+      const start = byId.get(startSegmentId)
+      const end = byId.get(endSegmentId) ?? start
+      if (!start || !end) return
+      setSoundbiteDraft({
+        startMs: Math.min(start.start_ms, end.start_ms),
+        endMs: Math.max(start.end_ms, end.end_ms),
+        title: text.replace(/\s+/g, ' ').trim().slice(0, 120),
+      })
+    },
+    [segments],
+  )
 
   /*
    * The filter is applied HERE rather than in the list, so the match count,
@@ -358,6 +382,13 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
         containerRef={bodyRef}
         onCopy={(text) => void copy(text, TOAST_MESSAGES.selectionCopied)}
         onComment={setCommentingSegmentId}
+        onSoundbite={onSoundbite}
+      />
+
+      <SoundbiteModal
+        meetingId={meetingId}
+        draft={soundbiteDraft}
+        onClose={() => setSoundbiteDraft(null)}
       />
     </section>
   )

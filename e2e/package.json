@@ -6,10 +6,17 @@
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
+    "test:mobile": "playwright test --project=chromium-mobile --pass-with-no-tests",
+    "test:visual": "playwright test --project=visual",
+    "test:update-snapshots": "playwright test --project=visual --update-snapshots",
+    "lint": "eslint .",
     "report": "playwright show-report"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
-    "@playwright/test": "^1.62.0"
+    "@playwright/test": "^1.62.0",
+    "eslint": "^9",
+    "eslint-plugin-playwright": "^2.2.0",
+    "typescript-eslint": "^8"
   }
 }

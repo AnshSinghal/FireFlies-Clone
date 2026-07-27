@@ -82,7 +82,7 @@ test.describe('toasts · behaviour', () => {
   })
 
   test('T09-I · an arriving toast does not steal focus', async ({ page }) => {
-    const search = page.locator('[data-testid="topbar-search"]')
+    const search = page.getByTestId('topbar-search')
     await page.getByTestId('fire-delayed').click()
     await search.click()
     await search.fill('typing')

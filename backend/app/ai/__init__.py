@@ -23,6 +23,7 @@ from app.ai.types import (
     NoteGroupResult,
     OutlineEntryResult,
     SegmentInput,
+    SoundbiteProposalResult,
     SummaryResult,
     Transcript,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "OutlineEntryResult",
     "ProviderError",
     "SegmentInput",
+    "SoundbiteProposalResult",
     "SummaryResult",
     "Transcript",
     "build_provider",

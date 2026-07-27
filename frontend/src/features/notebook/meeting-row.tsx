@@ -60,6 +60,8 @@ interface MeetingRowProps {
   onShowDetails: (id: number) => void
   /** Opens the edit modal, which loads the full meeting itself. */
   onEditDetails?: (id: number) => void
+  /** Opens the export modal (T-34) — same load-on-open shape as edit. */
+  onExport?: (id: number) => void
   /** Plays the exit animation before the row leaves the data (T-28.6). */
   exiting?: boolean
   onPrefetch: () => void
@@ -78,6 +80,7 @@ export function MeetingRow({
   onDelete,
   onShowDetails,
   onEditDetails,
+  onExport,
   exiting,
   onPrefetch,
   tabIndex,
@@ -397,11 +400,13 @@ export function MeetingRow({
           >
             Tags
           </DropdownItem>
-          <DropdownSub label="Export" icon={<Download size={16} strokeWidth={1.75} />}>
-            <DropdownItem soon>PDF</DropdownItem>
-            <DropdownItem soon>Markdown</DropdownItem>
-            <DropdownItem soon>Plain text</DropdownItem>
-          </DropdownSub>
+          <DropdownItem
+            icon={<Download size={16} strokeWidth={1.75} />}
+            onSelect={() => onExport?.(meeting.id)}
+            testId="meeting-row-export"
+          >
+            Export
+          </DropdownItem>
           <DropdownSub label="Move to channel" icon={<FolderInput size={16} strokeWidth={1.75} />}>
             {(channels?.channels ?? []).map((channel) => (
               <DropdownItem

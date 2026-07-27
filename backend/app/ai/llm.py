@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from app.ai.prompts import Prompt
-    from app.ai.types import ChatTurn
+    from app.ai.types import ChatTurn, SoundbiteProposalResult
 
 logger = logging.getLogger(__name__)
 
@@ -283,6 +283,25 @@ class LLMProvider(AIProvider):
             text = f"Prior conversation:\n{prior}\n\nTranscript:\n{text}"
         text = f"{text}\n\nQuestion: {question}"
         return self._complete(prompt, text, AnswerResult)
+
+    def propose_soundbites(
+        self,
+        transcript: Transcript,  # noqa: ARG002 — the interface's input; unused because we decline
+    ) -> list[SoundbiteProposalResult]:
+        """Deliberately not an LLM call (T-33.8).
+
+        Clip ranges must snap to real segment boundaries and satisfy hard
+        3s-3min bounds — constraint satisfaction, which the deterministic
+        keyword-density heuristic already does well and a model does
+        unreliably. Raising `ProviderError` routes the call through the
+        standard T-29.7 degradation path, so the assembled pipeline serves
+        the mock heuristic for every vendor. Revisit if a prompt ever earns
+        its keep here.
+        """
+        raise ProviderError(
+            f"{self.name} has no soundbite-proposal implementation; "
+            "the mock heuristic serves this method"
+        )
 
     # ── Plumbing ────────────────────────────────────────────────────────
 

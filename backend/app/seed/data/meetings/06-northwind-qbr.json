@@ -163,5 +163,8 @@
     { "text": "Model Northwind's position under usage-based pricing", "assignee": "Tom Bradley", "due_in_days": -4, "at_segment": 73 },
     { "text": "Arrange Northwind identity team availability for SSO", "assignee": null, "due_in_days": 3, "at_segment": 59 },
     { "text": "Review whether short meetings should summarise differently", "assignee": null, "at_segment": 17 }
+  ],
+  "soundbites": [
+    { "title": "The real complaint: notification, not the outage", "from_segment": 30, "to_segment": 33 }
   ]
 }

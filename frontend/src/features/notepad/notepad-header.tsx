@@ -28,7 +28,7 @@ import { useQueryClient } from '@tanstack/react-query'
 
 import { AvatarGroup } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Dropdown, DropdownItem, DropdownSeparator, DropdownSub } from '@/components/ui/dropdown'
+import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/dropdown'
 import { IconButton } from '@/components/ui/icon-button'
 import { InlineEdit } from '@/components/ui/inline-edit'
 import { Popover } from '@/components/ui/popover'
@@ -50,6 +50,8 @@ interface NotepadHeaderProps {
   onRegenerate: () => void
   onDelete: () => void
   onEditDetails: () => void
+  /** Opens the export modal (T-34) — the view owns it, like the other modals. */
+  onExport: () => void
 }
 
 export function NotepadHeader({
@@ -57,6 +59,7 @@ export function NotepadHeader({
   onRegenerate,
   onDelete,
   onEditDetails,
+  onExport,
 }: NotepadHeaderProps) {
   const router = useRouter()
   const toast = useToast()
@@ -187,11 +190,13 @@ export function NotepadHeader({
           <DropdownItem icon={<Languages size={16} strokeWidth={1.75} />} soon>
             Change language
           </DropdownItem>
-          <DropdownSub label="Download" icon={<Download size={16} strokeWidth={1.75} />}>
-            <DropdownItem soon>PDF</DropdownItem>
-            <DropdownItem soon>Markdown</DropdownItem>
-            <DropdownItem soon>Plain text</DropdownItem>
-          </DropdownSub>
+          <DropdownItem
+            icon={<Download size={16} strokeWidth={1.75} />}
+            onSelect={onExport}
+            testId="notepad-export"
+          >
+            Export
+          </DropdownItem>
           <DropdownSub label="Move to channel" icon={<FolderInput size={16} strokeWidth={1.75} />}>
             {(channels?.channels ?? []).map((channel) => (
               <DropdownItem

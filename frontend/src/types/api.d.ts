@@ -180,6 +180,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/export': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Export several meetings as a zip archive
+     * @description One file per meeting, all in the requested format (T-34.9). All-or-nothing: an unknown or deleted id fails the whole request with a 404 naming the offenders, rather than shipping a zip that silently misses files.
+     */
+    get: operations['export_meetings_api_v1_meetings_export_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/meetings/facets': {
     parameters: {
       query?: never
@@ -358,6 +378,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/{meeting_id}/export': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Export a meeting as a file
+     * @description The meeting rendered to `pdf`, `md`, `txt` or `docx`, streamed as a download (T-34.7). `include=` picks sections; the five canonical summary sections come from `summary` + `actions`.
+     */
+    get: operations['export_meeting_api_v1_meetings__meeting_id__export_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/meetings/{meeting_id}/media': {
     parameters: {
       query?: never
@@ -392,6 +432,50 @@ export interface paths {
      * @description Undoes a soft delete. Backs the 6-second Undo affordance in the UI.
      */
     post: operations['restore_meeting_api_v1_meetings__meeting_id__restore_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/soundbites': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List soundbites
+     * @description Every clip of the meeting, ordered by start time.
+     */
+    get: operations['list_soundbites_api_v1_meetings__meeting_id__soundbites_get']
+    put?: never
+    /**
+     * Create a soundbite
+     * @description A named clip of the meeting. The range must be 3 seconds to 3 minutes long and end inside the meeting.
+     */
+    post: operations['create_soundbite_api_v1_meetings__meeting_id__soundbites_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/soundbites/proposals': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Propose auto-generated soundbites
+     * @description Up to three clip candidates from the segments with the highest keyword density. Deterministic per meeting and never persisted — saving one is a plain POST with `auto_generated=true`.
+     */
+    get: operations['propose_soundbites_api_v1_meetings__meeting_id__soundbites_proposals_get']
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -536,6 +620,26 @@ export interface paths {
     put?: never
     post?: never
     delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/soundbites/{soundbite_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete a soundbite
+     * @description Hard delete — a clip is a pointer into the transcript, and two integers recreate it. Nothing to restore, so no tombstone.
+     */
+    delete: operations['delete_soundbite_api_v1_soundbites__soundbite_id__delete']
     options?: never
     head?: never
     patch?: never
@@ -1404,6 +1508,74 @@ export interface components {
       /** My Meetings */
       my_meetings: number
     }
+    /** SoundbiteCreate */
+    SoundbiteCreate: {
+      /**
+       * Auto Generated
+       * @default false
+       */
+      auto_generated: boolean
+      /** End Ms */
+      end_ms: number
+      /** Start Ms */
+      start_ms: number
+      /** Title */
+      title: string
+    }
+    /**
+     * SoundbiteListOut
+     * @description Every clip of one meeting, ordered by `start_ms`.
+     */
+    SoundbiteListOut: {
+      /** Items */
+      items: components['schemas']['SoundbiteOut'][]
+    }
+    /** SoundbiteOut */
+    SoundbiteOut: {
+      /** Auto Generated */
+      auto_generated: boolean
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** End Ms */
+      end_ms: number
+      /** Id */
+      id: number
+      /** Meeting Id */
+      meeting_id: number
+      /** Start Ms */
+      start_ms: number
+      /** Title */
+      title: string
+    }
+    /**
+     * SoundbiteProposalListOut
+     * @description Exactly the provider's proposals — at most three, timeline-ordered.
+     */
+    SoundbiteProposalListOut: {
+      /** Items */
+      items: components['schemas']['SoundbiteProposalOut'][]
+    }
+    /**
+     * SoundbiteProposalOut
+     * @description An unsaved auto-clip candidate.
+     *
+     *     No `id` on purpose — proposals are never persisted (T-33.8). Saving one is
+     *     a plain `POST /soundbites` with `auto_generated=true`; dismissing one is a
+     *     client-side matter.
+     */
+    SoundbiteProposalOut: {
+      /** End Ms */
+      end_ms: number
+      /** Score */
+      score: number
+      /** Start Ms */
+      start_ms: number
+      /** Title */
+      title: string
+    }
     /**
      * SpeakerCreate
      * @description A voice the diariser did not find (T-25.6).
@@ -2222,6 +2394,61 @@ export interface operations {
       }
     }
   }
+  export_meetings_api_v1_meetings_export_get: {
+    parameters: {
+      query: {
+        /** @description Comma-separated meeting ids. */
+        ids: string
+        /** @description The file format to render. */
+        format: 'pdf' | 'md' | 'txt' | 'docx'
+        /** @description Comma-separated sections: `summary`, `transcript`, `actions`, `comments`, `highlights`. Omitted means all of them. */
+        include?: string | null
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description A zip archive with one file per requested meeting. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+          'application/zip': string
+        }
+      }
+      /** @description One or more ids are unknown or deleted; `details` lists them. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   meeting_facets_api_v1_meetings_facets_get: {
     parameters: {
       query?: never
@@ -2880,6 +3107,73 @@ export interface operations {
       }
     }
   }
+  export_meeting_api_v1_meetings__meeting_id__export_get: {
+    parameters: {
+      query: {
+        /** @description The file format to render. */
+        format: 'pdf' | 'md' | 'txt' | 'docx'
+        /** @description Comma-separated sections: `summary`, `transcript`, `actions`, `comments`, `highlights`. Omitted means all of them. */
+        include?: string | null
+      }
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description The exported file, as an attachment. `Content-Disposition` carries the sanitised `<slug-of-title>-<date>.<ext>` filename. */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': unknown
+          'application/pdf': string
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': string
+          'text/markdown': string
+          'text/plain': string
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   get_media_api_v1_meetings__meeting_id__media_get: {
     parameters: {
       query?: never
@@ -2985,6 +3279,193 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  list_soundbites_api_v1_meetings__meeting_id__soundbites_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SoundbiteListOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  create_soundbite_api_v1_meetings__meeting_id__soundbites_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SoundbiteCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SoundbiteOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  propose_soundbites_api_v1_meetings__meeting_id__soundbites_proposals_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SoundbiteProposalListOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Rate limit exceeded. */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */
@@ -3454,6 +3935,53 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['SearchResults']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  delete_soundbite_api_v1_soundbites__soundbite_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        soundbite_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description No such resource. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
       /** @description Validation Error */

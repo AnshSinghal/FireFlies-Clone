@@ -150,7 +150,9 @@ export function CommentComposer({
                   leftIcon={<Avatar name={option.displayName} size="sm" />}
                   onClick={() => pick(option)}
                 >
-                  <span className="truncate">{option.displayName}</span>
+                  <span data-testid="comment-mention-name" className="truncate">
+                    {option.displayName}
+                  </span>
                 </Button>
               </li>
             ))}

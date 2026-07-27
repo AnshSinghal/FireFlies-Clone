@@ -155,5 +155,9 @@
     { "text": "Sync on mobile onboarding and commit to a date for the board deck", "assignee": "Marcus Patel", "due_in_days": 4, "at_segment": 63 },
     { "text": "Add the shortened signup flow to the content calendar", "assignee": "Chloe Dubois", "due_in_days": 10, "at_segment": 67 },
     { "text": "Send Raj a written summary of the pricing decision", "assignee": "Sarah Chen", "status": "completed", "due_in_days": 1, "at_segment": 0 }
+  ],
+  "soundbites": [
+    { "title": "Aisha's case for usage-based billing", "from_segment": 6, "to_segment": 9 },
+    { "title": "Why a canary would have caught the incident", "from_segment": 44, "to_segment": 46, "auto_generated": true }
   ]
 }
