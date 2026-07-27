@@ -334,6 +334,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/{meeting_id}/ask': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Ask a question about this meeting
+     * @description Retrieval first, then generation: the answer is built from the segments that actually match the question, and every response carries citations back into the transcript — or says plainly that the meeting does not cover it. History is truncated server-side to the last six turns. Rate limited with the other model-calling endpoints.
+     */
+    post: operations['ask_api_v1_meetings__meeting_id__ask_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/meetings/{meeting_id}/comments': {
     parameters: {
       query?: never
@@ -606,6 +626,51 @@ export interface components {
       status?: components['schemas']['ActionItemStatus'] | null
       /** Text */
       text?: string | null
+    }
+    /**
+     * AskCitation
+     * @description Where an answer came from — the chip that makes the feature credible.
+     *
+     *     No defaults: everything here is always known, and a default would make the
+     *     field optional in the generated client (ADR-076's recurring defect).
+     */
+    AskCitation: {
+      /** Segment Id */
+      segment_id: number
+      /** Snippet */
+      snippet: string
+      /** Speaker */
+      speaker: string
+      /** Start Ms */
+      start_ms: number
+    }
+    /** AskRequest */
+    AskRequest: {
+      /** History */
+      history?: components['schemas']['AskTurn'][]
+      /** Question */
+      question: string
+    }
+    /** AskResponse */
+    AskResponse: {
+      /** Answer */
+      answer: string
+      /** Citations */
+      citations: components['schemas']['AskCitation'][]
+      /** Grounded */
+      grounded: boolean
+      /** Provider */
+      provider: string
+    }
+    /** AskTurn */
+    AskTurn: {
+      /**
+       * Role
+       * @enum {string}
+       */
+      role: 'user' | 'assistant'
+      /** Text */
+      text: string
     }
     /** Body_parse_transcript_preview_api_v1_meetings_parse_post */
     Body_parse_transcript_preview_api_v1_meetings_parse_post: {
@@ -2531,6 +2596,77 @@ export interface operations {
       }
       /** @description Invalid payload; `details` is keyed by field path. */
       422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  ask_api_v1_meetings__meeting_id__ask_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AskRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AskResponse']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Rate limit exceeded. */
+      429: {
         headers: {
           [name: string]: unknown
         }

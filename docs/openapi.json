@@ -230,6 +230,113 @@
         "title": "ActionItemUpdate",
         "type": "object"
       },
+      "AskCitation": {
+        "description": "Where an answer came from \u2014 the chip that makes the feature credible.\n\nNo defaults: everything here is always known, and a default would make the\nfield optional in the generated client (ADR-076's recurring defect).",
+        "properties": {
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "integer"
+          },
+          "snippet": {
+            "title": "Snippet",
+            "type": "string"
+          },
+          "speaker": {
+            "title": "Speaker",
+            "type": "string"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "segment_id",
+          "start_ms",
+          "speaker",
+          "snippet"
+        ],
+        "title": "AskCitation",
+        "type": "object"
+      },
+      "AskRequest": {
+        "properties": {
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/AskTurn"
+            },
+            "maxItems": 50,
+            "title": "History",
+            "type": "array"
+          },
+          "question": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "AskRequest",
+        "type": "object"
+      },
+      "AskResponse": {
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/AskCitation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "grounded": {
+            "title": "Grounded",
+            "type": "boolean"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "answer",
+          "citations",
+          "grounded",
+          "provider"
+        ],
+        "title": "AskResponse",
+        "type": "object"
+      },
+      "AskTurn": {
+        "properties": {
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "text"
+        ],
+        "title": "AskTurn",
+        "type": "object"
+      },
       "Body_parse_transcript_preview_api_v1_meetings_parse_post": {
         "properties": {
           "extension": {
@@ -3844,6 +3951,99 @@
         "summary": "Add an action item",
         "tags": [
           "meetings"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/ask": {
+      "post": {
+        "description": "Retrieval first, then generation: the answer is built from the segments that actually match the question, and every response carries citations back into the transcript \u2014 or says plainly that the meeting does not cover it. History is truncated server-side to the last six turns. Rate limited with the other model-calling endpoints.",
+        "operationId": "ask_api_v1_meetings__meeting_id__ask_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Ask a question about this meeting",
+        "tags": [
+          "ask"
         ]
       }
     },
