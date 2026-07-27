@@ -39,8 +39,10 @@ CAPTURE=1 npx playwright test tests/99-capture.spec.ts --project=visual
 
 That writes `docs/screenshots/` at a fixed 1440×900, `deviceScaleFactor: 1`, with the seed clock
 frozen, fonts awaited and animations disabled — so two runs a week apart are byte-comparable and a
-diff means the UI changed. Keys `01`–`08` mirror `docs/reference/fireflies/`, which is what
-[docs/visual-comparison.html](docs/visual-comparison.html) puts side by side;
+diff means the UI changed. Keys `01`–`08` mirror `docs/reference/fireflies/` and `09` is the
+notepad, which the reference set has no equivalent of — it is shown alone rather than paired.
+[docs/visual-comparison.html](docs/visual-comparison.html) puts each pair side by side under a
+wipe slider;
 **[docs/ui-audit.md](docs/ui-audit.md)** is the written result of that comparison, including where
 this clone deliberately differs and why.
 
