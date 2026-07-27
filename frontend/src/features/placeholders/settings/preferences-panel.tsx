@@ -51,30 +51,55 @@ export function PreferencesPanel() {
         </p>
       </header>
 
-      <div className="max-w-sm space-y-4">
-        <Select
-          label="Default sort"
-          value={defaultSort}
-          onValueChange={(value) => setDefaultSort(value as SortValue)}
-          options={SORT_OPTIONS.map((option) => ({ ...option }))}
-          testId="settings-default-sort"
-        />
+      {/*
+        Each control in its own BLOCK wrapper.
 
-        <Select
-          label="Meetings per page"
-          value={String(pageSize)}
-          onValueChange={(value) => setPageSize(Number(value) as PageSize)}
-          options={PAGE_SIZES.map((size) => ({ value: String(size), label: String(size) }))}
-          testId="settings-page-size"
-        />
+        `Select` renders an `inline-flex` span — deliberately, because the
+        Notebook toolbar's sort dropdown and the pagination size picker sit
+        inline beside other controls. Three of them as direct siblings
+        therefore flowed onto one line, and `space-y-*` (a `margin-top` rule)
+        does nothing about that: the labels butted together and read as
+        "Meetings per pagePlayback rate".
 
-        <Select
-          label="Playback rate"
-          value={String(rate)}
-          onValueChange={(value) => setRate(parseRate(value))}
-          options={RATES.map((value) => ({ value: String(value), label: `${value}×` }))}
-          testId="settings-playback-rate"
-        />
+        A `flex` class on the Select would be the obvious fix and the wrong
+        one — `inline-flex` and `flex` both set `display`, `cn` deliberately
+        does not resolve conflicts, and the winner would be Tailwind's class
+        order rather than this file's intent (ADR-103). A wrapper cannot lose
+        that argument.
+      */}
+      <div className="max-w-sm space-y-5">
+        <div>
+          <Select
+            label="Default sort"
+            value={defaultSort}
+            onValueChange={(value) => setDefaultSort(value as SortValue)}
+            options={SORT_OPTIONS.map((option) => ({ ...option }))}
+            testId="settings-default-sort"
+            className="w-full"
+          />
+        </div>
+
+        <div>
+          <Select
+            label="Meetings per page"
+            value={String(pageSize)}
+            onValueChange={(value) => setPageSize(Number(value) as PageSize)}
+            options={PAGE_SIZES.map((size) => ({ value: String(size), label: String(size) }))}
+            testId="settings-page-size"
+            className="w-full"
+          />
+        </div>
+
+        <div>
+          <Select
+            label="Playback rate"
+            value={String(rate)}
+            onValueChange={(value) => setRate(parseRate(value))}
+            options={RATES.map((value) => ({ value: String(value), label: `${value}×` }))}
+            testId="settings-playback-rate"
+            className="w-full"
+          />
+        </div>
 
         <Switch
           checked={autoplay}

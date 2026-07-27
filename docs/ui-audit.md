@@ -77,6 +77,21 @@ An earlier draft of this audit listed the profile menu under *Verified
 equivalent* with "name, plan, storage meter" — the screenshots do not support
 that, and the reason they do not is this decision rather than an omission.
 
+**8 · Settings has no Personal/Team segmentation and no setting cards
+(references 07, 08).**
+Visual weight: medium. Fireflies segments Personal from Team above the section
+list and renders each setting as its own bordered card. Ours has one scope —
+there is no team model behind a Team tab — and lays the sections out as a
+titled form rather than cards. An earlier draft listed this under *Verified
+equivalent* including the segmentation and the cards; it has neither.
+
+Two real defects on these screens WERE found by this comparison and fixed:
+the three Preferences dropdowns rendered on one line with their labels run
+together (`Meetings per pagePlayback rate`) because `Select` is `inline-flex`
+and nothing wrapped them, and the sub-nav's `Soon` badges were ragged because
+the two longest labels overflowed the 224px rail. Both are in
+`docs/screenshots/` as re-captured.
+
 ## Verified equivalent
 
 - Date-grouped rows with a group header and per-group checkbox (reference 02).
@@ -85,8 +100,8 @@ that, and the reason they do not is this decision rather than an omission.
   chips, avatar group with `+N` overflow, action-item count on the right.
 - Topbar: centred search with a `⌘K` hint, primary action, notification bell,
   help, avatar menu.
-- Settings: left nav with segmented Personal/Team, card-per-setting body
-  (references 07, 08).
+- Settings: a left sub-nav of sections with `Soon` badges, and a titled body
+  per section (references 07, 08).
 - Dark theme: near-black app background, lifted card surfaces, no light-mode
   shadows, legible chips and avatars — checked on every dark capture.
 

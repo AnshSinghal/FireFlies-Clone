@@ -57,9 +57,17 @@ export const SETTINGS_TABS: SettingsTab[] = [
 export function SettingsNav({ active }: { active: string }) {
   return (
     <nav aria-label="Settings sections" className="md:w-56 md:shrink-0">
+      {/*
+        `shrink-0` on each item belongs to the MOBILE form of this list — below
+        `md` it is a horizontal scroller, where an item that shrinks is an item
+        whose label wraps. On the desktop column it made the two longest labels
+        overflow the 224px rail, so their `Soon` badges sat past the x where the
+        other four aligned and the right edge read as ragged (reference 07
+        right-aligns its badge). Hence `md:shrink` and the truncating label.
+      */}
       <ul className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
         {SETTINGS_TABS.map((tab) => (
-          <li key={tab.id} className="shrink-0">
+          <li key={tab.id} className="shrink-0 md:shrink">
             <Link
               href={tab.href ?? `/settings?tab=${tab.id}`}
               data-testid={`settings-tab-${tab.id}`}
@@ -72,7 +80,14 @@ export function SettingsNav({ active }: { active: string }) {
               )}
             >
               <tab.icon size={16} strokeWidth={1.75} className="shrink-0" />
-              <span className="flex-1 whitespace-nowrap">{tab.label}</span>
+              {/*
+                `md:truncate` rather than a wider rail: it sets the same three
+                properties `whitespace-nowrap` does plus the ellipsis, so it
+                wins cleanly, and a longer label added later cannot re-break
+                the alignment. With `flex-1` the badge lands hard against the
+                right edge on every row.
+              */}
+              <span className="flex-1 whitespace-nowrap md:truncate">{tab.label}</span>
               {tab.soon && <Badge variant="neutral">Soon</Badge>}
             </Link>
           </li>
