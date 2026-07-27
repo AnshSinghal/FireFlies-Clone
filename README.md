@@ -565,6 +565,23 @@ because the ratio is what stays true on someone else's hardware: a page of 20 mu
 the corpus triples, and the last page of a 5,000-segment transcript must cost what the first one
 does — the property cursor pagination exists for.
 
+Those budgets are asserted against a `TestClient`, which skips HTTP, nginx and the proxy hop. Run
+against the deployment instead — the whole stack, `curl` to `nginx` to `uvicorn` — the same
+endpoints come in well under:
+
+| Endpoint | Budget | Deployed |
+|---|---|---|
+| `/meetings?page_size=20` | 400ms | 60ms |
+| `/meetings/{id}` | 800ms | 16ms |
+| `/meetings/{id}/transcript` | 800ms | 14ms |
+| `/search?q=` | 800ms | 7ms |
+
+One caveat, stated because it changes what the numbers mean: the demo box serves the site and ran
+the measurement, so these include no wide-area network time. They show the stack is not the
+bottleneck; they do not predict what a user in another country sees. The budgets exist to catch a
+regression in *our* code, and end-to-end numbers at 2–15% of budget say there is a lot of headroom
+before one would show up.
+
 ---
 
 ## Project Structure
