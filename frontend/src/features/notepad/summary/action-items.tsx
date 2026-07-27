@@ -233,7 +233,21 @@ export function ActionItems({ meetingId, participants }: ActionItemsProps) {
                       testId={`action-item-text-${item.id}`}
                       hideIcon
                       multiline
-                      className={cn('text-body', done ? 'text-muted line-through' : 'text-primary')}
+                      /*
+                        `text-success-strong` on a completed row, not
+                        `text-muted`: the row's background becomes
+                        `bg-success-subtle`, and #667085 on #d7fbe3 measures
+                        4.45:1 — a hair under AA, and Lighthouse's mobile run
+                        flags it where the desktop axe sweep rounds past it.
+                        The token layer already has the convention (see the
+                        note on the `*-strong` tokens): base hues for icons and
+                        fills, `-strong` for text on the matching subtle
+                        background.
+                      */
+                      className={cn(
+                        'text-body',
+                        done ? 'text-success-strong line-through' : 'text-primary',
+                      )}
                       onSave={(text) => update.mutate({ id: item.id, text })}
                     />
 

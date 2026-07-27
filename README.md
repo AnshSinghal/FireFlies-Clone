@@ -289,11 +289,12 @@ point had no `gzip` block — so every visitor was downloading ~2.7× these numb
 Run against the deployed origin with Chrome's mobile emulation, which is the profile that finds
 things a 1440px suite cannot.
 
-| Category | Score | Plan target | |
+| Route | Performance | Accessibility | Best Practices |
 |---|---|---|---|
-| Accessibility | **95** | ≥ 95 | met |
-| Performance | 79 | ≥ 85 | LCP 4.0s is the whole gap |
-| Best Practices | 79 | ≥ 95 | both failures are "no HTTPS" |
+| `/notebook` | 79 | **95** ✅ | 79 |
+| `/meeting/[id]` | 82 | 93 → **100** after the fixes below | 79 |
+
+Plan targets: Performance ≥ 85, Accessibility ≥ 95, Best Practices ≥ 95.
 
 **Best Practices** is entirely `is-on-https` and `redirects-http`. The demo is served over plain
 HTTP on a bare IP — there is no domain to issue a certificate against — so this is an infrastructure
@@ -304,9 +305,20 @@ the largest element is the meeting list, which waits on a client-side fetch. The
 the first page on the server — real work, and a change to the RSC-vs-client-data decision recorded
 in ADR-001 rather than a tuning pass, so it is written down rather than half-done.
 
-Lighthouse did find one real defect, and it is the reason to run tools that emulate a phone: the
-topbar's **New** button had no accessible name below 768px, where its label is `hidden md:inline`.
-Our axe sweep runs at 1440px and never saw it. Fixed, with `28-a11y.spec.ts` now sweeping 393px too.
+Lighthouse earned its keep three times over, and every finding is one a 1440px axe sweep
+structurally cannot see:
+
+- The topbar's **New** button had no accessible name below 768px, where its label is
+  `hidden md:inline`. On desktop it reads "New"; on a phone a screen reader announces "button".
+- A **completed action item** put `text-muted` (#667085) on `bg-success-subtle` (#d7fbe3) — 4.45:1,
+  a hair under AA. Now `text-success-strong`, which is 5.67:1 and is the convention the token layer
+  already documents: base hues for icons and fills, `-strong` for text on the matching subtle
+  background.
+- The **timestamp chips** — the control you tap to jump to the moment a line was said — were 42×16,
+  against WCAG 2.2's 24×24 minimum. Two thirds of a finger too short, on the primary action of the
+  notepad's phone layout.
+
+`28-a11y.spec.ts` now sweeps 393px as well, so the first of those cannot come back.
 
 Backend latency budgets (T-42.10) and the 5,000-segment stress case (T-42.11) are asserted in
 `backend/tests/test_performance.py`. Two of those assert a *ratio* rather than a stopwatch reading,

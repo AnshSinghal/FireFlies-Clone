@@ -140,7 +140,18 @@ export function TimestampButton({ time, label, className, ...rest }: TimestampBu
       type="button"
       aria-label={label}
       className={cn(
-        'tnum rounded shrink-0 px-1 text-xs text-muted transition-colors duration-fast',
+        /*
+         * `min-h-6` and `inline-flex items-center` give a 24px tall target
+         * without changing the type or the visual weight — the text still
+         * occupies 16px, the extra 8px is hit area.
+         *
+         * WCAG 2.2's Target Size (Minimum) is 24x24, and Lighthouse's mobile
+         * run flags these at 42x16: they are the chip you tap to jump to the
+         * moment a line was said, which is a primary action on a phone and was
+         * two thirds of a finger too short.
+         */
+        'tnum rounded inline-flex min-h-6 shrink-0 items-center px-1.5 text-xs text-muted',
+        'transition-colors duration-fast',
         'hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
         className,
       )}
