@@ -2831,3 +2831,31 @@ trusted from the provider.
 **Alternative rejected.** Having the provider return segment ids directly would
 weld the provider interface to the schema; a future LLM provider quoting
 paraphrased text could never comply.
+
+## ADR-132 — The optimistic contract cannot depend on an unrelated GET
+
+**Context.** ERR-B (comment POST timeout) failed under parallel-worker load
+while passing sequentially, on every tree. The optimistic insert in
+`useCreateComment.onMutate` skipped itself when the comments list cache was
+empty — `if (!page) return page` — and under load the submit genuinely beats
+the list GET, which `cancelQueries` has just aborted anyway.
+
+**Decision.** When no page is cached, `onMutate` SEEDS a one-item page rather
+than skipping. "Your comment is on screen the moment you press send" is the
+whole promise of optimism; it cannot be conditional on how fast an unrelated
+request happened to run. Rollback gains the mirror case: when `previous` was
+`undefined`, the seeded entry is REMOVED (`removeQueries`) instead of restored,
+so a failed post leaves no phantom one-comment page.
+
+**The test-side twin (T31-A/B/F).** The same race wore a second costume: the
+comments spec asserted on text the OPTIMISTIC row already renders, then
+reloaded — aborting the still-in-flight POST, so "survives reload" tested a
+race, not persistence. The access log for a failing run showed NO comment POST
+during T31-A at all. Specs that reload or close the page after a write now
+first wait for `[data-pending]` to clear — the signal that the SERVER row
+replaced the placeholder.
+
+**Rule extracted.** An optimistic UI makes assertions pass before the write has
+happened. Any test that navigates after a write must first observe server
+truth, and any `onMutate` must handle the cache it WISHES it had, not the one
+a fast network usually gives it.
