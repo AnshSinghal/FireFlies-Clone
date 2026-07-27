@@ -54,6 +54,13 @@ no product icon (ours would be invented), and muted text is darker than theirs â
 4.97:1 against 2.60:1, the one place this clone knowingly trades likeness for
 legibility.
 
+**These numbers are now checked, not asserted.**
+`scripts/check_reference_ratios.py` runs in `make lint`: it re-derives all eight
+from `docs/screenshots/` and fails when this table stops describing them. It is a
+documentation check, not a fidelity gate â€” a ratio drifting from the reference is
+a product decision; the table quietly ceasing to match the pixels beside it is a
+defect. Verified by reintroducing the 0.815 regression and watching it fire.
+
 **How much of this was visible by looking:** none of it. Several careful
 side-by-side passes in one day found the duration format and the settings
 asymmetry, and missed every ratio above. The rest came from edge-detecting both

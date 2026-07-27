@@ -84,6 +84,8 @@ lint-backend:
 	cd backend && uv run ruff format --check .
 	python3 scripts/check_layering.py backend
 	python3 scripts/check_design_tokens.py .
+	@uv run --quiet --with pillow --with numpy python3 scripts/check_reference_ratios.py . \
+		|| { echo "  (ratio check needs pillow+numpy; skipped)"; }
 
 lint-frontend:
 	cd frontend && npm run lint
