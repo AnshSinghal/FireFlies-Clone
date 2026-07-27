@@ -221,12 +221,33 @@ larger the screenshot the more real change it hides.
 3. **Mask the volatile regions** (relative dates, avatar hues) rather than
    buying tolerance for the whole frame to accommodate them.
 
-I did not change it during this task, and the reason is worth stating: it would
-re-baseline 165 committed snapshots in the middle of a verification cycle, to
-tighten a threshold I had not measured the flake rate of. Tightening a test on
-a hunch and re-recording every baseline to make it green is how a suite quietly
-stops meaning anything. Measure the run-to-run noise floor first, then set the
-budget just above it.
+I did not change the existing budgets during this task, and the reason is worth
+stating: it would re-baseline 165 committed snapshots to tighten a threshold
+whose flake rate I had not measured. Tightening a test on a hunch and
+re-recording every baseline to make it green is how a suite quietly stops
+meaning anything. Measure the run-to-run noise floor first, then set the budget
+just above it.
+
+**Then I proved the point on myself.** Adding the first visual coverage for
+Settings, I wrote it as a full-page shot, watched four baselines go green, and
+was one commit away from calling that surface protected. It was not: changing
+the card padding from `p-4` to `p-6` — a visible 8px shift on every card —
+passed. Settings is mostly whitespace, so five cards moving hide inside 19,400
+pixels of tolerance.
+
+Fix number 1 above, applied: shoot the panel instead of the page. Same ratio,
+much smaller absolute budget, and the same `p-4` -> `p-6` edit now fails all
+four. Verified by breaking it deliberately, watching them fail, and restoring.
+
+Two things I would want an interviewer to take from that. **A baseline that has
+never failed is not evidence** — adding a screenshot test and seeing green is
+the most natural way in the world to conclude a surface is covered, and it is
+exactly the move that leaves you unprotected. And I nearly mis-diagnosed it:
+the run took 15 seconds, so my first instinct was that the server had not
+rebuilt. The config says `reuseExistingServer: false` with `npm run build`, so
+the change was live and the tolerance really did absorb it. Stopping at the
+plausible explanation would have had me "fix" a caching problem that did not
+exist and ship the real weakness intact.
 
 ## Things I would rather be asked
 

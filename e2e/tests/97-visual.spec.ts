@@ -223,6 +223,48 @@ test.describe('visual baselines @visual', () => {
 
       // ── Notepad ───────────────────────────────────────────────────────────
 
+      /*
+       * Settings had NO visual coverage until 2026-07-28, which is how a
+       * restructure left Preferences rendering cards while Appearance stayed a
+       * bare radio list — two tabs of one screen looking like different
+       * products, caught only by putting `docs/screenshots/` side by side.
+       *
+       * Both tabs, because the defect was the DIFFERENCE between them: a
+       * baseline on one alone would have gone green while they diverged. It is
+       * also the surface whose measure and card anatomy are the T-46.1
+       * findings, so it is the one most likely to be edited again.
+       */
+      test(`settings-preferences · ${theme}`, async ({ page }) => {
+        await page.goto('/settings?tab=preferences')
+        const panel = page.getByTestId('settings-preferences')
+        await expect(panel).toBeVisible()
+        await settle(page)
+        /*
+         * The PANEL, not the page, and `COMPONENT_SHOT` rather than
+         * `PAGE_SHOT`. Written as a full-page shot first, and it did not work:
+         * changing the card padding from `p-4` to `p-6` — a visible 8px shift
+         * on every card — still passed. `maxDiffPixelRatio: 0.015` is ~19,400
+         * pixels of a 1440x900 page, and Settings is mostly whitespace, so the
+         * cards are a small enough fraction of the frame to hide inside the
+         * budget.
+         *
+         * A ratio scales with the area you photograph. Shooting the panel keeps
+         * the same ratio while shrinking the absolute budget to something that
+         * can actually fail, which is the fix `docs/interview-notes.md` §9
+         * argues for. Verified by re-running the p-4 -> p-6 edit against these
+         * baselines and watching them fail.
+         */
+        await expect(panel).toHaveScreenshot(`settings-preferences-${theme}.png`, COMPONENT_SHOT)
+      })
+
+      test(`settings-appearance · ${theme}`, async ({ page }) => {
+        await page.goto('/settings?tab=appearance')
+        const panel = page.getByTestId('settings-appearance')
+        await expect(panel).toBeVisible()
+        await settle(page)
+        await expect(panel).toHaveScreenshot(`settings-appearance-${theme}.png`, COMPONENT_SHOT)
+      })
+
       test(`notepad-full · ${theme}`, async ({ page, seededMeeting }) => {
         await openNotepad(page, seededMeeting.id)
         const transcript = new TranscriptComponent(page)
