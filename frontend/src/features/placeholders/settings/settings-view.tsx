@@ -17,11 +17,12 @@
 import {
   Bell,
   CreditCard,
-  LayoutGrid,
+  Mail,
   Mic,
   Palette,
-  Shield,
+  Radio,
   SlidersHorizontal,
+  Wand2,
   type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -43,14 +44,20 @@ interface SettingsTab {
 
 const APPEARANCE_TAB: SettingsTab = { id: 'appearance', label: 'Appearance', icon: Palette }
 
+// The deferred groups carry the REAL product's names — the reference
+// screenshots (docs/reference/fireflies/07-08.png) show Recording & Privacy,
+// Compliance Notification, Email Assistant, AI settings, Live meeting and
+// Account in this order, and a side-by-side against invented names reads as
+// not having looked.
 const TABS: SettingsTab[] = [
   APPEARANCE_TAB,
   { id: 'preferences', label: 'Preferences', icon: SlidersHorizontal },
-  { id: 'recording', label: 'Recording', icon: Mic, soon: true },
-  { id: 'notifications', label: 'Notifications', icon: Bell, soon: true },
-  { id: 'privacy', label: 'Privacy & sharing', icon: Shield, soon: true },
-  { id: 'ai-apps', label: 'AI Apps', icon: LayoutGrid, soon: true },
-  { id: 'billing', label: 'Billing', icon: CreditCard, soon: true },
+  { id: 'recording', label: 'Recording & Privacy', icon: Mic, soon: true },
+  { id: 'compliance', label: 'Compliance Notification', icon: Bell, soon: true },
+  { id: 'email-assistant', label: 'Email Assistant', icon: Mail, soon: true },
+  { id: 'ai-settings', label: 'AI settings', icon: Wand2, soon: true },
+  { id: 'live-meeting', label: 'Live meeting', icon: Radio, soon: true },
+  { id: 'account', label: 'Account', icon: CreditCard, soon: true },
 ]
 
 export function SettingsView() {

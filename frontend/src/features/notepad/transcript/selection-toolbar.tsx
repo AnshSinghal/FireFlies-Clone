@@ -20,18 +20,22 @@ interface SelectionToolbarProps {
   /** Selections outside this element are ignored. */
   containerRef: React.RefObject<HTMLElement | null>
   onCopy: (text: string) => void
+  /** Opens the comment composer for the selection's segment (T-31.3). */
+  onComment?: (segmentId: number) => void
 }
 
 interface Anchor {
   top: number
   left: number
   text: string
+  /** The segment the selection STARTS in, from the row's data attribute. */
+  segmentId: number | null
 }
 
 /** Below this many characters a "selection" is usually a stray click-drag. */
 const MIN_SELECTION = 2
 
-export function SelectionToolbar({ containerRef, onCopy }: SelectionToolbarProps) {
+export function SelectionToolbar({ containerRef, onCopy, onComment }: SelectionToolbarProps) {
   const toast = useToast()
   const [anchor, setAnchor] = useState<Anchor | null>(null)
 
@@ -64,7 +68,20 @@ export function SelectionToolbar({ containerRef, onCopy }: SelectionToolbarProps
       return
     }
 
-    setAnchor({ top: rect.top, left: rect.left + rect.width / 2, text })
+    // A comment anchors to the line where the selection STARTS — the natural
+    // reading of "comment on this", and unambiguous for cross-line drags.
+    const startElement =
+      range.startContainer instanceof Element
+        ? range.startContainer
+        : range.startContainer.parentElement
+    const segmentId = startElement?.closest<HTMLElement>('[data-segment-id]')?.dataset.segmentId
+
+    setAnchor({
+      top: rect.top,
+      left: rect.left + rect.width / 2,
+      text,
+      segmentId: segmentId != null ? Number(segmentId) : null,
+    })
   }, [containerRef])
 
   useEffect(() => {
@@ -124,7 +141,16 @@ export function SelectionToolbar({ containerRef, onCopy }: SelectionToolbarProps
         label="Comment"
         size="sm"
         icon={<MessageSquarePlus size={16} strokeWidth={1.75} />}
-        onClick={soon}
+        data-testid="selection-comment"
+        onClick={
+          onComment && anchor.segmentId != null
+            ? () => {
+                onComment(anchor.segmentId as number)
+                window.getSelection()?.removeAllRanges()
+                setAnchor(null)
+              }
+            : soon
+        }
       />
       <IconButton
         label="Soundbite"

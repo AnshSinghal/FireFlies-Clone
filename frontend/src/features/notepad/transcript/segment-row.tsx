@@ -9,10 +9,20 @@
  * which are stable, and compares only what the row draws.
  */
 
-import { Copy, Link2, MessageSquarePlus, MoreHorizontal, Quote, Undo2, UserCog } from 'lucide-react'
+import {
+  Copy,
+  Link2,
+  MessageSquare,
+  MessageSquarePlus,
+  MoreHorizontal,
+  Quote,
+  Undo2,
+  UserCog,
+} from 'lucide-react'
 import { memo } from 'react'
 
 import { Avatar } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
 import { Highlighter, type HighlightRange } from '@/components/ui/highlighter'
 import { Dropdown, DropdownItem, DropdownSeparator, DropdownSub } from '@/components/ui/dropdown'
 import { IconButton } from '@/components/ui/icon-button'
@@ -44,6 +54,10 @@ export interface SegmentRowProps {
   onCommitEdit?: () => void
   onReassign?: (segmentId: number, speakerId: number) => void
   onRevert?: (segment: SegmentOut) => void
+  /** Live comments on this line — drives the always-visible gutter chip (T-31.2). */
+  commentCount?: number
+  /** Opens the inline composer under this line (T-31.3). */
+  onAddComment?: (segmentId: number) => void
 }
 
 function SegmentRowImpl({
@@ -61,6 +75,8 @@ function SegmentRowImpl({
   onCommitEdit,
   onReassign,
   onRevert,
+  commentCount = 0,
+  onAddComment,
 }: SegmentRowProps) {
   const color = speaker ? getSpeakerColorByIndex(speaker.color_index) : undefined
   const label = speaker?.label ?? 'Unknown speaker'
@@ -68,6 +84,7 @@ function SegmentRowImpl({
   return (
     <article
       data-testid={`transcript-segment-${segment.id}`}
+      data-segment-id={segment.id}
       data-active={isActive || undefined}
       // Announced as the current item rather than only coloured (T-21.12).
       aria-current={isActive ? 'true' : undefined}
@@ -160,6 +177,25 @@ function SegmentRowImpl({
           )}
         </p>
 
+        {/*
+          Always visible, not hover-only (T-31.2): a thread nobody can see is
+          a thread nobody discovers. Sits in the right gutter beside the
+          timestamp, and clicking it opens the discussion it advertises.
+        */}
+        {commentCount > 0 && onAddComment && (
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid={`comment-gutter-${segment.id}`}
+            aria-label={`${commentCount} ${commentCount === 1 ? 'comment' : 'comments'} on this line`}
+            className="tnum h-6 shrink-0 gap-1 px-1.5 text-xs text-muted"
+            leftIcon={<MessageSquare size={13} strokeWidth={1.75} />}
+            onClick={() => onAddComment(segment.id)}
+          >
+            {commentCount}
+          </Button>
+        )}
+
         <TimestampButton
           data-testid={`transcript-timestamp-${segment.id}`}
           time={formatTimestamp(segment.start_ms)}
@@ -208,9 +244,19 @@ function SegmentRowImpl({
               Copy link to this moment
             </DropdownItem>
             <DropdownSeparator />
-            <DropdownItem icon={<MessageSquarePlus size={16} strokeWidth={1.75} />} soon>
-              Add comment
-            </DropdownItem>
+            {onAddComment ? (
+              <DropdownItem
+                icon={<MessageSquarePlus size={16} strokeWidth={1.75} />}
+                onSelect={() => onAddComment(segment.id)}
+                testId={`segment-add-comment-${segment.id}`}
+              >
+                Add comment
+              </DropdownItem>
+            ) : (
+              <DropdownItem icon={<MessageSquarePlus size={16} strokeWidth={1.75} />} soon>
+                Add comment
+              </DropdownItem>
+            )}
             <DropdownItem icon={<Quote size={16} strokeWidth={1.75} />} soon>
               Create soundbite
             </DropdownItem>
@@ -278,6 +324,9 @@ export const SegmentRow = memo(SegmentRowImpl, (previous, next) => {
     previous.segment.original_text === next.segment.original_text &&
     previous.speakers === next.speakers &&
     previous.speaker?.label === next.speaker?.label &&
-    previous.speaker?.color_index === next.speaker?.color_index
+    previous.speaker?.color_index === next.speaker?.color_index &&
+    // The gutter chip is visible state (T-31.2) — a posted comment must show
+    // up without waiting for some other prop to change.
+    previous.commentCount === next.commentCount
   )
 })

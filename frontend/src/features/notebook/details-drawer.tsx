@@ -164,6 +164,13 @@ function DrawerBody({ meeting, onClose }: { meeting: MeetingDetail; onClose: () 
             value={formatDuration(meeting.duration_seconds * 1000)}
           />
           <MetaRow field="language" label="Language" value={meeting.language.toUpperCase()} />
+          {meeting.comment_count > 0 && (
+            <MetaRow
+              field="comments"
+              label="Comments"
+              value={pluralize(meeting.comment_count, 'comment')}
+            />
+          )}
           {/* `capitalize` only here: a channel slug is lowercase by design, and
               a person's name is already however they wrote it. */}
           <MetaRow field="source" label="Source" value={meeting.source} capitalize />

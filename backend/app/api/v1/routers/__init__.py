@@ -9,7 +9,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1.routers import channels, export, me, meetings, search, summaries, transcript, users
+from app.api.v1.routers import (
+    channels,
+    comments,
+    export,
+    me,
+    meetings,
+    search,
+    summaries,
+    transcript,
+    users,
+)
 
 api_router = APIRouter()
 api_router.include_router(me.router)
@@ -23,5 +33,6 @@ api_router.include_router(export.router)
 api_router.include_router(meetings.router)
 api_router.include_router(summaries.router)
 api_router.include_router(users.router)
+api_router.include_router(comments.router)
 
 __all__ = ["api_router"]

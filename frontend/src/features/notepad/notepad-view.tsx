@@ -37,6 +37,7 @@ import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
 import { NotepadHeader } from './notepad-header'
 import { ShortcutsModal } from './player/shortcuts-modal'
 import { IndexPanel } from './summary/index-panel'
+import { CommentsPanel } from './comments/comments-panel'
 import { SmartSearchPanel } from './transcript/smart-search-panel'
 import { SummaryPanel } from './summary-panel'
 import { TranscriptPanel } from './transcript-panel'
@@ -152,11 +153,12 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
 
               {openPanel && (
                 <RailFlyout item={openPanel} onClose={() => setOpenPanel(null)}>
-                  {/* Smart Search (T-22.10) and Index (T-23.13) are real; the
-                    other three rail items are still placeholders, and the
-                    flyout says so itself. */}
+                  {/* Smart Search (T-22.10), Index (T-23.13) and Comments
+                    (T-31.6) are real; soundbites and bookmarks are still
+                    placeholders, and the flyout says so itself. */}
                   {openPanel === 'search' ? <SmartSearchPanel meetingId={meetingId} /> : undefined}
                   {openPanel === 'index' ? <IndexPanel meetingId={meetingId} /> : undefined}
+                  {openPanel === 'comments' ? <CommentsPanel meetingId={meetingId} /> : undefined}
                 </RailFlyout>
               )}
 
