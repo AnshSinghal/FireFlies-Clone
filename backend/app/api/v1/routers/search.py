@@ -26,7 +26,25 @@ router = APIRouter(tags=["search"])
 )
 def search(
     db: DbSession,
-    q: Annotated[str, Query(description="Search term. Treated literally, not as a pattern.")],
+    q: Annotated[
+        str,
+        Query(
+            description=(
+                "Search term. Supports quoted phrases, `-exclusion`, "
+                "`speaker:Name`, `before:` and `after:` dates (T-35.3); "
+                "everything else is matched literally, never as a pattern."
+            )
+        ),
+    ],
     limit: Annotated[int, Query(ge=1, le=50, description="Max hits per group.")] = 5,
+    offset: Annotated[int, Query(ge=0, description="Into the transcript hits only.")] = 0,
+    host: Annotated[
+        str | None,
+        Query(description="Restrict to one host, by exact name (the facets list supplies them)."),
+    ] = None,
+    scope: Annotated[
+        str,
+        Query(pattern="^(all|meetings|transcript)$", description="Which groups to return."),
+    ] = "all",
 ) -> SearchResults:
-    return SearchService(db).search(q, limit=limit)
+    return SearchService(db).search(q, limit=limit, offset=offset, host=host, scope=scope)

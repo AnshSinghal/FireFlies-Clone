@@ -8,7 +8,7 @@
  * lags the input by 250ms, so a cached term would still wait before painting.
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 
 import { api } from './client'
 import { qk } from './query-keys'
@@ -32,5 +32,39 @@ export function useSearch(query: string, { limit = 5 }: { limit?: number } = {})
      */
     staleTime: 30_000,
     placeholderData: (previous) => previous,
+  })
+}
+
+/**
+ * The /search page's query (T-35).
+ *
+ * Separate from `useSearch` (the topbar's five-hit dropdown) because the page
+ * accumulates: `Load more` appends transcript pages onto what is shown, so the
+ * hook keeps every page it has fetched for the current query and filters, and
+ * resets when either changes.
+ */
+export function useSearchPage(
+  query: string,
+  { host, scope, limit = 10 }: { host?: string | null; scope?: string; limit?: number } = {},
+) {
+  return useInfiniteQuery({
+    queryKey: [...qk.search(query), 'page', host ?? '', scope ?? 'all', limit],
+    queryFn: ({ pageParam, signal }) =>
+      api.get<SearchResults>('/api/v1/search', {
+        signal,
+        params: {
+          q: query,
+          limit,
+          offset: pageParam,
+          host: host || undefined,
+          scope: scope === 'all' ? undefined : scope,
+        },
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (last) =>
+      // The server says whether more transcript hits exist past this page;
+      // the next offset is how many the client already holds.
+      last.has_more ? last.offset + last.transcripts.length : undefined,
+    enabled: query.trim().length >= MIN_SEARCH_LENGTH,
   })
 }

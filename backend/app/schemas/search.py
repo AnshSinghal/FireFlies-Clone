@@ -51,4 +51,8 @@ class SearchResults(BaseModel):
     # defect as `action_item_counts` in T-05.
     meetings: list[MeetingHit]
     transcripts: list[TranscriptHit]
+    #: True when another page of transcript hits exists past `offset + limit`.
+    #: Meetings are never paginated — title matches are few by nature.
+    has_more: bool
+    offset: int
     total: int = Field(description="Combined count across both groups.")
