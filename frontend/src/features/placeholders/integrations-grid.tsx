@@ -8,10 +8,11 @@
  * third-party trademarked logo files"). Greyscale keeps them reading as
  * inactive.
  *
- * `Connect` is aria-disabled but still clickable ON PURPOSE — T30-C wants a
- * click to raise the coming-soon toast, and a hard-disabled button that
- * swallows the click would leave the user guessing. Explaining beats
- * ignoring.
+ * `Connect` is a real, enabled button that explains itself via the
+ * coming-soon toast (T30-C) — the same rule MenuItem's `soon` rows settled
+ * (T-09.10): an inert `aria-disabled` control is indistinguishable from a
+ * broken one, and screen readers + Playwright both refuse to click it. The
+ * muted styling carries the "not active" signal; the click carries the why.
  */
 
 import { Button } from '@/components/ui/button'
@@ -43,7 +44,6 @@ export function IntegrationsGrid() {
           <Button
             variant="secondary"
             size="sm"
-            aria-disabled="true"
             className="shrink-0 text-muted"
             data-testid={`integrations-connect-${integration.id}`}
             onClick={() => toast.info({ message: TOAST_MESSAGES.comingSoon })}

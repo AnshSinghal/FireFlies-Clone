@@ -47,10 +47,11 @@ export function TeamTable() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-end gap-2">
+        {/* Enabled-but-explaining, per MenuItem's `soon` rule (T-09.10):
+            an aria-disabled control reads as broken, not deferred. */}
         <Button
           variant="secondary"
           size="sm"
-          aria-disabled="true"
           className="text-muted"
           data-testid="team-invite-button"
           onClick={comingSoon}
@@ -60,7 +61,6 @@ export function TeamTable() {
         <Button
           variant="secondary"
           size="sm"
-          aria-disabled="true"
           className="text-muted"
           data-testid="team-manage-roles-button"
           onClick={comingSoon}
