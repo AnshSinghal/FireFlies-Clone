@@ -48,6 +48,8 @@ interface SelectionToolbarProps {
 
 interface Anchor {
   top: number
+  /** The selection's lower edge — where the toolbar goes when it flips down. */
+  bottom: number
   left: number
   text: string
   /** The segment the selection STARTS in, from the row's data attribute. */
@@ -118,6 +120,7 @@ export function SelectionToolbar({
 
     setAnchor({
       top: rect.top,
+      bottom: rect.bottom,
       left: rect.left + rect.width / 2,
       text,
       segmentId: segmentId != null ? Number(segmentId) : null,
@@ -175,16 +178,50 @@ export function SelectionToolbar({
     setAnchor(null)
   }
 
+  /*
+   * Clamped into the viewport, and flipped below the selection when there is
+   * no room above it (T-33.2 fallout).
+   *
+   * `fixed` + the selection's viewport rect means an unclamped toolbar simply
+   * leaves the screen: select a line scrolled to the TOP of the transcript and
+   * it renders above the viewport, unreachable — and because the rightmost
+   * control is `selection-soundbite`, a selection near the right edge takes
+   * that button off-screen first. Neither is reachable by scrolling, since a
+   * fixed element does not move with the page. `07-primitives` T10-K already
+   * requires dropdowns to flip near an edge; this was the one floating surface
+   * that did not.
+   *
+   * Measured toolbar box: 248×38. The half-width and height are constants
+   * rather than a measured ref because the toolbar's contents are fixed and a
+   * layout-effect measurement would place it one frame late, which reads as a
+   * jump.
+   */
+  const HALF_W = 124
+  const HEIGHT = 38
+  const GAP = 8
+  const viewportW = typeof window === 'undefined' ? 1440 : window.innerWidth
+  const flipped = anchor.top < HEIGHT + GAP
+  const placement = {
+    flipped,
+    top: flipped ? anchor.bottom + GAP : anchor.top - GAP,
+    left: Math.min(Math.max(anchor.left, HALF_W + GAP), viewportW - HALF_W - GAP),
+  }
+
   return (
     <div
       data-testid="selection-toolbar"
+      data-flipped={flipped ? 'true' : 'false'}
       role="toolbar"
       aria-label="Selection actions"
       // `fixed`, because the anchor comes from a viewport-relative rect. An
       // absolutely positioned version would need the offset parent's scroll
       // subtracted, and would drift the moment anything between them scrolled.
-      className="fixed z-popover flex -translate-x-1/2 -translate-y-full items-center gap-0.5 rounded-lg border border-subtle bg-surface-0 p-1 shadow-md"
-      style={{ top: anchor.top - 8, left: anchor.left }}
+      className={cn(
+        'fixed z-popover flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-subtle bg-surface-0 p-1 shadow-md',
+        // Flipped below the selection, so no `-translate-y-full`.
+        placement.flipped ? '' : '-translate-y-full',
+      )}
+      style={{ top: placement.top, left: placement.left }}
       // The toolbar must not steal the selection it is describing: focusing a
       // button inside it would collapse the range and unmount this component
       // before the click landed.
