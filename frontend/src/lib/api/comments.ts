@@ -74,7 +74,24 @@ export function useCreateComment(meetingId: number) {
       }
 
       client.setQueryData<CommentsPage>(key, (page) => {
-        if (!page) return page
+        /*
+         * No page cached yet — the list GET is slow or still in flight (it was
+         * just CANCELLED above). Seed a one-item page rather than skipping:
+         * the optimistic contract is "your comment is on screen the moment you
+         * press send", and it cannot depend on how fast an unrelated GET ran.
+         * ERR-B caught the skip under parallel-worker load, where the submit
+         * genuinely beats the list.
+         */
+        if (!page) {
+          return {
+            items: [placeholder],
+            page: 1,
+            page_size: 100,
+            total: 1,
+            total_pages: 1,
+            has_next: false,
+          }
+        }
         if (placeholder.parent_id != null) {
           return {
             ...page,
@@ -94,7 +111,13 @@ export function useCreateComment(meetingId: number) {
     onError: (_error, _payload, context) => {
       // Roll back (T31-G); the global handler owns the toast, the composer
       // owns the preserved text.
-      if (context?.previous) client.setQueryData(key, context.previous)
+      if (context?.previous) {
+        client.setQueryData(key, context.previous)
+      } else {
+        // The cache was EMPTY before the seed above — remove the entry
+        // entirely so the rollback leaves no phantom one-comment page behind.
+        client.removeQueries({ queryKey: key, exact: true })
+      }
     },
 
     onSettled: () => {
