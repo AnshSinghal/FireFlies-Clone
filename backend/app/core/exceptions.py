@@ -70,6 +70,11 @@ class CommentNotFoundError(NotFoundError):
     message = "Comment not found."
 
 
+class SoundbiteNotFoundError(NotFoundError):
+    code = "SOUNDBITE_NOT_FOUND"
+    message = "Soundbite not found."
+
+
 class ForbiddenError(AppException):
     status_code = 403
     code = "FORBIDDEN"

@@ -16,12 +16,20 @@ import { IconButton } from '@/components/ui/icon-button'
 import { useToast } from '@/components/ui/toast'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 
+export interface SoundbiteSelection {
+  startSegmentId: number
+  endSegmentId: number
+  text: string
+}
+
 interface SelectionToolbarProps {
   /** Selections outside this element are ignored. */
   containerRef: React.RefObject<HTMLElement | null>
   onCopy: (text: string) => void
   /** Opens the comment composer for the selection's segment (T-31.3). */
   onComment?: (segmentId: number) => void
+  /** Opens the create-soundbite modal for the selection's range (T-33.2). */
+  onSoundbite?: (selection: SoundbiteSelection) => void
 }
 
 interface Anchor {
@@ -30,12 +38,19 @@ interface Anchor {
   text: string
   /** The segment the selection STARTS in, from the row's data attribute. */
   segmentId: number | null
+  /** …and the one it ENDS in — a soundbite spans both (T-33.2). */
+  endSegmentId: number | null
 }
 
 /** Below this many characters a "selection" is usually a stray click-drag. */
 const MIN_SELECTION = 2
 
-export function SelectionToolbar({ containerRef, onCopy, onComment }: SelectionToolbarProps) {
+export function SelectionToolbar({
+  containerRef,
+  onCopy,
+  onComment,
+  onSoundbite,
+}: SelectionToolbarProps) {
   const toast = useToast()
   const [anchor, setAnchor] = useState<Anchor | null>(null)
 
@@ -76,11 +91,18 @@ export function SelectionToolbar({ containerRef, onCopy, onComment }: SelectionT
         : range.startContainer.parentElement
     const segmentId = startElement?.closest<HTMLElement>('[data-segment-id]')?.dataset.segmentId
 
+    // A soundbite needs the whole span, so the END matters too. DOM ranges are
+    // normalised to document order, so end is never before start.
+    const endElement =
+      range.endContainer instanceof Element ? range.endContainer : range.endContainer.parentElement
+    const endSegmentId = endElement?.closest<HTMLElement>('[data-segment-id]')?.dataset.segmentId
+
     setAnchor({
       top: rect.top,
       left: rect.left + rect.width / 2,
       text,
       segmentId: segmentId != null ? Number(segmentId) : null,
+      endSegmentId: endSegmentId != null ? Number(endSegmentId) : null,
     })
   }, [containerRef])
 
@@ -156,7 +178,22 @@ export function SelectionToolbar({ containerRef, onCopy, onComment }: SelectionT
         label="Soundbite"
         size="sm"
         icon={<Quote size={16} strokeWidth={1.75} />}
-        onClick={soon}
+        data-testid="selection-soundbite"
+        onClick={
+          onSoundbite && anchor.segmentId != null
+            ? () => {
+                onSoundbite({
+                  startSegmentId: anchor.segmentId as number,
+                  // A selection can END outside any segment row — in a speaker
+                  // header, say — in which case the start segment IS the range.
+                  endSegmentId: anchor.endSegmentId ?? (anchor.segmentId as number),
+                  text: anchor.text,
+                })
+                window.getSelection()?.removeAllRanges()
+                setAnchor(null)
+              }
+            : soon
+        }
       />
     </div>
   )
