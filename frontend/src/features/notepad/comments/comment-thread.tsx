@@ -148,7 +148,12 @@ function CommentBody({
 
         {editing ? (
           <div className="mt-1 space-y-2">
-            <Textarea value={draft} rows={2} onChange={(event) => setDraft(event.target.value)} />
+            <Textarea
+              value={draft}
+              rows={2}
+              data-testid={`comment-edit-input-${comment.id}`}
+              onChange={(event) => setDraft(event.target.value)}
+            />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
                 Cancel
@@ -157,6 +162,7 @@ function CommentBody({
                 variant="primary"
                 size="sm"
                 disabled={!draft.trim()}
+                data-testid={`comment-edit-save-${comment.id}`}
                 onClick={() => {
                   update.mutate({ id: comment.id, patch: { body: draft.trim() } })
                   setEditing(false)
