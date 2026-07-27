@@ -162,18 +162,27 @@ question, not a polish pass.
 (references 07, 08).**
 The width is what an evaluator sees first and this audit had missed it.
 
-Measured off the two screenshots rather than assumed, because the first version
-of this entry got the reference wrong. Fireflies does **not** let its settings
-run full-bleed either — in `07.png` the card group spans roughly 60% of the
-content area and is **centred**, with even gutters either side. Ours is a
-`max-w-sm` (384px) form occupying about 40% of a ~950px column, hard against
-the left edge, leaving one big asymmetric void on the right.
+Measured, not estimated — and the first version of this entry got the reference
+wrong by estimating. Edge-detecting vertical rules in both images:
+
+| | Fireflies (`07.png`) | Ours |
+|---|---|---|
+| Content column | x 392 → 2000 (1608px) | x 487 → 1440 (953px) |
+| The settings block | x 728 → 1655 (927px) | x 487 → 870 (383px) |
+| Left gutter | 336px | **0px** |
+| Right gutter | 345px | **570px** |
+| Block ÷ column | 57.6% | 40.2% |
+
+Fireflies does **not** run its settings full-bleed either — it constrains to
+57.6% and centres, with gutters equal within 3% (336 vs 345). Ours constrains
+harder, to 40.2%, and puts the entire remainder on one side: a 0px left gutter
+against a 570px right one.
 
 So the difference is not "they fill it and we don't". Both constrain the
-measure; theirs is wider and centred, ours is narrower and left-aligned. The
-asymmetry is doing more damage than the width — a centred column reads as a
-designed measure, a left-aligned narrow one reads as a page that did not
-finish loading.
+measure. Theirs is wider and centred; ours is narrower and flush left. The
+asymmetry is doing more damage than the width — 0px against 570px is not a
+margin, it is a page that looks like it stopped rendering. A centred column at
+even half that width would read as a designed measure.
 
 It is self-inflicted. The constraint was added earlier in T-46 to fix a real
 defect — three `Select`s are inline elements, and as direct siblings under
