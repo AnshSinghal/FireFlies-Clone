@@ -73,6 +73,21 @@ the skeleton has to mirror them exactly. Six visual baselines moved —
 `notebook-list` in both themes and the four responsive widths — and nothing
 else, which is the evidence the change stayed on the surface it was meant for.
 
+**A negative result worth writing down, so it is not "fixed" later.** The
+reference's topbar measures 71–72px on three separate screens (02, 04, 07);
+ours is 56px. Taken alone that reads as a 21% deficit and an obvious thing to
+change — and it would be wrong. Against the type it carries, the topbar is
+already right: topbar ÷ row-title glyph is 3.74 for Fireflies and 3.93 for us,
+inside 5%. Their whole capture sits at a larger effective scale (their title
+glyphs are 19px to our 14px), so the absolute 71-vs-56 comparison is measuring
+their zoom level, not our layout.
+
+What does not fall out of scale is the card: 1.51 ÷ 1.29 against the topbar and
+5.66 ÷ 5.07 against the type — short on both counts, from both directions. That
+is one finding seen twice, not two findings, and it means the row height is the
+single remaining geometric deviation on this screen. Do not touch the topbar
+token to chase it.
+
 **The row height is deliberately still 1.29 against their 1.51.** Matching it
 means 72px → ~85px, and that token is load-bearing in a way the gaps are not:
 `design.md` §3.7 fixes it, T12-B asserts it, ADR-036 kept it on purpose, the
