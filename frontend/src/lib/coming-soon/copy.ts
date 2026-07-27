@@ -88,7 +88,12 @@ export const INTEGRATIONS = [
   { id: 'slack', name: 'Slack', mark: 'Sl', blurb: 'Post recaps to a channel after each call' },
   { id: 'notion', name: 'Notion', mark: 'No', blurb: 'Sync meeting notes into your pages' },
   { id: 'hubspot', name: 'HubSpot', mark: 'Hs', blurb: 'Log calls against contacts and deals' },
-  { id: 'salesforce', name: 'Salesforce', mark: 'Sf', blurb: 'Attach transcripts to opportunities' },
+  {
+    id: 'salesforce',
+    name: 'Salesforce',
+    mark: 'Sf',
+    blurb: 'Attach transcripts to opportunities',
+  },
   {
     id: 'google-calendar',
     name: 'Google Calendar',

@@ -260,8 +260,15 @@ test.describe('summary panel', () => {
     await expect(page.getByTestId('summary-error')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('summary-retry')).toBeVisible()
 
-    // The transcript is untouched — one failing panel does not blank the page.
-    await expect(page.getByTestId('transcript-list')).toBeVisible()
+    /*
+     * The transcript is untouched — one failing panel does not blank the page.
+     *
+     * With the same headroom the error state above gets: the summary query
+     * retries its 500 with backoff before settling into `isError`, and while
+     * the panel waits on that, the transcript render competes with three other
+     * workers for the machine.
+     */
+    await expect(page.getByTestId('transcript-list')).toBeVisible({ timeout: 20_000 })
     await expect(page.getByTestId('player')).toBeVisible()
   })
 })

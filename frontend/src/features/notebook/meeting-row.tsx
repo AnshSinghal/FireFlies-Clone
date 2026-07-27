@@ -52,6 +52,8 @@ interface MeetingRowProps {
   onShowDetails: (id: number) => void
   /** Opens the edit modal, which loads the full meeting itself. */
   onEditDetails?: (id: number) => void
+  /** Plays the exit animation before the row leaves the data (T-28.6). */
+  exiting?: boolean
   onPrefetch: () => void
   /** Roving tabindex: only the focused row is tabbable (T-12.12). */
   tabIndex: number
@@ -68,6 +70,7 @@ export function MeetingRow({
   onDelete,
   onShowDetails,
   onEditDetails,
+  exiting,
   onPrefetch,
   tabIndex,
   onFocus,
@@ -82,6 +85,7 @@ export function MeetingRow({
     <li
       data-testid="meeting-row"
       data-selected={selected || undefined}
+      data-exiting={exiting || undefined}
       onPointerEnter={() => setHovered(true)}
       onPointerLeave={() => setHovered(false)}
       className={cn(
@@ -90,6 +94,7 @@ export function MeetingRow({
         // is what keeps the two from drifting and the layout from jumping when
         // data lands.
         'group relative h-row rounded-lg border transition-colors duration-fast',
+        exiting && 'ff-row-exit',
         selected
           ? 'border-accent-subtle bg-accent-subtle'
           : 'border-subtle bg-surface-0 hover:border-strong',

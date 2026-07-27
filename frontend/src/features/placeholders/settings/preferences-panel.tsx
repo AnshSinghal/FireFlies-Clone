@@ -16,7 +16,12 @@ import { Badge } from '@/components/ui/chip'
 import { Select } from '@/components/ui/select'
 import { Switch } from '@/components/ui/controls'
 import { SORT_OPTIONS, type SortValue } from '@/lib/meetings/sort-options'
-import { PREF_KEYS as PLAYER_PREF_KEYS, RATES, parseRate, type PlaybackRate } from '@/lib/player/prefs'
+import {
+  PREF_KEYS as PLAYER_PREF_KEYS,
+  RATES,
+  parseRate,
+  type PlaybackRate,
+} from '@/lib/player/prefs'
 import { usePref } from '@/lib/hooks/use-pref'
 import {
   PAGE_SIZES,

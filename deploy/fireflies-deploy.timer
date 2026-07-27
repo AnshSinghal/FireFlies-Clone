@@ -1,0 +1,14 @@
+# Every 90 seconds, check whether origin/main moved (T-44).
+# A push lands on the demo box in at most ~2 minutes.
+
+[Unit]
+Description=Poll origin/main and deploy the Fireflies clone
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=90s
+# No point stacking ticks behind a long build; the flock skips them anyway.
+AccuracySec=15s
+
+[Install]
+WantedBy=timers.target

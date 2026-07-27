@@ -4,7 +4,14 @@ import type { SearchResults } from '@/lib/api/types'
 
 import { flattenRows, idleSections, resultSections, truncateSnippet } from './rows'
 
-const EMPTY: SearchResults = { query: '', meetings: [], transcripts: [], total: 0 }
+const EMPTY: SearchResults = {
+  query: '',
+  meetings: [],
+  transcripts: [],
+  total: 0,
+  has_more: false,
+  offset: 0,
+}
 
 describe('truncateSnippet', () => {
   it('leaves short snippets and their ranges alone', () => {
@@ -96,6 +103,8 @@ describe('resultSections', () => {
       },
     ],
     total: 2,
+    has_more: false,
+    offset: 0,
   }
 
   it('groups meetings and transcripts separately, with a footer row last', () => {

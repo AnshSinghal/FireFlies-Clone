@@ -10,7 +10,7 @@
 import type { MatchRange, SearchResults } from '@/lib/api/types'
 import { formatMeetingMeta } from '@/lib/utils/format'
 
-export type SearchRowKind = 'recent' | 'action' | 'meeting' | 'transcript' | 'all'
+export type SearchRowKind = 'recent' | 'action' | 'meeting' | 'transcript' | 'all' | 'clear'
 
 export interface SearchRow {
   /** Stable DOM id — this is what `aria-activedescendant` points at. */
@@ -82,14 +82,26 @@ export function idleSections(recent: readonly string[]): SearchSection[] {
     sections.push({
       id: 'recent',
       label: 'Recent searches',
-      rows: recent.map((term, i) => ({
-        id: `search-row-recent-${i}`,
-        kind: 'recent',
-        // A recent search re-runs the search rather than jumping to a result —
-        // the meeting that matched last week may not be the one that matters now.
-        href: `/search?q=${encodeURIComponent(term)}`,
-        label: term,
-      })),
+      rows: [
+        ...recent.map((term, i): SearchRow => ({
+          id: `search-row-recent-${i}`,
+          kind: 'recent',
+          // A recent search re-runs the search rather than jumping to a
+          // result — the meeting that matched last week may not be the one
+          // that matters now.
+          href: `/search?q=${encodeURIComponent(term)}`,
+          label: term,
+        })),
+        {
+          // In the ROWS, so it is reachable with ↑/↓ — the per-item ✕ is a
+          // pointer affordance, and this is the keyboard's route to the same
+          // outcome (T-35.9).
+          id: 'search-row-clear',
+          kind: 'clear',
+          href: '#',
+          label: 'Clear history',
+        },
+      ],
     })
   }
 

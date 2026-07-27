@@ -100,7 +100,14 @@ def _seed_cast(db: Session, stats: SeedStats) -> dict[str, User]:
     cast = _load(DATA_DIR / "cast.json")
     people = [*cast["users"], *cast["externals"]]
 
-    stats.avatars = write_avatars({p["slug"]: p["name"] for p in people}, AVATAR_DIR)
+    try:
+        stats.avatars = write_avatars({p["slug"]: p["name"] for p in people}, AVATAR_DIR)
+    except OSError:
+        # A containerised backend has no frontend tree to write into — and
+        # doesn't need one: the SVGs are committed and baked into the frontend
+        # image. Regeneration is a dev-checkout convenience, never a
+        # requirement, so a read-only or absent target is a skip, not a crash.
+        stats.avatars = 0
 
     users: dict[str, User] = {}
     for person in people:

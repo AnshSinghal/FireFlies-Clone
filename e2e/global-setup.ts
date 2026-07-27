@@ -33,7 +33,21 @@ export const E2E_DATABASE_URL = 'sqlite:///./e2e.db'
  * URL looked like a broken debounce rather than a cold build.
  */
 async function warmRoutes(baseURL: string): Promise<void> {
-  const routes = ['/notebook', '/dev/components', '/dev/toasts', '/dev/tokens']
+  /*
+   * `/meeting/1` and `/meeting/2` are here because they are DYNAMIC — rendered
+   * on demand — so the first request pays for loading the route's chunk and
+   * opening the database. That first request used to land inside whichever
+   * test navigated there first, which under four workers was occasionally
+   * enough to blow its whole budget.
+   */
+  const routes = [
+    '/notebook',
+    '/meeting/1',
+    '/meeting/2',
+    '/dev/components',
+    '/dev/toasts',
+    '/dev/tokens',
+  ]
 
   await Promise.all(
     routes.map(async (route) => {

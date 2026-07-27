@@ -36,6 +36,7 @@ import { pluralize } from '@/lib/utils/format'
 import { RemovableChip } from '@/components/ui/chip'
 
 import { BulkBar } from './bulk-bar'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { EditMeetingModalById } from '@/features/edit/edit-meeting-modal'
 
 import { DetailsDrawer } from './details-drawer'
@@ -94,6 +95,9 @@ function removeChip(
   return updates
 }
 
+/** Matches `ff-row-out`'s duration, so the wait and the animation agree. */
+const ROW_EXIT_MS = 200
+
 export function NotebookView() {
   const { filters, setFilter, setPage, setParams } = useNotebookParams()
   const { data, isPending, isFetching, isError, error, refetch } = useMeetings(filters)
@@ -131,6 +135,16 @@ export function NotebookView() {
    * not something to restore on reload.
    */
   const [editingId, setEditingId] = useState<number | null>(null)
+  /*
+   * Which meeting the delete dialog is asking about.
+   *
+   * The id rather than the row: the dialog outlives the row it was opened
+   * from — deleting removes it — and a dialog holding a reference to something
+   * that has gone is how "undefined" ends up in a confirmation sentence.
+   */
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  /** The row currently playing its exit animation. */
+  const [exitingId, setExitingId] = useState<number | null>(null)
 
   const detailsId = filters.details ?? null
   const showDetails = useCallback(
@@ -168,6 +182,9 @@ export function NotebookView() {
 
   const activeQuickFilters = readQuickFilters(filters)
   const items = useMemo(() => data?.items ?? [], [data])
+
+  // Resolved from the loaded page, so the dialog names what it is deleting.
+  const deletingTitle = items.find((meeting) => meeting.id === deletingId)?.title ?? ''
   const pageIds = useMemo(() => items.map((m) => m.id), [items])
 
   const selection = useSelection(pageIds)
@@ -340,9 +357,10 @@ export function NotebookView() {
           groups={groups}
           selection={selection}
           query={filters.q}
-          onDelete={(id) => void deleteWithUndo(id)}
+          onDelete={setDeletingId}
           onShowDetails={showDetails}
           onEditDetails={setEditingId}
+          exitingId={exitingId}
           onPrefetch={(id) =>
             void client.prefetchQuery({
               queryKey: qk.meetings.detail(id),
@@ -380,6 +398,36 @@ export function NotebookView() {
       )}
 
       <EditMeetingModalById meetingId={editingId} onClose={() => setEditingId(null)} />
+
+      <ConfirmDialog
+        open={deletingId !== null}
+        onOpenChange={(next) => {
+          if (!next) setDeletingId(null)
+        }}
+        title="Delete meeting?"
+        objectName={deletingTitle}
+        body="and its transcript, summary, and action items will be deleted."
+        testId="delete-dialog"
+        onConfirm={async () => {
+          if (deletingId === null) return
+          const id = deletingId
+          setDeletingId(null)
+
+          /*
+           * The row plays out before the data changes (T-28.6).
+           *
+           * The list is driven by a query, so a row disappears the instant the
+           * cache updates — there is no unmount transition to hook. Marking it
+           * first, then waiting one animation, lets the rows below close the
+           * gap instead of jumping into it.
+           */
+          setExitingId(id)
+          await new Promise((resolve) => setTimeout(resolve, ROW_EXIT_MS))
+          setExitingId(null)
+
+          await deleteWithUndo(id)
+        }}
+      />
 
       {detailsId !== null && (
         <DetailsDrawer
@@ -433,6 +481,8 @@ interface GroupedListProps {
   onShowDetails: (id: number) => void
   onEditDetails: (id: number) => void
   onPrefetch: (id: number) => void
+  /** The row playing its exit animation, if any. */
+  exitingId: number | null
 }
 
 function GroupedList({
@@ -443,6 +493,7 @@ function GroupedList({
   onShowDetails,
   onEditDetails,
   onPrefetch,
+  exitingId,
 }: GroupedListProps) {
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups])
   const listRef = useRef<HTMLDivElement>(null)
@@ -519,6 +570,7 @@ function GroupedList({
                   anySelected={selection.count > 0}
                   query={query}
                   onDelete={onDelete}
+                  exiting={meeting.id === exitingId}
                   onShowDetails={onShowDetails}
                   onEditDetails={onEditDetails}
                   onPrefetch={() => onPrefetch(meeting.id)}

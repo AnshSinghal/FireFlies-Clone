@@ -112,8 +112,8 @@ export function TeamTable() {
 
       <p className="rounded-lg border border-subtle bg-surface-2 px-4 py-3 text-sm text-muted">
         <span className="font-semibold">Sharing &amp; permissions:</span> in the real product,
-        admins set per-meeting visibility — private to the host, shared with the team, or open
-        by link. Every meeting in this build is visible to the seeded workspace.
+        admins set per-meeting visibility — private to the host, shared with the team, or open by
+        link. Every meeting in this build is visible to the seeded workspace.
       </p>
     </div>
   )

@@ -1236,8 +1236,12 @@ export interface components {
      *     dropdown harder to scan.
      */
     SearchResults: {
+      /** Has More */
+      has_more: boolean
       /** Meetings */
       meetings: components['schemas']['MeetingHit'][]
+      /** Offset */
+      offset: number
       /** Query */
       query: string
       /**
@@ -3100,10 +3104,16 @@ export interface operations {
   search_api_v1_search_get: {
     parameters: {
       query: {
-        /** @description Search term. Treated literally, not as a pattern. */
+        /** @description Search term. Supports quoted phrases, `-exclusion`, `speaker:Name`, `before:` and `after:` dates (T-35.3); everything else is matched literally, never as a pattern. */
         q: string
         /** @description Max hits per group. */
         limit?: number
+        /** @description Into the transcript hits only. */
+        offset?: number
+        /** @description Restrict to one host, by exact name (the facets list supplies them). */
+        host?: string | null
+        /** @description Which groups to return. */
+        scope?: string
       }
       header?: never
       path?: never

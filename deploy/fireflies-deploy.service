@@ -1,0 +1,16 @@
+# Deploys the Fireflies clone when origin/main moves (T-44).
+# Installed at /etc/systemd/system/fireflies-deploy.service; fired by the
+# matching .timer. Runs as the deploy user, who is in the docker group.
+
+[Unit]
+Description=Fireflies clone pull-based deploy
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=contact_cyberultron_com
+Environment=FIREFLIES_DIR=/home/contact_cyberultron_com/apps/fireflies
+ExecStart=/home/contact_cyberultron_com/apps/fireflies/deploy/deploy.sh
+# A wedged build must not hold the lock forever.
+TimeoutStartSec=1200

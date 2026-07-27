@@ -2175,10 +2175,53 @@ reference, no resolved date — an honest null beats a clock-dependent guess.
 
 **Consequence.** The provider layer contains zero calls to `now()`, and the
 same fixture asserts the same dates forever.
+## ADR-095 — Single delete confirms first; the undo toast stays
+
+**Context.** T-12 shipped row deletion with an Undo toast and no confirmation
+— defensible for a soft delete with a six-second escape hatch. T-28 specifies a
+named confirmation dialog as well.
+
+**Decision.** Both. The dialog stops the accident; the toast catches the
+confirmed-but-regretted. They guard different mistakes, and each is cheap.
+
+The dialog names the meeting in bold — "which one" is the whole question — and
+autofocuses CANCEL, because a destructive dialog that autofocuses its
+destructive button turns an Enter still travelling from the opening keystroke
+into a deletion.
+
+**Consequence.** Every pre-existing delete test needed the confirm step added.
+The double-click guard (one DELETE per confirmation, enforced by a synchronous
+ref) is tested by dispatching two DOM clicks in one evaluate — `locator.click()`
+re-checks actionability and refuses to click a button that disabled itself,
+which is the correct product behaviour making the naive test impossible.
+
+**Also learned here:** deriving a confirm dialog's button testids from the
+dialog's own id (`delete-dialog-confirm`) broke the one test I renamed with a
+blanket substitution. Rename by call site, not by pattern.
 
 ---
 
-## ADR-095 — One theme store, and it's the avatar menu's
+## ADR-096 — The exit animation animates `height`, legally
+
+**Context.** T-28.6 wants a deleted row to animate out rather than vanish, and
+`height: auto` is famously not animatable.
+
+**Decision.** Animate `height` to zero directly — legal here only because a
+Notebook row is a FIXED 72px (`h-row`), a token the skeleton shares. The margin
+goes with it, because the list is `space-y-2` and a collapsed row would
+otherwise leave its gap behind.
+
+The row plays out BEFORE the cache changes: the list is query-driven, so a row
+disappears the instant the data does, and there is no unmount transition to
+hook. Mark, wait one animation, then mutate.
+
+**Consequence.** A 200ms constant in the view (`ROW_EXIT_MS`) that must match
+the CSS duration; both point at each other in comments. If rows ever become
+variable-height, this becomes the grid-rows trick — noted in the stylesheet.
+
+---
+
+## ADR-097 — One theme store, and it's the avatar menu's
 
 **Context.** T-30.7's Appearance tab needs a theme preference. The avatar menu
 (T-08.9) already shipped one — `ff.theme` via `useLocalStorage` — that nothing
@@ -2199,7 +2242,7 @@ is purely visual (finishing the dark token audit), not plumbing.
 
 ---
 
-## ADR-096 — A `Soon` badge inside a functional tab beats a lying toggle
+## ADR-098 — A `Soon` badge inside a functional tab beats a lying toggle
 
 **Context.** T-30.7 lists five preferences. Four wire to real consumers —
 default sort and page size feed the Notebook's URL-state defaults (URL still
@@ -2216,6 +2259,58 @@ a select that persists a value nothing reads.
 **Consequence.** Everything interactive on the Preferences tab genuinely
 works, which is the tab's whole claim. Date format joins its consumer after
 T-28 merges.
+## ADR-099 — Search syntax is parsed once, into two languages
+
+**Context.** `"pricing model" -churn speaker:Sarah after:2026-07-01` mixes text
+matching with filters that are not text matching at all. FTS5 can express the
+first half; dates and speakers are SQL's.
+
+**Decision.** One parser (`search_query.py`) splits the string into an FTS
+MATCH expression and structured filters. Every text term is quoted so
+punctuation is characters rather than FTS syntax; exclusions chain with `NOT`;
+the last bare word gets a prefix `*` so results narrow while typing; and the
+parser NEVER RAISES — an unclosed quote closes itself, an unknown `field:` is
+searched literally, `after:lunch` is a phrase somebody said.
+
+**Consequence.** The WHERE clause is shared verbatim between the row query and
+the count query, because two copies of a filter is how a total stops matching
+its list. The host filter takes a NAME, since names are what the facets
+sidebar has — there is no users endpoint to resolve ids against.
+
+---
+
+## ADR-100 — The search total is stable across pages
+
+**Context.** `total` combined the title hits with the transcript count — and
+titles were only fetched on page one, so `Load more` changed the number in the
+header.
+
+**Decision.** Count title matches on EVERY page; include the hit objects only
+on the first. The total describes the corpus; the page describes the fetch.
+
+**Consequence.** The pagination test asserts the totals agree across pages and
+that pages never overlap — the property, not the implementation. The EXPLAIN
+QUERY PLAN test pins that MATCH goes through the FTS virtual table's index and
+segments are reached by rowid, never scanned; the plan names the table by its
+ALIAS, which is what the first version of the assertion got wrong.
+
+---
+
+## ADR-101 — A snippet's deep link carries both halves of the answer
+
+**Context.** T-35.5 calls the snippet link the feature's payoff.
+
+**Decision.** `/meeting/{id}?t=<sec>&find=<q>` — the player seeks to the moment
+(T-19.12's machinery) and the find bar opens primed with the query (T-22.11's).
+Neither part was built for search; the deep link is two existing contracts
+composed, which is the argument for having made them URL state in the first
+place.
+
+**Consequence.** T35-H asserts all three outcomes off one click: position,
+active line in view, find bar populated. History removal in the topbar is
+pointer-only (`tabIndex={-1}`, so no nested tab stop inside the listbox); the
+keyboard's route to the same outcome is the `Clear history` row, which is a
+real option reachable with ↑/↓.
 
 ---
 
