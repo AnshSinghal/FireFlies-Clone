@@ -11,12 +11,16 @@ import type { LucideIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/chip'
 import { Switch } from '@/components/ui/controls'
 
+// Toggle copy mirrors the reference settings screens (docs/reference/
+// fireflies/07-08.png): auto-record and video capture under Recording &
+// Privacy, topic tracker and custom vocabulary under AI settings.
 const SAMPLE_TOGGLES: Record<string, string[]> = {
-  recording: ['Auto-record scheduled meetings', 'Save speaker audio separately'],
-  notifications: ['Email me each recap', 'Notify on new action items'],
-  privacy: ['Meetings default to private', 'Allow sharing by link'],
-  'ai-apps': ['Run skills on new meetings', 'Allow custom prompts'],
-  billing: ['Annual billing', 'Send invoices to finance'],
+  recording: ['Auto-record meetings', 'Capture meeting video'],
+  compliance: ['Email participants before the bot joins', 'Announce recording in-call'],
+  'email-assistant': ['Auto-draft replies and follow-ups', 'Label my inbox'],
+  'ai-settings': ['Topic tracker keywords', 'Custom vocabulary'],
+  'live-meeting': ['Live captions during the call', 'Real-time AskFred'],
+  account: ['Two-factor authentication', 'Weekly usage summary'],
 }
 
 interface SoonPanelProps {
