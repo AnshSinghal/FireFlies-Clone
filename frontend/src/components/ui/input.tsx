@@ -25,6 +25,14 @@ const CONTROL_BASE =
 
 const CONTROL_IDLE = 'border-subtle hover:border-strong focus:border-accent focus:shadow-focus'
 const CONTROL_ERROR = 'border-danger focus:border-danger focus:shadow-focus'
+/*
+ * For input that is VALID but found nothing (T-22.8).
+ *
+ * A search with no results is not a mistake — danger red would tell the user
+ * they typed something wrong when they typed something fine that simply is not
+ * in this transcript.
+ */
+const CONTROL_WARNING = 'border-warning focus:border-warning focus:shadow-focus'
 
 interface FieldShellProps {
   label?: string
@@ -92,10 +100,12 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   error?: string
   leading?: ReactNode
   trailing?: ReactNode
+  /** Tints the border without claiming the value is invalid. See CONTROL_WARNING. */
+  tone?: 'warning'
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { label, helper, error, leading, trailing, className, required, ...props },
+  { label, helper, error, leading, trailing, tone, className, required, ...props },
   ref,
 ) {
   return (
@@ -115,7 +125,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
             aria-describedby={describedBy}
             className={cn(
               CONTROL_BASE,
-              error ? CONTROL_ERROR : CONTROL_IDLE,
+              error ? CONTROL_ERROR : tone === 'warning' ? CONTROL_WARNING : CONTROL_IDLE,
               'h-input outline-none',
               leading && 'pl-9',
               trailing && 'pr-9',

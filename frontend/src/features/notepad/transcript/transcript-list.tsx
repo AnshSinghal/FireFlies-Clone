@@ -15,6 +15,7 @@ import { ArrowDown } from 'lucide-react'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import type { HighlightRange } from '@/components/ui/highlighter'
 import type { SegmentOut, SpeakerRef } from '@/lib/api/types'
 import { useNotepadCommands } from '@/lib/notepad/commands'
 import { markTurns } from '@/lib/transcript/grouping'
@@ -35,6 +36,10 @@ interface TranscriptListProps {
    */
   activeIndex: number
   isPlaying: boolean
+  /** Highlight offsets per segment id (T-22.3). */
+  matchRanges?: Map<number, HighlightRange[]>
+  /** `{ segmentIndex, indexInSegment }` of the current match, or null. */
+  currentMatch?: { segmentIndex: number; indexInSegment: number } | null
   onSeek: (ms: number, options?: { play?: boolean }) => void
   onCopyText: (segment: SegmentOut) => void
   onCopyLink: (segment: SegmentOut) => void
@@ -98,6 +103,8 @@ function TranscriptListImpl({
   speakers,
   activeIndex,
   isPlaying,
+  matchRanges,
+  currentMatch,
   onSeek,
   onCopyText,
   onCopyLink,
@@ -259,6 +266,21 @@ function TranscriptListImpl({
   }, [revealNonce, scrollToActive])
 
   /*
+   * Stepping through matches scrolls THROUGH THE VIRTUALISER (T-22.5).
+   *
+   * The trap in this task: a match is very often in a row that is not mounted,
+   * and `scrollIntoView` on a node that does not exist silently does nothing —
+   * the counter advances, the highlight moves, and the view stays put. Only
+   * the virtualiser knows where an unrendered row would be.
+   */
+  const matchIndex = currentMatch?.segmentIndex ?? -1
+  useEffect(() => {
+    if (matchIndex < 0) return
+    selfScrollUntil.current = performance.now() + SELF_SCROLL_MS
+    virtualizer.scrollToIndex(matchIndex, { align: 'center', behavior: 'auto' })
+  }, [matchIndex, virtualizer])
+
+  /*
    * The first scroll, after the rows have been MEASURED (T-21.9).
    *
    * A `?t=` deep link resolves an active index before any row has a real
@@ -291,6 +313,20 @@ function TranscriptListImpl({
 
   // The pill only makes sense while something is moving underneath it.
   const showJump = pinned && isPlaying && activeIndex >= 0
+
+  /*
+   * Where each match sits in the transcript, as a fraction.
+   *
+   * By ROW INDEX rather than by measured pixel offset: most rows have not been
+   * measured — that is the point of virtualising — so a pixel-based map would
+   * be accurate for the visible handful and wrong for everything else. Index
+   * position is exact for all of them and, at row heights this uniform, lands
+   * within a few pixels of the truth.
+   */
+  const matchPositions = useMemo(() => {
+    if (!matchRanges || matchRanges.size === 0 || rows.length === 0) return []
+    return rows.flatMap((row, index) => (matchRanges.has(row.id) ? [index / rows.length] : []))
+  }, [matchRanges, rows])
 
   const activeSpeakerId = activeIndex >= 0 ? rows[activeIndex]?.speaker_id : undefined
   const activeSpeakerLabel =
@@ -337,6 +373,27 @@ function TranscriptListImpl({
         {stickySpeaker?.label ?? ''}
       </div>
 
+      {/*
+        The match density map (T-22.7): a tick per match, at the fraction of
+        the transcript it sits at. Alongside the scrollbar rather than on it —
+        a scrollbar is the browser's, and painting into one means recreating it.
+      */}
+      {matchRanges && matchRanges.size > 0 && (
+        <div
+          aria-hidden="true"
+          data-testid="transcript-match-map"
+          className="pointer-events-none absolute inset-y-0 right-0 z-topbar w-1.5"
+        >
+          {matchPositions.map((position, index) => (
+            <span
+              key={index}
+              className="absolute inset-x-0 h-0.5 rounded-full bg-highlight-active"
+              style={{ top: `${position * 100}%` }}
+            />
+          ))}
+        </div>
+      )}
+
       <div
         ref={scrollRef}
         data-testid="transcript-scroll"
@@ -380,6 +437,12 @@ function TranscriptListImpl({
                   onSeek={onSeek}
                   onCopyText={onCopyText}
                   onCopyLink={onCopyLink}
+                  matchRanges={matchRanges?.get(row.id)}
+                  activeMatch={
+                    currentMatch?.segmentIndex === virtualRow.index
+                      ? currentMatch.indexInSegment
+                      : -1
+                  }
                 />
               </li>
             )

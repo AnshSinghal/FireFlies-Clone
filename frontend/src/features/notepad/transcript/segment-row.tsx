@@ -21,6 +21,7 @@ import {
 import { memo } from 'react'
 
 import { Avatar } from '@/components/ui/avatar'
+import { Highlighter, type HighlightRange } from '@/components/ui/highlighter'
 import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/dropdown'
 import { IconButton } from '@/components/ui/icon-button'
 import { TimestampButton } from '@/components/ui/media-controls'
@@ -38,6 +39,10 @@ export interface SegmentRowProps {
   onSeek: (ms: number, options?: { play?: boolean }) => void
   onCopyText: (segment: SegmentOut) => void
   onCopyLink: (segment: SegmentOut) => void
+  /** Offsets to highlight in this line (T-22.3). */
+  matchRanges?: HighlightRange[]
+  /** Which of those is the CURRENT match, or -1 for none. */
+  activeMatch?: number
 }
 
 function SegmentRowImpl({
@@ -47,6 +52,8 @@ function SegmentRowImpl({
   onSeek,
   onCopyText,
   onCopyLink,
+  matchRanges,
+  activeMatch = -1,
 }: SegmentRowProps) {
   const color = speaker ? getSpeakerColorByIndex(speaker.color_index) : undefined
   const label = speaker?.label ?? 'Unknown speaker'
@@ -115,7 +122,18 @@ function SegmentRowImpl({
           // the transcript uncopyable — the one thing people do with one.
           style={{ userSelect: 'text' }}
         >
-          {segment.text}
+          {matchRanges && matchRanges.length > 0 ? (
+            <Highlighter
+              text={segment.text}
+              ranges={matchRanges}
+              activeIndex={activeMatch}
+              // No radius here: the component already sets `rounded-none`, and a
+              // second radius utility would leave the winner to stylesheet order.
+              markClassName="bg-highlight text-primary"
+            />
+          ) : (
+            segment.text
+          )}
         </p>
 
         <TimestampButton
@@ -199,6 +217,10 @@ export const SegmentRow = memo(SegmentRowImpl, (previous, next) => {
     previous.segment.text === next.segment.text &&
     previous.segment.startsTurn === next.segment.startsTurn &&
     previous.isActive === next.isActive &&
+    // Identity is enough: the ranges are rebuilt as a group whenever the query
+    // changes, and never mutated in place.
+    previous.matchRanges === next.matchRanges &&
+    previous.activeMatch === next.activeMatch &&
     previous.speaker?.label === next.speaker?.label &&
     previous.speaker?.color_index === next.speaker?.color_index
   )
