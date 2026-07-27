@@ -1,6 +1,8 @@
 # Fireflies.ai Clone
 
+[![CI](https://github.com/AnshSinghal/FireFlies-Clone/actions/workflows/ci.yml/badge.svg)](https://github.com/AnshSinghal/FireFlies-Clone/actions/workflows/ci.yml)
 ![backend coverage](https://img.shields.io/badge/backend_coverage-95%25-brightgreen)
+![tests](https://img.shields.io/badge/tests-440_pytest_·_548_e2e-brightgreen)
 
 An AI meeting-notetaker: a searchable meetings library, an interactive transcript wired
 bidirectionally to a media player, AI-generated summaries and extracted action items.
@@ -473,13 +475,39 @@ does — the property cursor pagination exists for.
 ## Project Structure
 
 ```
-├─ frontend/          Next.js app (App Router, TypeScript)
-├─ backend/           FastAPI service, layered routers → services → models
-├─ e2e/               Playwright suite, owns its own package.json
-├─ docs/              ADR log, schema and API documentation
-├─ scripts/           Repo-level checks (layering enforcement)
-├─ design.md          Design tokens and layout reference
-├─ PLAN.md            Full implementation plan (46 tasks)
+├─ frontend/            Next.js app — App Router, TypeScript strict
+│  └─ src/
+│     ├─ app/           Routes only. No business logic in a page.tsx
+│     ├─ components/ui/ The 20 primitives — zero domain knowledge
+│     ├─ features/      Domain UI. features/* never import each other
+│     ├─ lib/           API client, hooks, utils
+│     └─ styles/        tokens.css — the only file containing a hex code
+├─ backend/
+│  ├─ app/
+│  │  ├─ api/v1/routers/  Thin: parse → call a service → return a schema
+│  │  ├─ services/        ALL business logic
+│  │  ├─ models/ schemas/ SQLAlchemy ORM · Pydantic, split by direction
+│  │  ├─ ai/              provider.py + mock.py + llm.py + versioned prompts
+│  │  ├─ parsers/ seed/   Transcript formats · the eight demo meetings
+│  │  └─ main.py          App factory only — under 100 lines, deliberately
+│  ├─ alembic/versions/   Committed migrations. The app never calls create_all()
+│  ├─ media/              One generated audio file (see its README — it is noise)
+│  └─ tests/              440 pytest tests
+├─ e2e/                 Playwright suite — owns its own package.json
+│  ├─ tests/            44 spec files, 548 tests
+│  └─ COVERAGE.md       Every brief bullet → the test that proves it
+├─ docs/
+│  ├─ decisions.md      147 ADRs, written as the decisions were made
+│  ├─ schema.md api.md  ERD and endpoint reference
+│  ├─ ui-audit.md       This clone vs the real product, difference by difference
+│  ├─ reference/        Fireflies screenshots — the fidelity target
+│  └─ screenshots/      Ours, same surfaces, both themes
+├─ deploy/              nginx config + the pull-based deploy script
+├─ scripts/             Repo-level checks (backend layering enforcement)
+├─ .github/workflows/   CI — lint, typecheck, pytest, Playwright × 3 engines
+├─ design.md            Design tokens and layout reference
+├─ PLAN.md              The full implementation plan (46 tasks)
+├─ Makefile             Every command in this README
 └─ docker-compose.yml
 ```
 
