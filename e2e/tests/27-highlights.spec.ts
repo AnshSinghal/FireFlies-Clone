@@ -242,6 +242,10 @@ test.describe('highlights · writes', { tag: '@mutates' }, () => {
     const id = (await span.getAttribute('data-testid'))!.replace('highlight-', '')
 
     await span.click()
+    const patched = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/highlights/${id}`) && response.request().method() === 'PATCH',
+    )
     await page
       .getByTestId(`highlight-popover-${id}`)
       .getByTestId('highlight-color-pink')
@@ -250,7 +254,11 @@ test.describe('highlights · writes', { tag: '@mutates' }, () => {
     // Optimistic: the colour flips before any refetch…
     await expect(span).toHaveAttribute('data-color', 'pink')
 
-    // …and survives a full reload, so it really wrote through.
+    // …but a reload can only prove persistence AFTER the PATCH has landed —
+    // the optimistic flip satisfies the line above while the write is still
+    // on the wire, and reloading then aborts it (ADR-132, again).
+    expect((await patched).ok()).toBe(true)
+
     await page.reload()
     await expect(page.getByTestId('transcript-list')).toBeVisible({ timeout: 25_000 })
     await expect(page.getByTestId(`highlight-${id}`)).toHaveAttribute('data-color', 'pink')
@@ -334,9 +342,16 @@ test.describe('highlights · writes', { tag: '@mutates' }, () => {
     const id = (await span.getAttribute('data-testid'))!.replace('highlight-', '')
 
     await span.click()
+    const deleted = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/highlights/${id}`) && response.request().method() === 'DELETE',
+    )
     await page.getByTestId(`highlight-popover-${id}`).getByTestId('highlight-remove').click()
 
     await expect(span).toHaveCount(0)
+    // The row is gone optimistically; the wire confirms before the page can
+    // close and abort the write (ADR-132's discipline).
+    expect((await deleted).ok()).toBe(true)
     // No residual markup: the paragraph is back to plain text, verbatim.
     await expect(page.getByTestId(`transcript-segment-${segmentId}`).locator('p')).toHaveText(
       text,
