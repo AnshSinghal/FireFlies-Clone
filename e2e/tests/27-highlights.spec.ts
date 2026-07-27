@@ -256,7 +256,7 @@ test.describe('highlights · writes', { tag: '@mutates' }, () => {
 
     // …but a reload can only prove persistence AFTER the PATCH has landed —
     // the optimistic flip satisfies the line above while the write is still
-    // on the wire, and reloading then aborts it (ADR-132, again).
+    // on the wire, and reloading then aborts it (ADR-138, again).
     expect((await patched).ok()).toBe(true)
 
     await page.reload()
@@ -350,7 +350,7 @@ test.describe('highlights · writes', { tag: '@mutates' }, () => {
 
     await expect(span).toHaveCount(0)
     // The row is gone optimistically; the wire confirms before the page can
-    // close and abort the write (ADR-132's discipline).
+    // close and abort the write (ADR-138's discipline).
     expect((await deleted).ok()).toBe(true)
     // No residual markup: the paragraph is back to plain text, verbatim.
     await expect(page.getByTestId(`transcript-segment-${segmentId}`).locator('p')).toHaveText(
