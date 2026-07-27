@@ -208,16 +208,31 @@ function TranscriptListImpl({
     }
   }, [])
 
-  // Restore the remembered position, once, before anything is painted.
+  /*
+   * Restore the remembered position, before anything is painted.
+   *
+   * Applied TWICE: once now, and once on the next frame. The first attempt
+   * lands against ESTIMATED row heights — nothing has been measured yet — so
+   * if the estimate is short the browser clamps `scrollTop` to a maximum that
+   * is about to grow, and the panel settles somewhere above where it was. The
+   * second application runs after the first measurements and corrects it.
+   *
+   * A deep link is an explicit instruction and outranks a remembered position,
+   * so the `?t=` effect below is still allowed to move this again.
+   */
   useLayoutEffect(() => {
     const element = scrollRef.current
     const saved = readSavedOffset(meetingId)
     if (!element || saved <= 0) return
 
-    selfScrollUntil.current = performance.now() + SELF_SCROLL_MS
-    element.scrollTop = saved
-    // A deep link is an explicit instruction and outranks a remembered
-    // position, so the `?t=` effect below is allowed to move this again.
+    const apply = () => {
+      selfScrollUntil.current = performance.now() + SELF_SCROLL_MS
+      element.scrollTop = saved
+    }
+
+    apply()
+    const frame = requestAnimationFrame(apply)
+    return () => cancelAnimationFrame(frame)
   }, [meetingId])
 
   // Remember where the reader is, for coming back to (T-21.10).

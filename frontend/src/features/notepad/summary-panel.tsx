@@ -31,6 +31,7 @@ import { StateView } from '@/components/ui/state-view'
 import { useToast } from '@/components/ui/toast'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useRegenerateSummary, useSummary } from '@/lib/api/summaries'
+import type { ParticipantDetail } from '@/lib/api/types'
 import { useNotepadCommands } from '@/lib/notepad/commands'
 import { usePlayer } from '@/lib/player/player-context'
 import { summaryToMarkdown, summaryToPlainText } from '@/lib/summary/to-markdown'
@@ -38,6 +39,7 @@ import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { cn } from '@/lib/utils/cn'
 import { formatRelativeDate, formatTimestamp } from '@/lib/utils/format'
 
+import { ActionItems } from './summary/action-items'
 import { SummarySection } from './summary/summary-section'
 
 /** Only the first is real; the rest exist because the reference has them. */
@@ -54,7 +56,14 @@ const MAX_KEYWORDS = 6
 /** Longer than this and the overview is worth clamping. */
 const CLAMP_ABOVE_CHARS = 400
 
-export function SummaryPanel({ meetingId, title }: { meetingId: number; title: string }) {
+interface SummaryPanelProps {
+  meetingId: number
+  title: string
+  /** Assignable people. An action item belongs to somebody who was here. */
+  participants: ParticipantDetail[]
+}
+
+export function SummaryPanel({ meetingId, title, participants }: SummaryPanelProps) {
   const { data: summary, isPending, isError, refetch } = useSummary(meetingId)
   const regenerate = useRegenerateSummary(meetingId)
   const { seekTo, requestFind } = useNotepadCommands()
@@ -322,9 +331,7 @@ export function SummaryPanel({ meetingId, title }: { meetingId: number; title: s
             )}
 
             <SummarySection id="actions" label="Action Items" meetingId={meetingId}>
-              <p className="text-body text-muted" data-testid="summary-actions-placeholder">
-                Action items are extracted from this meeting in the next build step.
-              </p>
+              <ActionItems meetingId={meetingId} participants={participants} />
             </SummarySection>
 
             {/*

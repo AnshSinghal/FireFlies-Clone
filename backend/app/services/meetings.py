@@ -13,20 +13,23 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, cast
 
-from sqlalchemy import Select, UnaryExpression, func, select, update
+from sqlalchemy import Select, UnaryExpression, case, func, select, update
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import (
     ActionItemNotFoundError,
+    AssigneeNotInMeetingError,
     InvalidSortError,
     MeetingDeletedError,
     MeetingNotFoundError,
 )
 from app.models import ActionItem, Meeting, Participant, Summary, TranscriptSegment, User
-from app.models.enums import ActionItemStatus, MediaType, SummarySectionKind
+from app.models.enums import ActionItemSource, ActionItemStatus, MediaType, SummarySectionKind
 from app.schemas.meeting import (
     ActionItemCounts,
+    ActionItemCreate,
     ActionItemOut,
+    ActionItemUpdate,
     ChannelRef,
     MeetingDetail,
     MeetingListItem,
@@ -325,48 +328,148 @@ class MeetingService:
         )
 
     def action_items(self, meeting_id: int) -> list[ActionItemOut]:
-        """Every action item on a meeting, in the order they were raised."""
+        """Every action item on a meeting, in the order the UI shows them.
+
+        OPEN BEFORE COMPLETED, then by due date with nulls last, then by the
+        moment in the recording (T-24.1). Sorting in SQL rather than in the
+        client because the Notebook drawer and the Notepad both render this
+        list, and two sorts written twice are two sorts that drift.
+
+        "Nulls last" is spelled out rather than left to the dialect: SQLite
+        sorts NULL first ascending, Postgres sorts it last, and an item with no
+        due date belongs at the bottom in both.
+        """
         rows = self.db.execute(
             select(ActionItem)
             .where(ActionItem.meeting_id == meeting_id)
-            .order_by(ActionItem.sequence)
-            .options(selectinload(ActionItem.assignee))
+            .order_by(
+                # `completed` sorts after `open` alphabetically, which is luck
+                # rather than design — so the ordering is stated explicitly.
+                case((ActionItem.status == ActionItemStatus.COMPLETED, 1), else_=0),
+                case((ActionItem.due_date.is_(None), 1), else_=0),
+                ActionItem.due_date,
+                ActionItem.start_ms.is_(None),
+                ActionItem.start_ms,
+                ActionItem.sequence,
+            )
+            # The assignee's USER too: the avatar lives there, and without it
+            # every row would fire its own query for one URL.
+            .options(selectinload(ActionItem.assignee).selectinload(Participant.user))
         ).scalars()
 
-        return [
-            ActionItemOut(
-                id=item.id,
-                text=item.text,
-                status=item.status,
-                due_date=item.due_date,
-                assignee_name=item.assignee.display_name if item.assignee else None,
+        return [self._to_action_item(item) for item in rows]
+
+    @staticmethod
+    def _to_action_item(item: ActionItem) -> ActionItemOut:
+        return ActionItemOut(
+            id=item.id,
+            meeting_id=item.meeting_id,
+            text=item.text,
+            status=item.status,
+            due_date=item.due_date,
+            assignee_name=item.assignee.display_name if item.assignee else None,
+            assignee_participant_id=item.assignee_participant_id,
+            # A participant has no avatar of their own — it belongs to the
+            # linked user, and an external attendee has no user (see the same
+            # note on `_to_participant_detail`).
+            assignee_avatar_url=(
+                item.assignee.user.avatar_url if item.assignee and item.assignee.user else None
+            ),
+            start_ms=item.start_ms,
+            source=item.source,
+        )
+
+    def _check_assignee(self, meeting_id: int, participant_id: int | None) -> None:
+        """The invariant the schema cannot express (see AssigneeNotInMeetingError)."""
+        if participant_id is None:
+            return
+
+        participant = self.db.get(Participant, participant_id)
+        if participant is None or participant.meeting_id != meeting_id:
+            raise AssigneeNotInMeetingError(
+                details={"participant_id": participant_id, "meeting_id": meeting_id}
             )
-            for item in rows
-        ]
 
-    def set_action_item_status(self, item_id: int, status: ActionItemStatus) -> ActionItemOut:
-        """Tick or untick one item.
+    def create_action_item(self, meeting_id: int, payload: ActionItemCreate) -> ActionItemOut:
+        """Add an item by hand (T-24.5)."""
+        self.get(meeting_id)
+        self._check_assignee(meeting_id, payload.assignee_participant_id)
 
-        `completed_at` is maintained here rather than by the caller: it is
-        derived from the status, and letting a client send both invites the two
-        to disagree.
+        # Appended: a manually added item belongs at the end of the raised
+        # order, not interleaved with what the extractor found.
+        highest = self.db.execute(
+            select(func.max(ActionItem.sequence)).where(ActionItem.meeting_id == meeting_id)
+        ).scalar()
+
+        item = ActionItem(
+            meeting_id=meeting_id,
+            text=payload.text,
+            assignee_participant_id=payload.assignee_participant_id,
+            due_date=payload.due_date,
+            start_ms=payload.start_ms,
+            status=ActionItemStatus.OPEN,
+            source=ActionItemSource.MANUAL,
+            sequence=(highest or 0) + 1,
+        )
+        self.db.add(item)
+        self.db.commit()
+        self.db.refresh(item)
+
+        return self._to_action_item(item)
+
+    def update_action_item(self, item_id: int, payload: ActionItemUpdate) -> ActionItemOut:
+        """A partial edit — text, assignee, due date, or the checkbox.
+
+        `model_fields_set` rather than `is not None`, because `None` is a
+        MEANINGFUL value here: clearing an assignee or a due date is a real
+        edit, and treating null as "absent" would make it impossible to express.
         """
         item = self.db.get(ActionItem, item_id)
         if item is None:
             raise ActionItemNotFoundError(details={"action_item_id": item_id})
 
-        item.status = status
-        item.completed_at = datetime.now(UTC) if status == ActionItemStatus.COMPLETED else None
+        sent = payload.model_fields_set
+
+        if "text" in sent and payload.text is not None:
+            item.text = payload.text
+
+        if "assignee_participant_id" in sent:
+            self._check_assignee(item.meeting_id, payload.assignee_participant_id)
+            item.assignee_participant_id = payload.assignee_participant_id
+
+        if "due_date" in sent:
+            item.due_date = payload.due_date
+
+        if "status" in sent and payload.status is not None:
+            item.status = payload.status
+            # Derived here rather than accepted from the client, so the two
+            # cannot disagree.
+            item.completed_at = (
+                datetime.now(UTC) if payload.status == ActionItemStatus.COMPLETED else None
+            )
+
         self.db.commit()
         self.db.refresh(item)
 
-        return ActionItemOut(
-            id=item.id,
-            text=item.text,
-            status=item.status,
-            due_date=item.due_date,
-            assignee_name=item.assignee.display_name if item.assignee else None,
-        )
+        return self._to_action_item(item)
+
+    def delete_action_item(self, item_id: int) -> ActionItemOut:
+        """Remove an item, RETURNING it so the client can offer Undo.
+
+        A hard delete, unlike meetings: an action item is one line of text with
+        no children, and the Undo toast re-creates it from the response. Soft
+        deletion would leave rows nobody can reach for a restore path that is
+        already covered.
+        """
+        item = self.db.get(ActionItem, item_id)
+        if item is None:
+            raise ActionItemNotFoundError(details={"action_item_id": item_id})
+
+        out = self._to_action_item(item)
+        self.db.delete(item)
+        self.db.commit()
+
+        return out
 
     def to_summary(self, meeting: Meeting) -> SummaryOut:
         """The five canonical sections, COMPOSED from four sources (T-17.7).

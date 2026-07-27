@@ -19,10 +19,12 @@ null": every field defaults to `None` and the router serialises with
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from app.models.enums import (
+    ActionItemSource,
     ActionItemStatus,
     MediaType,
     MeetingSource,
@@ -37,6 +39,8 @@ from app.schemas.user import UserRef
 # answer is for the API layer to get its vocabulary from the schema module
 # rather than to carve a hole in the check.
 __all__ = [
+    "ActionItemCreate",
+    "ActionItemSource",
     "ActionItemStatus",
     "MediaType",
     "MeetingSource",
@@ -92,21 +96,56 @@ class ParticipantDetail(BaseModel):
 
 
 class ActionItemOut(BaseModel):
-    """One action item. T-24 owns the full CRUD; this is what a preview needs."""
+    """One action item, with everything the Notepad's list draws (T-24)."""
 
     model_config = ConfigDict(from_attributes=True)
 
+    # No defaults on ANY of these. A default makes the field optional in the
+    # emitted OpenAPI, and the generated client then types it possibly-undefined
+    # for an absence the API never produces — the same defect ADR-076 records
+    # against `NoteGroup`. Nullable and required is the accurate pair here.
     id: int
+    meeting_id: int
     text: str
     status: ActionItemStatus
+    due_date: date | None
+    #: Resolved for display; `assignee_participant_id` is what an edit sends.
+    assignee_name: str | None
+    assignee_participant_id: int | None
+    assignee_avatar_url: str | None
+    #: Where in the recording the commitment was made — powers the ⏱ chip.
+    start_ms: int | None
+    #: `ai` or `manual`, so a guessed task is distinguishable from a typed one.
+    source: ActionItemSource
+
+
+class ActionItemCreate(BaseModel):
+    """A manually added item (T-24.5)."""
+
+    #: Trimmed and required. An empty task is not a task, and the composer
+    #: blocks it client-side too — this is the half that cannot be bypassed.
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
+    assignee_participant_id: int | None = None
     due_date: date | None = None
-    assignee_name: str | None = None
+    start_ms: int | None = None
 
 
 class ActionItemUpdate(BaseModel):
-    """The only field the drawer's checkbox changes."""
+    """A partial edit: text, assignee, due date, or the checkbox.
 
-    status: ActionItemStatus
+    Every field is optional, and `None` is a MEANINGFUL value for the nullable
+    ones — clearing an assignee is a real edit. The two are told apart with
+    `model_fields_set` rather than by treating `None` as "absent", which would
+    make unassigning impossible.
+    """
+
+    text: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
+        | None
+    ) = None
+    status: ActionItemStatus | None = None
+    assignee_participant_id: int | None = None
+    due_date: date | None = None
 
 
 class ActionItemCounts(BaseModel):

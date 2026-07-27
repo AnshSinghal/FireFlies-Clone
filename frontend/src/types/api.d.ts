@@ -102,12 +102,16 @@ export interface paths {
     get?: never
     put?: never
     post?: never
-    delete?: never
+    /**
+     * Delete an action item
+     * @description Returns the deleted item, so the client can offer Undo by re-creating it. A hard delete: one line of text with no children does not need the soft-delete machinery meetings have.
+     */
+    delete: operations['delete_action_item_api_v1_meetings_action_items__item_id__delete']
     options?: never
     head?: never
     /**
-     * Tick or untick an action item
-     * @description `completed_at` is derived from the status rather than accepted from the client, so the two cannot disagree.
+     * Edit an action item
+     * @description A partial edit: text, assignee, due date or status. `completed_at` is derived from the status rather than accepted from the client, so the two cannot disagree. Sending `null` CLEARS a nullable field — absent and null are different requests.
      */
     patch: operations['update_action_item_api_v1_meetings_action_items__item_id__patch']
     trace?: never
@@ -253,7 +257,11 @@ export interface paths {
      */
     get: operations['list_action_items_api_v1_meetings__meeting_id__action_items_get']
     put?: never
-    post?: never
+    /**
+     * Add an action item
+     * @description Appended after the extracted items and marked `manual`, so a task somebody typed is distinguishable from one the model guessed.
+     */
+    post: operations['create_action_item_api_v1_meetings__meeting_id__action_items_post']
     delete?: never
     options?: never
     head?: never
@@ -420,20 +428,48 @@ export interface components {
       open: number
     }
     /**
-     * ActionItemOut
-     * @description One action item. T-24 owns the full CRUD; this is what a preview needs.
+     * ActionItemCreate
+     * @description A manually added item (T-24.5).
      */
-    ActionItemOut: {
-      /** Assignee Name */
-      assignee_name?: string | null
+    ActionItemCreate: {
+      /** Assignee Participant Id */
+      assignee_participant_id?: number | null
       /** Due Date */
       due_date?: string | null
+      /** Start Ms */
+      start_ms?: number | null
+      /** Text */
+      text: string
+    }
+    /**
+     * ActionItemOut
+     * @description One action item, with everything the Notepad's list draws (T-24).
+     */
+    ActionItemOut: {
+      /** Assignee Avatar Url */
+      assignee_avatar_url: string | null
+      /** Assignee Name */
+      assignee_name: string | null
+      /** Assignee Participant Id */
+      assignee_participant_id: number | null
+      /** Due Date */
+      due_date: string | null
       /** Id */
       id: number
+      /** Meeting Id */
+      meeting_id: number
+      source: components['schemas']['ActionItemSource']
+      /** Start Ms */
+      start_ms: number | null
       status: components['schemas']['ActionItemStatus']
       /** Text */
       text: string
     }
+    /**
+     * ActionItemSource
+     * @enum {string}
+     */
+    ActionItemSource: 'ai' | 'manual'
     /**
      * ActionItemStatus
      * @enum {string}
@@ -441,10 +477,21 @@ export interface components {
     ActionItemStatus: 'open' | 'completed'
     /**
      * ActionItemUpdate
-     * @description The only field the drawer's checkbox changes.
+     * @description A partial edit: text, assignee, due date, or the checkbox.
+     *
+     *     Every field is optional, and `None` is a MEANINGFUL value for the nullable
+     *     ones — clearing an assignee is a real edit. The two are told apart with
+     *     `model_fields_set` rather than by treating `None` as "absent", which would
+     *     make unassigning impossible.
      */
     ActionItemUpdate: {
-      status: components['schemas']['ActionItemStatus']
+      /** Assignee Participant Id */
+      assignee_participant_id?: number | null
+      /** Due Date */
+      due_date?: string | null
+      status?: components['schemas']['ActionItemStatus'] | null
+      /** Text */
+      text?: string | null
     }
     /** BulkDeleteRequest */
     BulkDeleteRequest: {
@@ -1332,6 +1379,64 @@ export interface operations {
       }
     }
   }
+  delete_action_item_api_v1_meetings_action_items__item_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        item_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ActionItemOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   update_action_item_api_v1_meetings_action_items__item_id__patch: {
     parameters: {
       query?: never
@@ -1374,13 +1479,13 @@ export interface operations {
           'application/json': components['schemas']['ErrorResponse']
         }
       }
-      /** @description Validation Error */
+      /** @description Invalid payload; `details` is keyed by field path. */
       422: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['HTTPValidationError']
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */
@@ -1852,6 +1957,68 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  create_action_item_api_v1_meetings__meeting_id__action_items_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ActionItemCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ActionItemOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */

@@ -20,6 +20,7 @@ from app.core.deps import CurrentUser, DbSession, Pagination
 from app.core.http import NotModified, weak_etag
 from app.schemas.common import Page
 from app.schemas.meeting import (
+    ActionItemCreate,
     ActionItemOut,
     ActionItemUpdate,
     BulkDeleteRequest,
@@ -240,15 +241,47 @@ def list_action_items(db: DbSession, meeting_id: int) -> list[ActionItemOut]:
     return service.action_items(meeting_id)
 
 
+@router.post(
+    "/{meeting_id}/action-items",
+    response_model=ActionItemOut,
+    status_code=201,
+    responses={**NOT_FOUND_OR_GONE, **VALIDATION},
+    summary="Add an action item",
+    description=(
+        "Appended after the extracted items and marked `manual`, so a task "
+        "somebody typed is distinguishable from one the model guessed."
+    ),
+)
+def create_action_item(db: DbSession, meeting_id: int, payload: ActionItemCreate) -> ActionItemOut:
+    return MeetingService(db).create_action_item(meeting_id, payload)
+
+
 @router.patch(
     "/action-items/{item_id}",
     response_model=ActionItemOut,
-    responses=NOT_FOUND_OR_GONE,
-    summary="Tick or untick an action item",
+    responses={**NOT_FOUND_OR_GONE, **VALIDATION},
+    summary="Edit an action item",
     description=(
-        "`completed_at` is derived from the status rather than accepted from "
-        "the client, so the two cannot disagree."
+        "A partial edit: text, assignee, due date or status. `completed_at` is "
+        "derived from the status rather than accepted from the client, so the "
+        "two cannot disagree. Sending `null` CLEARS a nullable field — absent "
+        "and null are different requests."
     ),
 )
 def update_action_item(db: DbSession, item_id: int, payload: ActionItemUpdate) -> ActionItemOut:
-    return MeetingService(db).set_action_item_status(item_id, payload.status)
+    return MeetingService(db).update_action_item(item_id, payload)
+
+
+@router.delete(
+    "/action-items/{item_id}",
+    response_model=ActionItemOut,
+    responses=NOT_FOUND_OR_GONE,
+    summary="Delete an action item",
+    description=(
+        "Returns the deleted item, so the client can offer Undo by re-creating "
+        "it. A hard delete: one line of text with no children does not need the "
+        "soft-delete machinery meetings have."
+    ),
+)
+def delete_action_item(db: DbSession, item_id: int) -> ActionItemOut:
+    return MeetingService(db).delete_action_item(item_id)

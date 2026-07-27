@@ -71,13 +71,16 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
 
   const src = meeting ? mediaSrc(meeting) : null
   const meetingTitle = meeting?.title ?? ''
+  const participants = useMemo(() => meeting?.participants ?? [], [meeting])
 
   const panels = useMemo(
     () => ({
-      summary: <SummaryPanel meetingId={meetingId} title={meetingTitle} />,
+      summary: (
+        <SummaryPanel meetingId={meetingId} title={meetingTitle} participants={participants} />
+      ),
       transcript: <TranscriptPanel meetingId={meetingId} mediaSrc={src} />,
     }),
-    [meetingId, src, meetingTitle],
+    [meetingId, src, meetingTitle, participants],
   )
 
   if (isError) {
