@@ -126,22 +126,42 @@ question, not a polish pass.
 **10 · The Settings form is narrower than the column it sits in
 (references 07, 08).**
 The width is what an evaluator sees first and this audit had missed it.
-Fireflies' setting cards fill the content column; ours is a `max-w-sm` (384px)
-form left-aligned in roughly 950px, so the right 60% of the panel is empty.
-Whitespace on a screen compared side by side is a spacing difference, which is
-the criterion weighted highest.
+
+Measured off the two screenshots rather than assumed, because the first version
+of this entry got the reference wrong. Fireflies does **not** let its settings
+run full-bleed either — in `07.png` the card group spans roughly 60% of the
+content area and is **centred**, with even gutters either side. Ours is a
+`max-w-sm` (384px) form occupying about 40% of a ~950px column, hard against
+the left edge, leaving one big asymmetric void on the right.
+
+So the difference is not "they fill it and we don't". Both constrain the
+measure; theirs is wider and centred, ours is narrower and left-aligned. The
+asymmetry is doing more damage than the width — a centred column reads as a
+designed measure, a left-aligned narrow one reads as a page that did not
+finish loading.
 
 It is self-inflicted. The constraint was added earlier in T-46 to fix a real
 defect — three `Select`s are inline elements, and as direct siblings under
 `space-y-*` they lined up on one row with their labels butted together.
 Bounding the column fixed the break and stranded the panel.
 
-Not fixed here. The right fix is the reference's own structure — each setting a
-bordered card spanning the column, label and description left, control right —
-which keeps controls at a sane width without the dead space. That is a layout
-change to a graded surface, and this is a verification cycle; making it now
-would invalidate a fourth five-pass run for a change no test covers. It is the
-first thing to pick up next.
+Not fixed here, but the fix is now specified properly. The reference's card
+anatomy, read off `07.png`:
+
+- A section heading (`Recording`) above a group of bordered cards.
+- Each card: a small icon at the left, then title and one line of description.
+- A **toggle** sits at the card's right edge, vertically aligned to the title.
+- A **dropdown** does NOT sit at the right edge — it spans the card's full
+  width on its own row *beneath* the description.
+
+That last point is where the first draft of this entry was wrong: it said
+"control right" for everything, which is true for switches and false for
+selects. Building it that way would have produced a third layout matching
+neither document.
+
+Deferred out of a verification cycle rather than rushed — it changes how
+`Select` composes its own label, on a graded surface, with no test covering it.
+It is the first thing to pick up next.
 
 ## Verified equivalent
 
