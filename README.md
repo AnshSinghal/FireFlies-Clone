@@ -227,11 +227,16 @@ _(Expanded in T-45.9.)_ Known scope boundaries, all deliberate:
 _(Counts and coverage added in T-45.10.)_
 
 ```bash
+make verify      # Everything CI runs, in CI's order — the one to use before pushing
 make test        # Backend suite (pytest)
 make e2e         # End-to-end suite (Playwright)
-make lint        # Both apps' linters + the backend layering check
+make lint        # Both apps' linters + formatters + the backend layering check
 make typecheck   # mypy --strict and tsc --noEmit
 ```
+
+`make verify` exists because running the parts is not the same as running the gate. CI went red
+three times on `ruff format --check` and `prettier --check` while `ruff check`, `eslint` and `tsc`
+were all green locally — the formatters are part of `lint`, and nothing had been running `lint`.
 
 Playwright starts its own copies of both apps on ports **3140/8140**, so `make dev` can stay running
 on 3000/8000 while the suite executes, and a run can never accidentally test whatever else happens to

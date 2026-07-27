@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 .PHONY: help dev down logs migrate migrate-down migration seed seed-reset test test-backend \
-        test-frontend e2e e2e-crossbrowser lint lint-frontend lint-backend lint-e2e typecheck format types \
+        test-frontend e2e e2e-crossbrowser verify lint lint-frontend lint-backend lint-e2e typecheck format types \
         seed-demo seed-validate install clean
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -56,6 +56,9 @@ types: ## Regenerate the TypeScript API client from OpenAPI
 	cd frontend && npx --yes prettier --write src/types/api.d.ts
 
 # ── Tests ────────────────────────────────────────────────────────────────────
+verify: lint typecheck test e2e ## Everything CI runs, in CI's order — use this before pushing
+	@echo "✓ lint · typecheck · unit tests · end-to-end — all green"
+
 test: test-backend test-frontend ## Run both unit test suites
 
 test-backend:
