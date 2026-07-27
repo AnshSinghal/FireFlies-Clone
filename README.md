@@ -435,8 +435,8 @@ out of time:
 
 ## Testing
 
-**440 backend tests** across 27 files and **566 end-to-end tests** across 44 spec files. 548 of the
-566 run and pass on every invocation; the remaining 18 are `99-capture.spec.ts`, which writes
+**440 backend tests** across 27 files and **570 end-to-end tests** across 44 spec files. 552 of the
+570 run and pass on every invocation; the remaining 18 are `99-capture.spec.ts`, which writes
 `docs/screenshots/` and skips unless `CAPTURE=1` — a camera, not a test. Two of those 18 stay
 skipped even then: Fireflies' Meeting Status screen has no equivalent here, and the harness shows
 the reference badged rather than photographing something that does not exist.
@@ -447,7 +447,7 @@ the reference badged rather than photographing something that does not exist.
 | Playwright `read-only` | ~430 | ~3m | Every read surface, in parallel |
 | Playwright `mutations` | ~90 | ~1m | Writes, serialised — they share one database |
 | Playwright `chromium-mobile` | 36 | ~26s | The 393px layout (`@mobile`) |
-| Playwright `visual` | 16 | ~20s | Screenshot comparison (`@visual`) |
+| Playwright `visual` | 40 | ~30s | Screenshot comparison (`@visual`), incl. 18 capture-only skips |
 | Playwright `firefox` + `webkit` | 16 | ~17s | Platform seams only (`@crossbrowser`) |
 
 Backend coverage is **96%** over `services/`, `ai/` and `parsers/` — the plan's target is 80%.
@@ -606,7 +606,7 @@ before one would show up.
 │  ├─ media/              One generated audio file (see its README — it is noise)
 │  └─ tests/              440 pytest tests
 ├─ e2e/                 Playwright suite — owns its own package.json
-│  ├─ tests/            44 spec files, 566 tests
+│  ├─ tests/            44 spec files, 570 tests
 │  └─ COVERAGE.md       Every brief bullet → the test that proves it
 ├─ docs/
 │  ├─ decisions.md      147 ADRs, written as the decisions were made
