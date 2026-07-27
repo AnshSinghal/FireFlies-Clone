@@ -55,8 +55,10 @@ no product icon (ours would be invented), and muted text is darker than theirs �
 legibility.
 
 **These numbers are now checked, not asserted.**
-`scripts/check_reference_ratios.py` runs in `make lint`: it re-derives all eight
-from `docs/screenshots/` and fails when this table stops describing them. It is a
+`scripts/check_reference_ratios.py` runs in `make lint` **and in CI** — both,
+because CI does not invoke `make lint`, it lists the individual commands, so a
+check added only to the Makefile guards one machine. It re-derives all eight
+ratios from `docs/screenshots/` and fails when this table stops describing them. It is a
 documentation check, not a fidelity gate — a ratio drifting from the reference is
 a product decision; the table quietly ceasing to match the pixels beside it is a
 defect. Verified by reintroducing the 0.815 regression and watching it fire.
