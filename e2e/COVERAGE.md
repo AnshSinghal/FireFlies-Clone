@@ -82,15 +82,38 @@ bare `test`** and therefore never got `fixtures.ts`'s auto-fixture that pins
 
 **Ten have since been converted, in two batches read one failure at a time.**
 Batch 1 took the four with the most timing surface — `12-states`, `14-player`,
-`16-sync`, `17-find` — and was clean, 55/55 first run. Batch 2 took the six
-mutation specs — `20-transcript-edit`, `21-create`, `22-edit`, `23-delete`,
-`25-comments`, `26-soundbites` — and was also clean.
+`16-sync`, `17-find`. Batch 2 took the six mutation specs —
+`20-transcript-edit`, `21-create`, `22-edit`, `23-delete`, `25-comments`,
+`26-soundbites`.
 
-Fourteen still import the bare `test`: `00-smoke`, `02-tokens`, `04-sidebar`,
-`05-topbar`, `06-toasts`, `07-primitives`, `11-details`, `24-placeholders`,
-`24-search`, `25-dark-mode`, `27-tags`, `34-export`, `98-smoke`, `99-capture`.
-Two of those have a positive reason to stay: `99-capture` is a camera and pins
-the clock itself, and `27-tags` is the case below.
+`17-find` was then reverted: it passed its batch run 55/55 and a full 552/552
+suite, and both were luck. Measured at 12 repeats in an isolated worktree, T22-I
+fails 5 times in 12 with the clock pinned and 0 times in 12 without it. **One
+green run is not evidence that a conversion is clean** when the failure is
+intermittent — the batch runs above proved less than they appeared to.
+
+Fifteen still import the bare `test`: `00-smoke`, `02-tokens`, `04-sidebar`,
+`05-topbar`, `06-toasts`, `07-primitives`, `11-details`, `17-find`,
+`24-placeholders`, `24-search`, `25-dark-mode`, `27-tags`, `34-export`,
+`98-smoke`, `99-capture`. Three have a positive reason to stay: `99-capture` is
+a camera and pins the clock itself, and `17-find` and `27-tags` are the two
+cases below.
+
+### How to check a conversion, and how not to
+
+`--repeat-each` is the right probe for a **read-only** spec: the three surviving
+batch-1 files ran 205/205 at five repeats.
+
+It is the wrong probe for a **mutations** spec, and misleadingly so. Those tests
+mutate a database that `global-setup` seeds once per run, so re-running one
+in-process without a reseed makes it act on state its predecessor left behind.
+`25-comments` T31-A and T31-K duly failed 2-of-3 under `--repeat-each=3` — and
+failed **identically on the wall clock**, which is what proves the repeat, not
+the clock, is the cause. Anyone who skips that control will file a clock bug
+that does not exist.
+
+The honest repeat for a mutations spec is a repeated FULL suite run, because
+each one reseeds. That is what the ×5 verification is for.
 
 Count these by import SOURCE, not by prefix — `grep "^import { expect, test"`
 matches the converted form too, and reports 37 of 38 files as unconverted.
