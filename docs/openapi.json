@@ -790,7 +790,7 @@
           },
           "tags": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/TagFacet"
             },
             "title": "Tags",
             "type": "array"
@@ -1518,6 +1518,23 @@
         ],
         "title": "MeetingSource",
         "type": "string"
+      },
+      "MeetingTagsUpdate": {
+        "description": "PUT body: the FULL tag list for a meeting, set semantics (T-36.1).\n\nReplaces whatever is there \u2014 the editor popover applies its checkbox state\non close, and a diff protocol would just re-derive this on the server. The\n10-tag cap is enforced in the service (after de-duplication) so the error\nis a TAG_LIMIT the client can match on, not a generic length failure.",
+        "properties": {
+          "tag_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Tag Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tag_ids"
+        ],
+        "title": "MeetingTagsUpdate",
+        "type": "object"
       },
       "MeetingUpdate": {
         "description": "Partial update. Every field optional; unset fields are left alone.",
@@ -2452,11 +2469,53 @@
         "title": "SummaryOut",
         "type": "object"
       },
-      "TagRef": {
+      "TagCreate": {
+        "description": "A new tag (T-36.3's `Create \"<query>\"`, or the settings page).",
         "properties": {
-          "color": {
-            "title": "Color",
+          "color_index": {
+            "anyOf": [
+              {
+                "maximum": 7.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Index"
+          },
+          "name": {
+            "maxLength": 24,
+            "minLength": 1,
+            "title": "Name",
             "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TagCreate",
+        "type": "object"
+      },
+      "TagFacet": {
+        "description": "One tag as the filter panel's chip cloud offers it (T-36.5).\n\nRicher than the plain strings the other facets are: the list filter takes\ntag IDS (`?tags=1,2`), the chip needs a colour, and T-36.5 specifies counts\non the cloud \u2014 so all three ride along. Only tags with at least one live\nmeeting appear; a zero-count option here would match nothing, which is how\na filter panel loses the user's trust (unused tags still show on the\nsettings page via `GET /tags`).",
+        "properties": {
+          "color_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Index"
+          },
+          "count": {
+            "description": "Live meetings carrying this tag.",
+            "title": "Count",
+            "type": "integer"
           },
           "id": {
             "title": "Id",
@@ -2470,9 +2529,170 @@
         "required": [
           "id",
           "name",
-          "color"
+          "color_index",
+          "count"
+        ],
+        "title": "TagFacet",
+        "type": "object"
+      },
+      "TagList": {
+        "description": "`{items: [...]}` rather than a bare array, matching every other list.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TagOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "TagList",
+        "type": "object"
+      },
+      "TagOut": {
+        "description": "One tag as the settings page and the editor popover see it.\n\nNo defaults on any field: a default makes it optional in the emitted\nOpenAPI, and the generated client then types an absence the API never\nproduces (the ADR-076 defect).",
+        "properties": {
+          "color_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Index"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "usage_count": {
+            "description": "Meetings carrying this tag, excluding deleted ones.",
+            "title": "Usage Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color_index",
+          "usage_count"
+        ],
+        "title": "TagOut",
+        "type": "object"
+      },
+      "TagProposal": {
+        "description": "One suggested tag (T-36.4). Nothing about it is persisted.\n\n`tag_id` is set when a tag with this name already exists \u2014 accepting it is\nthen a plain PUT \u2014 and null when accepting means creating the tag first.\nDismissals never reach the server; they live in the client.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "tag_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag Id"
+          }
+        },
+        "required": [
+          "name",
+          "tag_id"
+        ],
+        "title": "TagProposal",
+        "type": "object"
+      },
+      "TagProposalList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TagProposal"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "TagProposalList",
+        "type": "object"
+      },
+      "TagRef": {
+        "description": "A tag on a meeting row or detail \u2014 LIGHT on purpose.\n\n`usage_count` (see `schemas/tag.py:TagOut`) is deliberately absent: a\nNotebook page carries up to twenty rows x ten chips, and the count is a\nsettings-page concern, not a chip concern. The schemas are direction-split\nalready, so the two shapes diverging is the design, not drift.",
+        "properties": {
+          "color_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Index"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color_index"
         ],
         "title": "TagRef",
+        "type": "object"
+      },
+      "TagUpdate": {
+        "description": "Rename and/or recolour (T-36.6). Omitted fields are left alone.\n\n`color_index: null` is a real edit \u2014 \"go back to the hash-derived colour\" \u2014\nso the service reads `model_fields_set`, not `is not None`.",
+        "properties": {
+          "color_index": {
+            "anyOf": [
+              {
+                "maximum": 7.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color Index"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "TagUpdate",
         "type": "object"
       },
       "TeamMemberOut": {
@@ -3249,24 +3469,37 @@
             }
           },
           {
-            "description": "Tag names. ALL must match.",
+            "description": "Tag ids, comma-separated. `tags_mode` decides how they combine.",
             "in": "query",
             "name": "tags",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "items": {
-                    "type": "string"
-                  },
-                  "type": "array"
+                  "type": "string"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "description": "Tag names. ALL must match.",
+              "description": "Tag ids, comma-separated. `tags_mode` decides how they combine.",
               "title": "Tags"
+            }
+          },
+          {
+            "description": "`or` (default): meetings carrying ANY selected tag. `and`: only meetings carrying ALL of them.",
+            "in": "query",
+            "name": "tags_mode",
+            "required": false,
+            "schema": {
+              "default": "or",
+              "description": "`or` (default): meetings carrying ANY selected tag. `and`: only meetings carrying ALL of them.",
+              "enum": [
+                "or",
+                "and"
+              ],
+              "title": "Tags Mode",
+              "type": "string"
             }
           },
           {
@@ -5990,6 +6223,162 @@
         ]
       }
     },
+    "/api/v1/meetings/{meeting_id}/tags": {
+      "put": {
+        "description": "REPLACES the meeting's tag list with exactly `tag_ids` \u2014 set semantics, so the editor popover applies its checkbox state in one request and an empty list clears everything. Duplicate ids collapse; more than 10 distinct tags is a **422** with code `TAG_LIMIT`; an unknown id is a **404** listing every missing one.",
+        "operationId": "set_meeting_tags_api_v1_meetings__meeting_id__tags_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeetingTagsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Set a meeting's tags",
+        "tags": [
+          "tags"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/tags/proposals": {
+      "get": {
+        "description": "Up to 5 deterministic suggestions from the AI provider's top transcript terms, excluding tags the meeting already carries. `tag_id` is set when a tag with that name exists, so accepting it is a plain `PUT`; when null, create the tag first. Nothing is persisted \u2014 dismissals are the client's business.",
+        "operationId": "propose_tags_api_v1_meetings__meeting_id__tags_proposals_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagProposalList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Propose tags for a meeting",
+        "tags": [
+          "tags"
+        ]
+      }
+    },
     "/api/v1/meetings/{meeting_id}/transcript": {
       "get": {
         "description": "Cursor-paginated on `sequence`, because a 55-minute meeting is ~1,200 segments. Speakers are sent BY REFERENCE once per page rather than inlined on every segment.\n\n`?q=` filters server-side and returns match offsets, so a long transcript does not have to be downloaded before it can be searched.",
@@ -6277,6 +6666,253 @@
         "summary": "Delete a soundbite",
         "tags": [
           "soundbites"
+        ]
+      }
+    },
+    "/api/v1/tags": {
+      "get": {
+        "description": "Every tag with its live usage count, sorted by name (case-insensitively). Counts exclude soft-deleted meetings, and an unused tag still appears showing zero \u2014 the settings page lists it either way. Names are stored without the leading `#`; add the glyph at render time.",
+        "operationId": "list_tags_api_v1_tags_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "List tags",
+        "tags": [
+          "tags"
+        ]
+      },
+      "post": {
+        "description": "Names are unique case-insensitively \u2014 creating `Sales` next to `sales` is a **409** naming the existing tag. A leading `#` is stripped before validation; 1-24 characters after that. Omitting `color_index` leaves it null, meaning the client derives the colour from the name via the shared speaker-colour hash.",
+        "operationId": "create_tag_api_v1_tags_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflicts with existing state, e.g. a duplicate name."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Create a tag",
+        "tags": [
+          "tags"
+        ]
+      }
+    },
+    "/api/v1/tags/{tag_id}": {
+      "delete": {
+        "description": "Without `merge_into`: the tag and its meeting associations are removed outright. With `merge_into`: every meeting carrying this tag gains the surviving one first (no duplicates), THEN the tag is removed \u2014 which is the merge operation. The target must exist and must not be the tag being deleted.",
+        "operationId": "delete_tag_api_v1_tags__tag_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tag_id",
+            "required": true,
+            "schema": {
+              "title": "Tag Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Id of the surviving tag to reassign this tag's meetings to.",
+            "in": "query",
+            "name": "merge_into",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Id of the surviving tag to reassign this tag's meetings to.",
+              "title": "Merge Into"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Delete a tag, optionally merging it into another",
+        "tags": [
+          "tags"
+        ]
+      },
+      "patch": {
+        "description": "Partial update. A rename propagates everywhere automatically \u2014 meetings reference tags by id \u2014 and collides with existing names under the same case-insensitive 409 rule as create. Sending `color_index: null` drops a pinned colour and returns the tag to its hash-derived one.",
+        "operationId": "update_tag_api_v1_tags__tag_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tag_id",
+            "required": true,
+            "schema": {
+              "title": "Tag Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such resource."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflicts with existing state, e.g. a duplicate name."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Rename or recolour a tag",
+        "tags": [
+          "tags"
         ]
       }
     },

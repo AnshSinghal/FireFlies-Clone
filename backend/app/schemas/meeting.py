@@ -173,6 +173,23 @@ class MatchContext(BaseModel):
     start_ms: int
 
 
+class TagFacet(BaseModel):
+    """One tag as the filter panel's chip cloud offers it (T-36.5).
+
+    Richer than the plain strings the other facets are: the list filter takes
+    tag IDS (`?tags=1,2`), the chip needs a colour, and T-36.5 specifies counts
+    on the cloud — so all three ride along. Only tags with at least one live
+    meeting appear; a zero-count option here would match nothing, which is how
+    a filter panel loses the user's trust (unused tags still show on the
+    settings page via `GET /tags`).
+    """
+
+    id: int
+    name: str
+    color_index: int | None
+    count: int = Field(description="Live meetings carrying this tag.")
+
+
 class Facets(BaseModel):
     """Available filter values, derived from real data (T-11.8).
 
@@ -182,18 +199,28 @@ class Facets(BaseModel):
 
     hosts: list[str]
     participants: list[str]
-    tags: list[str]
+    tags: list[TagFacet]
     channels: list[str]
     min_duration: int
     max_duration: int
 
 
 class TagRef(BaseModel):
+    """A tag on a meeting row or detail — LIGHT on purpose.
+
+    `usage_count` (see `schemas/tag.py:TagOut`) is deliberately absent: a
+    Notebook page carries up to twenty rows x ten chips, and the count is a
+    settings-page concern, not a chip concern. The schemas are direction-split
+    already, so the two shapes diverging is the design, not drift.
+    """
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     name: str
-    color: str
+    #: Palette slot 0-7, or null meaning "hash the name client-side" — the
+    #: same rule everywhere a tag renders (T36-L).
+    color_index: int | None
 
 
 # ── Input ───────────────────────────────────────────────────────────────────

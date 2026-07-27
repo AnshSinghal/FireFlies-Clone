@@ -29,10 +29,12 @@
   ],
 
   "tags": [
-    { "name": "sales", "color": "3" },
-    { "name": "engineering", "color": "0" },
-    { "name": "product", "color": "6" },
-    { "name": "customer", "color": "5" },
-    { "name": "urgent", "color": "4" }
+    { "name": "sales", "color_index": 3 },
+    { "name": "engineering", "color_index": 0 },
+    { "name": "product", "color_index": 6 },
+    { "name": "customer", "color_index": 5 },
+    { "name": "urgent", "color_index": 4 },
+    { "name": "roadmap" },
+    { "name": "hiring" }
   ]
 }

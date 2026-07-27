@@ -8,10 +8,13 @@
 
 'use client'
 
+import { useMemo } from 'react'
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api, type RequestParams } from './client'
 import { qk, type MeetingFilters } from './query-keys'
+import { resolveTagIds, useTags } from './tags'
 import type {
   Facets,
   MeetingCreate,
@@ -24,11 +27,12 @@ import type {
 /**
  * camelCase in the app, snake_case on the wire.
  *
- * Exported because the pagination prefetch needs the same mapping — two copies
- * would drift, and the symptom would be a prefetch that warms the wrong cache
- * key and never gets used.
+ * The T-36 list API takes `tags` as a CSV of tag IDS (`?tags=3,7&tags_mode=or`)
+ * while the app's URL state keeps human-readable names — pass `tagIds` once
+ * they are resolved. Without `tagIds` the names go out as repeated params,
+ * which is the pre-T-36 wire format and the graceful-degradation path.
  */
-export function toApiParams(filters: MeetingFilters): RequestParams {
+export function toApiParams(filters: MeetingFilters, tagIds?: number[]): RequestParams {
   return {
     q: filters.q,
     host: filters.host,
@@ -37,7 +41,10 @@ export function toApiParams(filters: MeetingFilters): RequestParams {
     to: filters.to,
     min_duration: filters.minDuration,
     max_duration: filters.maxDuration,
-    tags: filters.tags,
+    // `0` when every name resolved to nothing: a filter on a tag that does not
+    // exist must match NO meetings, and an empty param would match all of them.
+    tags: tagIds !== undefined ? (tagIds.length > 0 ? tagIds.join(',') : '0') : filters.tags,
+    tags_mode: filters.tagsMode,
     channel: filters.channel,
     has_action_items: filters.hasActionItems,
     source: filters.source,
@@ -47,14 +54,47 @@ export function toApiParams(filters: MeetingFilters): RequestParams {
   }
 }
 
+/**
+ * The list request for a filter set, with tag NAMES (URL state) resolved to
+ * tag IDS (wire format) via the tag library.
+ *
+ * One hook shared by `useMeetings`, the pagination prefetch and select-all —
+ * three hand-built copies of this mapping would drift, and the symptom would
+ * be a prefetch warming a cache key its data does not match.
+ *
+ * `ready` gates the fetch while the library loads. If the library itself
+ * errors (a pre-T-36 backend has no `/tags`), the names are sent as repeated
+ * params — the old wire format — so filtering degrades instead of breaking.
+ */
+export function useMeetingListRequest(filters: MeetingFilters): {
+  params: RequestParams
+  ready: boolean
+} {
+  const needsTags = (filters.tags?.length ?? 0) > 0
+  const tagLibrary = useTags(needsTags)
+
+  return useMemo(() => {
+    if (!needsTags) return { params: toApiParams(filters), ready: true }
+    if (tagLibrary.data) {
+      return {
+        params: toApiParams(filters, resolveTagIds(tagLibrary.data.items, filters.tags ?? [])),
+        ready: true,
+      }
+    }
+    if (tagLibrary.isError) return { params: toApiParams(filters), ready: true }
+    return { params: toApiParams(filters), ready: false }
+  }, [filters, needsTags, tagLibrary.data, tagLibrary.isError])
+}
+
 export function useMeetings(filters: MeetingFilters = {}) {
+  const { params, ready } = useMeetingListRequest(filters)
+
   return useQuery({
     queryKey: qk.meetings.list(filters),
-    queryFn: ({ signal }) =>
-      api.get<Page<MeetingListItem>>('/api/v1/meetings', {
-        signal,
-        params: toApiParams(filters),
-      }),
+    queryFn: ({ signal }) => api.get<Page<MeetingListItem>>('/api/v1/meetings', { signal, params }),
+    // Waits for tag-name → id resolution; without the gate a tag-filtered URL
+    // would fire once unfiltered and flash the wrong rows.
+    enabled: ready,
     // Keeps the previous page visible while the next one loads, so paging does
     // not flash an empty table. Without it every page change is a full unmount.
     placeholderData: (previous) => previous,

@@ -2727,6 +2727,85 @@ unit tests tick the clock through every path.
 
 ---
 
+## ADR-124 — Tag merge is delete-with-reassignment
+
+**Context.** T-36.6 wants merge; every path must stay verb-free.
+
+**Decision.** `DELETE /tags/{id}?merge_into={survivor}` IS the merge: "remove
+this tag, but its meetings now mean that one". One INSERT..SELECT that skips
+meetings already carrying the survivor, so merging overlapping tags cannot
+violate the association's composite PK. Rejected: `POST /tags/{id}/merge`.
+
+**Consequence.** The no-merge delete is the natural default; the UI still
+calls it Merge and states the blast radius before the click.
+
+---
+
+## ADR-125 — Case-insensitive tag uniqueness is enforced twice, deliberately
+
+**Context.** SQLite's BINARY collation stores `Sales` beside `sales` — T36-J's
+exact bug.
+
+**Decision.** The service checks `lower(name)` and raises 409 `DUPLICATE_TAG`
+naming the existing tag — the answer a UI can act on. A UNIQUE functional
+index over `lower(name)` backstops the race; its IntegrityError converts to
+the same 409. A normalised shadow column was rejected: it duplicates data to
+express what a functional index states directly.
+
+**Consequence.** `'#'` is stripped before validation; rename-to-own-casing is
+allowed.
+
+---
+
+## ADR-126 — Tag colour identity: `color_index` is nullable, and null means the hash
+
+**Context.** T36-L requires the same tag to render identically everywhere;
+T-36.6 wants recolour.
+
+**Decision.** Null `color_index` = derive via the shared FNV-1a speaker hash
+client-side — a brand-new tag is coloured consistently with zero server round
+trip. A pinned int survives renames precisely because it is stored; never
+re-hash when an index exists or a rename would silently recolour. Chips render
+the colour as a token-var dot on a neutral surface — zero new tokens, no
+text-on-wash contrast math, dark mode free.
+
+**Consequence.** Seeds keep two tags null to keep both paths exercised.
+
+---
+
+## ADR-127 — Multi-tag filtering: OR by default, ids in the API, names in the URL
+
+**Context.** T-36.8 calls ambiguous filter semantics a real usability bug. The
+pre-T-36 behaviour was AND-only.
+
+**Decision.** `?tags=<csv ids>&tags_mode=or|and`, OR default, labelled in
+words ('Match any' / 'Match all'). The notebook URL keeps human-readable
+repeated `?tags=<name>` — shareable and Back-undoable — with name→id
+resolution in exactly one hook shared by list, prefetch and select-all. A URL
+naming a dead tag sends the sentinel id 0 so it matches nothing rather than
+everything. The old AND-only pinning test was replaced, not deleted.
+
+**Consequence.** Facets inner-join (the panel never offers a zero-match
+option); `GET /tags` outer-joins (settings lists the zero-count tag most worth
+deleting). Two join directions, on purpose.
+
+---
+
+## ADR-128 — Suggestions compute, accepts write, dismissals stay client-side
+
+**Context.** T-36.4 auto-proposes tags; `propose_tags` derives from
+`extract_keywords` as a concrete ABC method, so every provider and wrapper
+composes correctly for free.
+
+**Decision.** Accepting writes real data (create-if-needed + one set-semantics
+PUT). Dismissing writes localStorage — a rejected suggestion is per-user UI
+preference, not domain state. Bulk tagging (T-36.9) is client-orchestrated
+ADD over the same PUT: meetings the 10-cap would breach are skipped and
+counted in the summary toast, never clamped silently.
+
+**Consequence.** `/settings/tags` is a real route (cross-route active state
+can't ride `?tab=`), and the editor commits one PUT on close per ADR-039's
+draft-then-commit shape.
 ## ADR-129 — Dialog focus restore survives a dropdown opener
 
 **Context.** Controlled Modals capture `document.activeElement` at open as the
@@ -2782,6 +2861,31 @@ in-file as a follow-up, not silently patched during a test task.
 
 **Consequence.** ERR-A/ERR-B genuinely outwait the client timeout
 (`test.slow()`, ~1 min of wall time), which is what makes them evidence.
+
+---
+
+## ADR-132 — A popover opened from a menu must not dismiss on focus-outside
+
+**Context.** The tag editor opened from a row kebab never appeared. A
+MutationObserver showed it *did* open at t=486 ms and vanish by t=500 ms: the
+dropdown closes on select and restores focus to its own trigger, and Radix
+reads that programmatic focus move as focus-outside, so the panel dismissed
+itself ~14 ms after mounting. Every T-36 entry point (row kebab, drawer,
+notepad header) opens this way, which is why all four failures shared one
+stack.
+
+**Decision.** `Popover` gains `dismissOnFocusOutside` (default true); the tag
+editor sets it false. Explicit dismissal is untouched — Escape and an outside
+*click* both still close and commit — so what changes is only that focus
+merely leaving the panel no longer discards an uncommitted draft. Rejected:
+deferring the state flip a tick (timing-dependent, the exact class of fix
+ADR-129 argued against), and preventing the menu's close-autofocus (that
+removes focus restore, which ADR-129 had just repaired).
+
+**Consequence.** Focus lands on the kebab with the editor open, which is a
+real and visible place to be; the panel is reachable by Tab and dismissable by
+Escape. Any future popover opened from a menu needs the same flag — the prop's
+doc comment says so.
 
 ---
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, ForeignKey, String, Table, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, Index, String, Table, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -33,13 +33,24 @@ class Tag(Base, TimestampMixin):
     """
 
     __tablename__ = "tags"
-    __table_args__ = (UniqueConstraint("name", name="uq_tags_name"),)
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_tags_name"),
+        # The T-36.10 rule ("Sales" vs "sales" is a duplicate) enforced in the
+        # DATABASE, not just the service: SQLite's default collation is BINARY,
+        # so `uq_tags_name` alone happily stores both spellings. A functional
+        # index over lower(name) closes the race two concurrent creates would
+        # otherwise win together; the service check exists on top of it purely
+        # to turn the failure into a 409 that names the existing tag.
+        Index("uq_tags_name_lower", text("lower(name)"), unique=True),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(24), nullable=False)
-    #: Deterministic from the name via the same hash as speaker colours, but
-    #: stored so a rename does not silently recolour the tag everywhere.
-    color: Mapped[str] = mapped_column(String(20), nullable=False, default="0")
+    #: Palette slot 0-7, NULL meaning "derive from the name" — the client runs
+    #: the speaker-colour hash over the name when this is null, so a brand-new
+    #: tag is coloured without a round trip. Set explicitly only by a recolour
+    #: in settings, and stored so THAT choice survives a rename (T-36.6).
+    color_index: Mapped[int | None] = mapped_column(nullable=True, default=None)
 
     meetings: Mapped[list[Meeting]] = relationship(secondary=meeting_tags, back_populates="tags")
 

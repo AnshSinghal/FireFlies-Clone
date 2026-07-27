@@ -13,11 +13,12 @@ from datetime import UTC, date, datetime, timedelta
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Channel, Meeting, Tag
 from app.models.enums import ActionItemStatus, MeetingSource
-from app.services.meeting_filters import FILTERS, MeetingFilters, apply_filters
+from app.services.meeting_filters import FILTERS, MeetingFilters, TagSelection, apply_filters
 from app.services.meetings import MeetingService
 from tests.factories import (
     make_action_items,
@@ -47,8 +48,8 @@ def library(db: Session) -> Session:
     db.add_all([product, sales])
     db.flush()
 
-    q3 = Tag(name="q3", color="0")
-    urgent = Tag(name="urgent", color="1")
+    q3 = Tag(name="q3", color_index=0)
+    urgent = Tag(name="urgent", color_index=1)
     db.add_all([q3, urgent])
     db.flush()
 
@@ -287,13 +288,49 @@ def test_source_filter(client: TestClient, library: Session):
     assert titles(body) == ["Q3 Product Roadmap Sync"]
 
 
-def test_tags_filter_narrows_rather_than_widens(client: TestClient, library: Session):
-    """Two selected tags mean AND. `q3` alone matches two meetings."""
-    one = client.get("/api/v1/meetings", params={"tags": ["q3"]}).json()
-    assert set(titles(one)) == {"Q3 Product Roadmap Sync", "Weekly Engineering Standup"}
+def _tag_ids(library: Session) -> tuple[int, int]:
+    q3 = library.execute(select(Tag).where(Tag.name == "q3")).scalar_one()
+    urgent = library.execute(select(Tag).where(Tag.name == "urgent")).scalar_one()
+    return q3.id, urgent.id
 
-    both = client.get("/api/v1/meetings", params={"tags": ["q3", "urgent"]}).json()
-    assert titles(both) == ["Q3 Product Roadmap Sync"]
+
+def test_tags_filter_defaults_to_or(client: TestClient, library: Session):
+    """Two selected tags mean UNION by default (T-36.8, case T36-D).
+
+    DELIBERATE flip of the pre-T-36 AND-only behaviour: tags are categories,
+    and two chips usually mean "sales and also urgent stuff". `urgent` alone
+    matches one meeting; adding `q3` must WIDEN to two, not narrow.
+    """
+    q3_id, urgent_id = _tag_ids(library)
+
+    one = client.get("/api/v1/meetings", params={"tags": str(urgent_id)}).json()
+    assert titles(one) == ["Q3 Product Roadmap Sync"]
+
+    both = client.get("/api/v1/meetings", params={"tags": f"{q3_id},{urgent_id}"}).json()
+    assert set(titles(both)) == {"Q3 Product Roadmap Sync", "Weekly Engineering Standup"}
+    assert both["total"] == 2
+
+
+def test_tags_mode_and_narrows_to_the_intersection(client: TestClient, library: Session):
+    """The labelled AND toggle (T-36.8, case T36-E): only the meeting carrying
+    BOTH tags survives, and the total follows."""
+    q3_id, urgent_id = _tag_ids(library)
+
+    body = client.get(
+        "/api/v1/meetings",
+        params={"tags": f"{q3_id},{urgent_id}", "tags_mode": "and"},
+    ).json()
+
+    assert titles(body) == ["Q3 Product Roadmap Sync"]
+    assert body["total"] == 1
+
+
+def test_a_non_numeric_tags_param_is_a_422_not_an_empty_page(client: TestClient, library: Session):
+    """Ids, not names: a name in the URL after the switch should FAIL loudly —
+    an empty page would read as "no meetings match" and hide the client bug."""
+    response = client.get("/api/v1/meetings", params={"tags": "q3"})
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
 def test_has_action_items_means_OUTSTANDING_ones(client: TestClient, library: Session):
@@ -324,7 +361,7 @@ def test_a_false_filter_value_is_not_dropped():
     assert "has_action_items" in MeetingFilters(has_action_items=False).active()
     assert "min_duration" in MeetingFilters(min_duration=0).active()
     assert MeetingFilters().active() == {}
-    assert MeetingFilters(tags=()).active() == {}
+    assert "tags" in MeetingFilters(tags=TagSelection(ids=(1,))).active()
 
 
 # ── Combinations (T11-G) ────────────────────────────────────────────────────
@@ -528,7 +565,13 @@ def test_facets_are_derived_from_real_data(client: TestClient, library: Session)
 
     assert "Sarah Okonkwo" in body["hosts"]
     assert "Priya Raghunathan" in body["participants"]
-    assert set(body["tags"]) == {"q3", "urgent"}
+    # Tags carry id (the filter key), colour and a live count (T-36.5): the
+    # chip cloud draws all three. q3 is on two meetings, urgent on one.
+    tags = {facet["name"]: facet for facet in body["tags"]}
+    assert set(tags) == {"q3", "urgent"}
+    assert tags["q3"]["count"] == 2
+    assert tags["urgent"]["count"] == 1
+    assert set(tags["q3"]) == {"id", "name", "color_index", "count"}
     assert set(body["channels"]) == {"product", "sales"}
     assert body["min_duration"] == 600
     assert body["max_duration"] == 3600

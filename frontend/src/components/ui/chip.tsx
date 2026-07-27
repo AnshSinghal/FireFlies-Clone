@@ -17,6 +17,30 @@ import { cn } from '@/lib/utils/cn'
 const CHIP_BASE =
   'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs transition-colors duration-fast'
 
+/**
+ * `Chip` builds its classes from these parts instead of `CHIP_BASE`, because
+ * it is the one chip that comes in two sizes — `sm` fits a metadata line
+ * (T-36.2's row tag chips) where the full 28px would blow the fixed row
+ * height. `cn` does not resolve conflicts, so a size must be a complete set
+ * of classes rather than an override.
+ */
+const CHIP_CORE = 'inline-flex shrink-0 items-center rounded-full transition-colors duration-fast'
+
+export type ChipSize = 'sm' | 'md'
+
+const CHIP_SIZE: Record<ChipSize, string> = {
+  sm: 'h-5 gap-1 px-2 text-xs',
+  md: 'h-7 gap-1.5 px-2.5 text-xs',
+}
+
+export type ChipVariant = 'solid' | 'dashed'
+
+/** `dashed` is a PROPOSAL — present but not yet accepted (T-36.4). */
+const CHIP_VARIANT: Record<ChipVariant, string> = {
+  solid: 'bg-surface-2 text-secondary',
+  dashed: 'border border-dashed border-strong bg-transparent text-secondary',
+}
+
 interface ChipBaseProps {
   children: ReactNode
   icon?: ReactNode
@@ -29,6 +53,8 @@ interface ChipProps extends ChipBaseProps {
   onAction?: () => void
   /** Required with `onAction` — the visible text alone rarely says what happens. */
   actionLabel?: string
+  size?: ChipSize
+  variant?: ChipVariant
 }
 
 /**
@@ -39,7 +65,16 @@ interface ChipProps extends ChipBaseProps {
  * to match: a chip that responds to clicks while looking inert is worse than
  * one that does nothing at all.
  */
-export function Chip({ children, icon, className, testId, onAction, actionLabel }: ChipProps) {
+export function Chip({
+  children,
+  icon,
+  className,
+  testId,
+  onAction,
+  actionLabel,
+  size = 'md',
+  variant = 'solid',
+}: ChipProps) {
   const content = (
     <>
       {icon}
@@ -51,7 +86,7 @@ export function Chip({ children, icon, className, testId, onAction, actionLabel 
     return (
       <span
         data-testid={testId}
-        className={cn(CHIP_BASE, 'bg-surface-2 text-secondary', className)}
+        className={cn(CHIP_CORE, CHIP_SIZE[size], CHIP_VARIANT[variant], className)}
       >
         {content}
       </span>
@@ -65,8 +100,10 @@ export function Chip({ children, icon, className, testId, onAction, actionLabel 
       aria-label={actionLabel}
       data-testid={testId}
       className={cn(
-        CHIP_BASE,
-        'cursor-pointer bg-surface-2 text-secondary hover:bg-surface-hover hover:text-primary',
+        CHIP_CORE,
+        CHIP_SIZE[size],
+        CHIP_VARIANT[variant],
+        'cursor-pointer hover:bg-surface-hover hover:text-primary',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
         className,
       )}

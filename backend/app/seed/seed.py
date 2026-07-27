@@ -143,7 +143,11 @@ def _seed_cast(db: Session, stats: SeedStats) -> dict[str, User]:
     for spec in cast["tags"]:
         tag = db.execute(select(Tag).where(Tag.name == spec["name"])).scalar_one_or_none()
         if tag is None:
-            db.add(Tag(name=spec["name"], color=spec["color"]))
+            # `color_index` is optional in the fixture ON PURPOSE: tags without
+            # one exercise the null path, where the client derives the colour
+            # from the name via the shared hash (T-36.2). Existing tags are
+            # left alone so a recolour in settings survives a re-seed.
+            db.add(Tag(name=spec["name"], color_index=spec.get("color_index")))
 
     db.flush()
     return users

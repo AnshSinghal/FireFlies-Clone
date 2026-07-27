@@ -10,6 +10,7 @@
 import {
   ArrowLeft,
   Download,
+  FolderInput,
   Info,
   Languages,
   Link2,
@@ -19,17 +20,25 @@ import {
   Share2,
   SlidersHorizontal,
   Sparkles,
+  Tag,
   Trash2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { AvatarGroup } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/dropdown'
+import { Dropdown, DropdownItem, DropdownSeparator, DropdownSub } from '@/components/ui/dropdown'
 import { IconButton } from '@/components/ui/icon-button'
 import { InlineEdit } from '@/components/ui/inline-edit'
 import { Popover } from '@/components/ui/popover'
 import { useToast } from '@/components/ui/toast'
+import { SuggestedTags } from '@/features/tags/suggested-tags'
+import { MeetingTagEditor } from '@/features/tags/tag-editor'
+import { TagChipList } from '@/features/tags/tag-chip'
+import { useTagFilter } from '@/features/tags/use-tag-filter'
+import { useChannels } from '@/lib/api/channels'
 import { useUpdateMeeting } from '@/lib/api/meetings'
 import type { MeetingDetail } from '@/lib/api/types'
 import { notebookReturnUrl } from '@/lib/notebook-return'
@@ -59,6 +68,27 @@ export function NotepadHeader({
 }: NotepadHeaderProps) {
   const router = useRouter()
   const toast = useToast()
+  const client = useQueryClient()
+  // Shared by the metadata line's tag affordance and the kebab's `Edit tags`
+  // (T-36.3): two entry points, one editor.
+  const [tagsOpen, setTagsOpen] = useState(false)
+
+  const { data: channels } = useChannels()
+  const update = useUpdateMeeting(meeting.id)
+
+  /** T-36.7: one channel per meeting, so moving is a single PATCH. */
+  const moveToChannel = (channel: { id: number; slug: string }) => {
+    update.mutate(
+      { channel_id: channel.id },
+      {
+        onSuccess: () => {
+          // The sidebar's per-channel counts just changed.
+          void client.invalidateQueries({ queryKey: ['channels'] })
+          toast.success(`Moved to #${channel.slug}`)
+        },
+      },
+    )
+  }
 
   return (
     <header
@@ -74,7 +104,7 @@ export function NotepadHeader({
 
       <div className="min-w-0 flex-1">
         <EditableTitle meeting={meeting} />
-        <MetadataLine meeting={meeting} />
+        <MetadataLine meeting={meeting} tagsOpen={tagsOpen} onTagsOpenChange={setTagsOpen} />
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
@@ -161,6 +191,13 @@ export function NotepadHeader({
             Edit details
           </DropdownItem>
           <DropdownItem
+            icon={<Tag size={16} strokeWidth={1.75} />}
+            onSelect={() => setTagsOpen(true)}
+            testId="notepad-edit-tags"
+          >
+            Edit tags
+          </DropdownItem>
+          <DropdownItem
             icon={<RefreshCw size={16} strokeWidth={1.75} />}
             onSelect={onRegenerate}
             testId="notepad-regenerate"
@@ -177,6 +214,22 @@ export function NotepadHeader({
           >
             Export
           </DropdownItem>
+          <DropdownSub label="Move to channel" icon={<FolderInput size={16} strokeWidth={1.75} />}>
+            {(channels?.channels ?? []).map((channel) => (
+              <DropdownItem
+                key={channel.id}
+                // The channel the meeting is already in is not a move.
+                disabled={meeting.channel?.id === channel.id}
+                onSelect={() => moveToChannel({ id: channel.id, slug: channel.slug })}
+                testId={`notepad-move-${channel.slug}`}
+              >
+                #{channel.slug}
+              </DropdownItem>
+            ))}
+            {(channels?.channels ?? []).length === 0 && (
+              <DropdownItem disabled>No channels yet</DropdownItem>
+            )}
+          </DropdownSub>
           <DropdownItem icon={<Info size={16} strokeWidth={1.75} />} soon>
             Meeting info
           </DropdownItem>
@@ -213,8 +266,18 @@ function EditableTitle({ meeting }: { meeting: MeetingDetail }) {
   )
 }
 
-function MetadataLine({ meeting }: { meeting: MeetingDetail }) {
+function MetadataLine({
+  meeting,
+  tagsOpen,
+  onTagsOpenChange,
+}: {
+  meeting: MeetingDetail
+  tagsOpen: boolean
+  onTagsOpenChange: (open: boolean) => void
+}) {
   const participants = meeting.participants ?? []
+  const applyTagFilter = useTagFilter()
+  const tags = meeting.tags ?? []
 
   return (
     <div className="flex min-w-0 items-center gap-2 text-sm text-muted" data-testid="notepad-meta">
@@ -259,6 +322,36 @@ function MetadataLine({ meeting }: { meeting: MeetingDetail }) {
 
       <Separator />
       <span className={cn('shrink-0 uppercase')}>{meeting.language}</span>
+
+      {/*
+        The FULL tag list (T-36.2) plus suggestions (T-36.4), inline in the
+        metadata line — the header's height is fixed, so overflow scrolls
+        horizontally rather than wrapping into a second line. Chips filter the
+        notebook: from here that is a navigation, not a URL tweak.
+      */}
+      <Separator />
+      <span
+        className="flex min-w-0 shrink items-center gap-1 overflow-x-auto"
+        data-testid="notepad-tags"
+      >
+        <TagChipList tags={tags} size="sm" onFilter={applyTagFilter} />
+        <SuggestedTags meetingId={meeting.id} currentTags={tags} size="sm" />
+        <MeetingTagEditor
+          meetingId={meeting.id}
+          tags={tags}
+          open={tagsOpen}
+          onOpenChange={onTagsOpenChange}
+          align="start"
+          trigger={
+            <IconButton
+              size="sm"
+              label={tags.length > 0 ? 'Edit tags' : 'Add tags'}
+              icon={<Tag size={14} strokeWidth={1.75} />}
+              data-testid="notepad-tags-edit"
+            />
+          }
+        />
+      </span>
     </div>
   )
 }
