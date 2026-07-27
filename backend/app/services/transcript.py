@@ -24,6 +24,7 @@ from app.schemas.transcript import (
     SpeakerUpdate,
     TranscriptPage,
 )
+from app.services.highlights import HighlightService
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -192,6 +193,12 @@ class TranscriptService:
 
             if segment.meeting.summary is not None:
                 segment.meeting.summary.is_stale = True
+
+            # Highlights are character offsets into the text that just
+            # changed; a garbled range is worse than a vanished one, so they
+            # are DELETED, not clamped (T-32.11). Same transaction: the edit
+            # and its invalidation commit or fail together.
+            HighlightService(self.db).invalidate_for_segment(segment.id)
 
         self.db.commit()
         self.db.refresh(segment)
