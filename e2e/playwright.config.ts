@@ -41,6 +41,23 @@ export default defineConfig({
   testDir: './tests',
   globalSetup: SMOKE_URL ? undefined : path.resolve(__dirname, 'global-setup.ts'),
 
+  /*
+   * Screenshot baselines live in ONE directory, named by project and platform
+   * (T-41.9).
+   *
+   * Playwright's default would scatter them into a `97-visual.spec.ts-snapshots/`
+   * folder beside the spec, which is fine until a second visual spec exists and
+   * the reviewer has to know which sibling directory holds what. One
+   * `__screenshots__/` with `{arg}-{projectName}-{platform}.png` filenames keeps
+   * `git status` after an intentional update readable in a single glance.
+   *
+   * `{platform}` is not decoration: font hinting and sub-pixel rendering differ
+   * enough between macOS and Linux that a baseline captured on one fails
+   * permanently on the other. Encoding it in the name means a Linux CI and a
+   * macOS laptop keep separate, both-correct baselines instead of fighting.
+   */
+  snapshotPathTemplate: '{testDir}/__screenshots__/{arg}-{projectName}-{platform}{ext}',
+
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
