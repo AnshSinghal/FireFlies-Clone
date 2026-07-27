@@ -17,6 +17,8 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import { Button } from '@/components/ui/button'
 import type { HighlightRange } from '@/components/ui/highlighter'
 import { useComments, useCreateComment, type CachedComment } from '@/lib/api/comments'
+import { useBookmarks, useHighlights, useToggleBookmark } from '@/lib/api/highlights'
+import type { HighlightOut } from '@/lib/api/types'
 import { useMeeting } from '@/lib/api/meetings'
 import type { SegmentOut, SpeakerRef } from '@/lib/api/types'
 import { useNotepadCommands } from '@/lib/notepad/commands'
@@ -139,6 +141,34 @@ function TranscriptListImpl({
   const { data: commentsPage } = useComments(meetingId)
   const { data: meetingDetail } = useMeeting(meetingId)
   const createComment = useCreateComment(meetingId)
+
+  // Highlights and bookmarks (T-32). Grouped ONCE per fetch: the rows compare
+  // their slice by identity, so the maps must be rebuilt only when the data
+  // changes, never per render.
+  const { data: allHighlights } = useHighlights(meetingId)
+  const { data: allBookmarks } = useBookmarks(meetingId)
+  const toggleBookmark = useToggleBookmark(meetingId)
+
+  const highlightsBySegment = useMemo(() => {
+    const map = new Map<number, HighlightOut[]>()
+    for (const highlight of allHighlights ?? []) {
+      const existing = map.get(highlight.segment_id)
+      if (existing) existing.push(highlight)
+      else map.set(highlight.segment_id, [highlight])
+    }
+    return map
+  }, [allHighlights])
+
+  const bookmarkedSegments = useMemo(
+    () => new Set((allBookmarks ?? []).map((b) => b.segment_id)),
+    [allBookmarks],
+  )
+
+  const onToggleBookmark = useCallback(
+    (segmentId: number, next: boolean) => toggleBookmark.mutate({ segmentId, bookmarked: next }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutate is stable
+    [],
+  )
 
   const threadsBySegment = useMemo(() => {
     const map = new Map<number, CachedComment[]>()
@@ -514,6 +544,10 @@ function TranscriptListImpl({
                   }
                   commentCount={countComments(threadsBySegment.get(row.id))}
                   onAddComment={onSetCommenting ?? undefined}
+                  meetingId={meetingId}
+                  highlights={highlightsBySegment.get(row.id)}
+                  bookmarked={bookmarkedSegments.has(row.id)}
+                  onToggleBookmark={onToggleBookmark}
                 />
 
                 {/* Threads live INSIDE the measured row wrapper, so the

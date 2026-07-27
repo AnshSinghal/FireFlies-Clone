@@ -16,6 +16,7 @@ import {
   MessageSquarePlus,
   MoreHorizontal,
   Quote,
+  Star,
   Undo2,
   UserCog,
 } from 'lucide-react'
@@ -27,13 +28,14 @@ import { Highlighter, type HighlightRange } from '@/components/ui/highlighter'
 import { Dropdown, DropdownItem, DropdownSeparator, DropdownSub } from '@/components/ui/dropdown'
 import { IconButton } from '@/components/ui/icon-button'
 import { TimestampButton } from '@/components/ui/media-controls'
-import type { SegmentOut, SpeakerRef } from '@/lib/api/types'
+import type { HighlightOut, SegmentOut, SpeakerRef } from '@/lib/api/types'
 import type { TurnAware } from '@/lib/transcript/grouping'
 import { cn } from '@/lib/utils/cn'
 import { formatTimestamp } from '@/lib/utils/format'
 import { getSpeakerColorByIndex } from '@/lib/utils/speaker-color'
 
 import { SegmentEditor } from './segment-editor'
+import { SegmentText } from './segment-text'
 
 export interface SegmentRowProps {
   segment: SegmentOut & TurnAware
@@ -58,6 +60,13 @@ export interface SegmentRowProps {
   commentCount?: number
   /** Opens the inline composer under this line (T-31.3). */
   onAddComment?: (segmentId: number) => void
+  /** For the highlight popover's mutations (T-32.5). */
+  meetingId?: number
+  /** This line's user highlights (T-32.4). */
+  highlights?: HighlightOut[]
+  /** Star state and toggle (T-32.6). */
+  bookmarked?: boolean
+  onToggleBookmark?: (segmentId: number, next: boolean) => void
 }
 
 function SegmentRowImpl({
@@ -77,6 +86,10 @@ function SegmentRowImpl({
   onRevert,
   commentCount = 0,
   onAddComment,
+  meetingId,
+  highlights,
+  bookmarked = false,
+  onToggleBookmark,
 }: SegmentRowProps) {
   const color = speaker ? getSpeakerColorByIndex(speaker.color_index) : undefined
   const label = speaker?.label ?? 'Unknown speaker'
@@ -104,6 +117,20 @@ function SegmentRowImpl({
         // player every time somebody copied a quote.
         if ((window.getSelection()?.toString().length ?? 0) > 0) return
         onSeek(segment.start_ms)
+      }}
+      onKeyDown={(event) => {
+        // `B` stars the segment whose controls hold focus (T-32.6). On the
+        // article rather than globally, so "the focused segment" means what
+        // it says — and typing a b into an editor or the find bar is typing.
+        if (
+          (event.key === 'b' || event.key === 'B') &&
+          onToggleBookmark &&
+          event.target instanceof Element &&
+          !event.target.closest('input, textarea, [contenteditable]')
+        ) {
+          event.preventDefault()
+          onToggleBookmark(segment.id, !bookmarked)
+        }
       }}
       // `group` so the timestamp and the ⋯ can appear on hover without either
       // of them needing hover state of its own.
@@ -163,6 +190,16 @@ function SegmentRowImpl({
               onChange={(previous, next) => onEditText(segment.id, previous, next)}
               onCommit={onCommitEdit}
             />
+          ) : highlights && highlights.length > 0 && meetingId !== undefined ? (
+            // Highlights and search marks merge into ONE span list (T-32.4);
+            // rendering the two systems separately is how marks nest wrong.
+            <SegmentText
+              meetingId={meetingId}
+              text={segment.text}
+              highlights={highlights}
+              matchRanges={matchRanges}
+              activeMatch={activeMatch}
+            />
           ) : matchRanges && matchRanges.length > 0 ? (
             <Highlighter
               text={segment.text}
@@ -182,6 +219,16 @@ function SegmentRowImpl({
           a thread nobody discovers. Sits in the right gutter beside the
           timestamp, and clicking it opens the discussion it advertises.
         */}
+        {bookmarked && (
+          <Star
+            size={14}
+            strokeWidth={1.75}
+            aria-hidden="true"
+            data-testid={`bookmark-star-${segment.id}`}
+            className="mt-1 shrink-0 fill-warning text-warning"
+          />
+        )}
+
         {commentCount > 0 && onAddComment && (
           <Button
             variant="ghost"
@@ -257,6 +304,19 @@ function SegmentRowImpl({
                 Add comment
               </DropdownItem>
             )}
+            {onToggleBookmark ? (
+              <DropdownItem
+                icon={<Star size={16} strokeWidth={1.75} />}
+                onSelect={() => onToggleBookmark(segment.id, !bookmarked)}
+                testId={`bookmark-toggle-${segment.id}`}
+              >
+                {bookmarked ? 'Remove bookmark' : 'Bookmark this moment'}
+              </DropdownItem>
+            ) : (
+              <DropdownItem icon={<Star size={16} strokeWidth={1.75} />} soon>
+                Bookmark this moment
+              </DropdownItem>
+            )}
             <DropdownItem icon={<Quote size={16} strokeWidth={1.75} />} soon>
               Create soundbite
             </DropdownItem>
@@ -327,6 +387,9 @@ export const SegmentRow = memo(SegmentRowImpl, (previous, next) => {
     previous.speaker?.color_index === next.speaker?.color_index &&
     // The gutter chip is visible state (T-31.2) — a posted comment must show
     // up without waiting for some other prop to change.
-    previous.commentCount === next.commentCount
+    previous.commentCount === next.commentCount &&
+    // Same identity contract as matchRanges: rebuilt as a group, never mutated.
+    previous.highlights === next.highlights &&
+    previous.bookmarked === next.bookmarked
   )
 })
