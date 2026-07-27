@@ -86,7 +86,7 @@ Each of these is a surface in the app that says so honestly, rather than a dead 
 | Layer | Choice | Why |
 |---|---|---|
 | Frontend | Next.js 16 (App Router, TypeScript strict) | File-based routing, first-class TS, and `next/font` for self-hosted Inter |
-| Styling | Tailwind CSS v3 + CSS custom properties | Tailwind's palette is *replaced* by semantic tokens, so an off-palette colour is a build error — see [ADR-002](docs/decisions.md) |
+| Styling | Tailwind CSS v3 + CSS custom properties | Tailwind's palette is *replaced* by semantic tokens, and an ESLint rule errors on any class the config cannot produce — see [ADR-006](docs/decisions.md) |
 | Data fetching | TanStack Query v5 | Cache invalidation across notebook / drawer / notepad is the hard part of this app |
 | Backend | FastAPI + SQLAlchemy 2.0 + Alembic | Typed request/response models and auto-generated OpenAPI |
 | Database | SQLite + FTS5 | The brief specifies SQLite; FTS5 gives real ranked search with no external service |
@@ -572,12 +572,31 @@ that was rejected and why: **[docs/decisions.md](docs/decisions.md)** — 147 AD
 
 The ones worth reading first, because they are the ones an interviewer would push on:
 
-- **ADR-001 — client data over RSC.** URL-state plus optimistic mutations makes nearly every page
-  `"use client"`. That is a real cost, and it is the direct cause of the LCP number below.
-- **ADR-002 — Tailwind's palette is deleted.** `bg-blue-500` is a build error. Hex codes exist in
-  `styles/tokens.css` and nowhere else.
-- **ADR-103 — `cn()` deliberately does not resolve class conflicts.** Two utilities setting the same
-  property is a bug to fix at the call site, not something a merge helper should paper over.
+- **[ADR-011] — the accent is violet, and the plan's researched palette was wrong.** The plan
+  specified `#2A6EF4` blue and flagged it as unsampled. Sampling the eight reference screenshots in
+  four passes — flat fills by modal colour, text by most-common-dark-pixel because antialiasing makes
+  a naive average far too light — gave `#6A39EF` violet. The accent touches every accented surface
+  there is: buttons, active nav, links, the focus ring, the active transcript line. Building on the
+  plan's blue would have made the clone wrong at a glance, which is exactly what a side-by-side
+  comparison grades.
+- **[ADR-005] — client-side data fetching, not RSC.** URL-state plus optimistic mutations makes
+  nearly every page `"use client"`. That is a real cost, and it is the direct cause of the LCP
+  number in Performance below.
+- **[ADR-006] — off-palette colour is caught by a lint rule, not by the compiler.** Worth reading
+  because the plan was wrong and the ADR says so: deleting Tailwind's palette does **not** make
+  `bg-blue-500` a compile error. Tailwind emits nothing for an unknown utility and stays silent, so
+  the class sits in the markup doing nothing and the bug ships looking like the token system worked.
+  It takes an actual checker — `no-custom-classname`.
+- **[ADR-103] — `cn()` deliberately does not resolve class conflicts.** Two same-property utilities
+  on one element resolve by stylesheet order, which Tailwind derives from its internal class
+  ordering — a build-dependent coin toss. This one was found by a test that caught search highlights
+  painting transparent in one build after painting amber in every previous one, with nothing relevant
+  edited.
+
+[ADR-005]: docs/decisions.md
+[ADR-006]: docs/decisions.md
+[ADR-011]: docs/decisions.md
+[ADR-103]: docs/decisions.md
 
 ---
 
