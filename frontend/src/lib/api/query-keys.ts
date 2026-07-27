@@ -28,6 +28,11 @@ export interface MeetingFilters {
   minDuration?: number
   maxDuration?: number
   tags?: string[]
+  /**
+   * How multiple tags combine (T-36.8). `or` is the default and is expressed
+   * as `undefined`, so an OR filter and an unset mode share one cache key.
+   */
+  tagsMode?: 'and'
   channel?: string
   hasActionItems?: boolean
   source?: string
@@ -61,6 +66,12 @@ export const qk = {
     comments: (id: number) => [...qk.meetings.detail(id), 'comments'] as const,
 
     facets: () => [...qk.meetings.all, 'facets'] as const,
+  },
+
+  /** The tag library (T-36). One list; every mutation invalidates it whole. */
+  tags: {
+    all: ['tags'] as const,
+    proposals: (meetingId: number) => [...qk.tags.all, 'proposals', meetingId] as const,
   },
 
   search: (query: string) => ['search', query] as const,

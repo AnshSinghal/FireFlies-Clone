@@ -24,6 +24,12 @@ export const TOAST_MESSAGES = {
   transcriptCopied: 'Transcript copied to clipboard',
   summaryCopied: 'Summary copied to clipboard',
 
+  tagCreated: 'Tag created',
+  tagsUpdated: 'Tags updated',
+  tagDeleted: 'Tag deleted',
+  tagsMerged: 'Tags merged',
+  tagLimit: 'A meeting can have at most 10 tags',
+
   saveFailed: "Couldn't save changes. Please try again.",
   // The clipboard API refuses on an insecure origin and when the user has
   // denied permission. Both leave a button that appears to do nothing.
