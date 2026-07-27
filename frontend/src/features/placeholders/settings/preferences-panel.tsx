@@ -67,7 +67,7 @@ export function PreferencesPanel() {
         order rather than this file's intent (ADR-103). A wrapper cannot lose
         that argument.
       */}
-      <div className="max-w-sm space-y-5">
+      <div className="space-y-5">
         <div>
           <Select
             label="Default sort"

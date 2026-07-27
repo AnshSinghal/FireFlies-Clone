@@ -34,7 +34,22 @@ export function SettingsView() {
     <div className="flex flex-col gap-6 py-6 md:flex-row" data-testid="settings-view">
       <SettingsNav active={active} />
 
-      <div className="min-w-0 flex-1">
+      {/*
+        `mx-auto max-w-xl` on the BODY, not on each panel.
+
+        Measured against `docs/reference/fireflies/07.png` (T-46.1): Fireflies
+        constrains its settings measure too — the card group spans 927px of a
+        1608px column, 57.6%, with gutters equal within 3% (336 and 345). Ours
+        was a 384px `max-w-sm` form in a 953px column, flush left: a 0px gutter
+        against a 570px one. Not a margin, a page that looks like it stopped
+        rendering.
+
+        576px here is 60.4% of the column with symmetric ~188px gutters, which
+        puts the measure and the symmetry where the reference has them. The
+        panels no longer set their own width — one place decides it, so a new
+        tab cannot reintroduce the asymmetry by forgetting.
+      */}
+      <div className="mx-auto w-full min-w-0 max-w-xl flex-1">
         {active === 'appearance' && <AppearancePanel />}
         {active === 'preferences' && <PreferencesPanel />}
         {activeTab.soon && <SoonPanel tab={activeTab} />}

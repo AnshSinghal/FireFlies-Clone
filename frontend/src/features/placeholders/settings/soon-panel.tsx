@@ -42,7 +42,7 @@ export function SoonPanel({ tab }: SoonPanelProps) {
         {tab.label.toLowerCase()} for the whole workspace.
       </p>
 
-      <div className="max-w-sm space-y-3">
+      <div className="space-y-3">
         {(SAMPLE_TOGGLES[tab.id] ?? []).map((label) => (
           <Switch
             key={label}

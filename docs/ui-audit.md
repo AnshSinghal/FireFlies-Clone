@@ -187,13 +187,18 @@ The width is what an evaluator sees first and this audit had missed it.
 Measured, not estimated — and the first version of this entry got the reference
 wrong by estimating. Edge-detecting vertical rules in both images:
 
-| | Fireflies (`07.png`) | Ours |
-|---|---|---|
-| Content column | x 392 → 2000 (1608px) | x 487 → 1440 (953px) |
-| The settings block | x 728 → 1655 (927px) | x 487 → 870 (383px) |
-| Left gutter | 336px | **0px** |
-| Right gutter | 345px | **570px** |
-| Block ÷ column | 57.6% | 40.2% |
+| | Fireflies (`07.png`) | Ours (before) | Ours (now) |
+|---|---|---|---|
+| Content column | 1608px | 953px | 953px |
+| The settings block | 927px | 383px | **575px** |
+| Left gutter | 336px | 0px | **188px** |
+| Right gutter | 345px | 570px | **190px** |
+| Block ÷ column | 57.6% | 40.2% | **60.3%** |
+
+**Fixed.** `mx-auto max-w-xl` on the settings body rather than `max-w-sm` on
+each panel — one place decides the measure, so a new tab cannot reintroduce the
+asymmetry by forgetting. Gutters are now equal within 2px, against the
+reference's 9px.
 
 Fireflies does **not** run its settings full-bleed either — it constrains to
 57.6% and centres, with gutters equal within 3% (336 vs 345). Ours constrains
@@ -211,8 +216,8 @@ defect — three `Select`s are inline elements, and as direct siblings under
 `space-y-*` they lined up on one row with their labels butted together.
 Bounding the column fixed the break and stranded the panel.
 
-Not fixed here, but the fix is now specified properly. The reference's card
-anatomy, read off `07.png`:
+The measure and the symmetry are fixed. The **card anatomy** is not, and is
+worth doing next — read off `07.png`:
 
 - A section heading (`Recording`) above a group of bordered cards.
 - Each card: a small icon at the left, then title and one line of description.
@@ -263,8 +268,10 @@ rather than by re-reading the code:
 
 - **Item 1 was a defect, not a difference** — every row's duration was in the
   wrong format, and this document argued for keeping it. Fixed (ADR-148).
-- **Item 10 is a spacing defect** — the Settings form leaves 60% of its column
-  empty. Open, with the fix identified.
+- **Item 10 was a spacing defect** — the Settings form left 60% of its column
+  empty, with a 0px gutter against a 570px one. **Fixed**: 60.3% of the column,
+  gutters equal within 2px. The card anatomy inside it is still flat, which is
+  a smaller difference and is described in the entry.
 
 - **The list's gaps were 54% and 18% tighter than the reference** — measured,
   not eyeballed. **Fixed** (ADR-149). The row height remains 15% tighter and is

@@ -3,10 +3,24 @@
 /**
  * Topbar (T-08).
  *
- * `grid-template-columns: auto 1fr auto` rather than flex: the search field has
- * to sit centred in the *window*, not centred in the space left over after the
- * two clusters. With flex, a longer user name in the right cluster would push
- * the search box left, so it would drift as the data changed.
+ * `grid-template-columns: auto minmax(0,1fr) auto` rather than flex. The reason
+ * is real but this comment used to overstate it, so: the grid stops the search
+ * field DRIFTING as data changes. With flex, a longer user name in the right
+ * cluster would push the search box left and it would move between users. The
+ * grid's middle column is sized by the layout, not by its neighbours' content.
+ *
+ * What it does NOT do — and an earlier version of this comment claimed it did —
+ * is centre the field in the *window*. `auto 1fr auto` centres it in the space
+ * left over between the two clusters, which is a different thing whenever the
+ * clusters differ in width, and ours do. Measured at 1440px the field's centre
+ * sits 69px left of the window's.
+ *
+ * That is left alone deliberately. `docs/reference/fireflies/02.png` measures
+ * the same way — their field centre is 30px left of a 2000px window, the same
+ * direction, smaller only because the viewport is wider. Fireflies centres in
+ * the leftover space too. Forcing true window-centring needs symmetric side
+ * columns, which at 1024px would squeeze the right cluster below its content
+ * width to buy a fidelity difference that does not exist.
  */
 
 import { HelpCircle, Menu } from 'lucide-react'
