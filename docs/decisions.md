@@ -5,6 +5,15 @@ every entry should answer "why did you do it that way?" before it is asked.
 
 Format: context → decision → consequences (including what we gave up).
 
+Entries are numbered 1–149 with no gaps and no duplicates, but four blocks sit
+out of numeric order in the file (ADR-005, 037/038, and the 133–138 group). Two
+sessions appended to this log concurrently and collisions were resolved by
+renumbering at merge time rather than at write time, which fixes the identity of
+each entry without moving it. Nothing cross-references position — every
+reference in this repository is by number — so the ordering is cosmetic, and
+reshuffling three thousand lines of a document that is itself evidence is a
+worse trade than leaving a note. Use search, not scroll position.
+
 ---
 
 ## ADR-001 · Monorepo with `frontend/` + `backend/` + `e2e/`
