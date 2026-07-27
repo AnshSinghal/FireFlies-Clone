@@ -1253,6 +1253,55 @@
         "title": "Page[MeetingListItem]",
         "type": "object"
       },
+      "Page_TeamMemberOut_": {
+        "properties": {
+          "has_next": {
+            "readOnly": true,
+            "title": "Has Next",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "description": "1-indexed page number.",
+            "minimum": 1.0,
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total matching rows, ignoring pagination.",
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "total_pages": {
+            "readOnly": true,
+            "title": "Total Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total",
+          "total_pages",
+          "has_next"
+        ],
+        "title": "Page[TeamMemberOut]",
+        "type": "object"
+      },
       "ParticipantDetail": {
         "description": "A participant, as the details drawer shows them (T-15.8, T-15.9).\n\nRicher than `ParticipantRef`, which exists to render an avatar in a group\nand deliberately carries nothing else \u2014 a Notebook page holds twenty rows\nand would otherwise ship attendance data for a hundred people nobody looks\nat.",
         "properties": {
@@ -1739,6 +1788,48 @@
           "color"
         ],
         "title": "TagRef",
+        "type": "object"
+      },
+      "TeamMemberOut": {
+        "description": "A row of the Team page's members table (T-30.4).\n\nNo email \u2014 `UserOut` establishes that email is only ever returned for the\ncurrent user, and a placeholder page is not a reason to widen that.\n`role` is presentation-only until real auth exists: the seeded default\nuser reads as the workspace admin, everyone else as a member.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "meetings_hosted": {
+            "minimum": 0.0,
+            "title": "Meetings Hosted",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "description": "'Admin' for the seeded default user, else 'Member'.",
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "role",
+          "meetings_hosted"
+        ],
+        "title": "TeamMemberOut",
         "type": "object"
       },
       "TranscriptHit": {
@@ -4056,6 +4147,76 @@
         "summary": "Search meetings and transcripts",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "description": "Everyone in the (single, seeded) workspace, for the Team page. Emails are deliberately absent \u2014 those are only ever returned for the current user via /me.",
+        "operationId": "list_users_api_v1_users_get",
+        "parameters": [
+          {
+            "description": "1-indexed page number.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "1-indexed page number.",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page. Clamped to 100.",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Items per page. Clamped to 100.",
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page_TeamMemberOut_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "List workspace members",
+        "tags": [
+          "users"
         ]
       }
     }
