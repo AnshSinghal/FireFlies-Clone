@@ -194,9 +194,9 @@ dark mode. Re-calibrate if a transcript screenshot becomes available.
 ### 3.1 Two-layer architecture (T-02.3)
 
 ```
-Primitive layer   --ff-blue-600: #2A6EF4;
+Primitive layer   --ff-violet-600: #6A39EF;
        ↓
-Semantic layer    --ff-accent: var(--ff-blue-600);
+Semantic layer    --ff-accent: var(--ff-violet-600);
        ↓
 Components        consume ONLY the semantic layer
 ```
@@ -265,11 +265,19 @@ light-mode shadows into dark is the classic tell of a rushed dark theme.
 | `--ff-text-primary` | `#F2F4F7` |
 | `--ff-text-secondary` | `#B4BCC9` |
 | `--ff-text-muted` | `#79839A` |
-| `--ff-accent` | `#5B8DEF` |
-| `--ff-accent-subtle` | `#18243C` |
+| `--ff-accent` | `#9B7BFF` |
+| `--ff-accent-subtle` | `#1D1638` |
 | `--ff-highlight` | `#6B5714` |
 
-The light accent `#2A6EF4` fails contrast on dark backgrounds — hence the lifted `#5B8DEF`.
+The light accent `#6A39EF` fails contrast on dark backgrounds — hence the lifted `#9B7BFF`.
+
+> These three values were `#2A6EF4` / `#5B8DEF` / `#18243C` until 2026-07-28 — the blue this
+> document specified before T-02.1 sampled the reference screenshots and found violet
+> (**ADR-011**). §3.2 and §3.4 were corrected then; the two-layer example above, this line, and the
+> dark table were not, so the file that CLAUDE.md calls the token authority spent two days teaching
+> a colour the app does not use. `#5B8DEF` appears nowhere in `tokens.css`. Dark resolves through
+> the same semantic name: the `--ff-violet-600` primitive is re-pointed to `#9B7BFF` under
+> `[data-theme='dark']`, which is the whole point of the two-layer split.
 Speaker colours need a dark variant set (lift lightness ~15%, drop saturation ~10%).
 
 ### 3.4 Speaker palette
