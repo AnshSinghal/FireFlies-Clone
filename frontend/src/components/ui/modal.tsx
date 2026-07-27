@@ -90,7 +90,18 @@ export function Modal({
         <Dialog.Content
           data-testid={testId}
           onOpenAutoFocus={(event) => {
-            restoreRef.current = document.activeElement as HTMLElement | null
+            /*
+             * When the opener is a DROPDOWN ITEM (a row kebab's "Delete…"),
+             * the item unmounts with its menu while the dialog is open, so it
+             * can never take focus back — closing dumped a keyboard user on
+             * <body>. The menu names its trigger via `aria-labelledby` (Radix
+             * wires the id pair), and that trigger — the kebab the user
+             * started at — is the right place to land on close.
+             */
+            const active = document.activeElement as HTMLElement | null
+            const menu = active?.closest('[role="menu"]')
+            const triggerId = menu?.getAttribute('aria-labelledby')
+            restoreRef.current = (triggerId ? document.getElementById(triggerId) : null) ?? active
             if (!initialFocusRef?.current) return
             event.preventDefault()
             initialFocusRef.current.focus()
