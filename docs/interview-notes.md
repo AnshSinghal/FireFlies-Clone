@@ -179,6 +179,44 @@ longer fixture, a colour simulation, a compression-aware measurement, a test
 that clicks the nav rather than trusting its badge. Reading the code would not
 have produced any of them, and neither would running the suite as it stood.
 
+## 9 · Where is your test suite weakest?
+
+The visual-regression layer, and I can put a number on it.
+
+`97-visual.spec.ts` compares full-page screenshots with
+`maxDiffPixelRatio: 0.015`. At 1440×900 that is 1,296,000 pixels, so the
+tolerance is about **19,400 differing pixels** before a test fails.
+
+T-46 changed every row's duration from `7:13` to `7 min` — eight rows of
+changed glyphs, on the order of 2,400 pixels. The visual suite passed. It was
+an intended change, so nothing broke; but a suite that cannot see an intended
+text change of that size cannot see an unintended one either, and catching
+unintended visual change is the entire reason T-41 exists.
+
+The tolerance is not arbitrary — it absorbs font antialiasing, which genuinely
+varies run to run and is the classic source of visual-test flake. But 1.5% of a
+full page is the wrong unit for the job: it scales with page area, so the
+larger the screenshot the more real change it hides.
+
+**What I would do instead**, in order of how much I trust it:
+
+1. **Shrink the comparison surface.** Element-level shots (`sidebar`, `topbar`,
+   the filters panel — which this spec already does for three of them) let the
+   ratio stay loose while the absolute pixel budget gets small. A 240×900
+   sidebar at 1.5% is ~3,200 pixels, not 19,400.
+2. **Switch full-page shots to `maxDiffPixels`, not a ratio.** An absolute
+   budget of a few hundred pixels absorbs antialiasing without scaling up with
+   the viewport.
+3. **Mask the volatile regions** (relative dates, avatar hues) rather than
+   buying tolerance for the whole frame to accommodate them.
+
+I did not change it during this task, and the reason is worth stating: it would
+re-baseline 165 committed snapshots in the middle of a verification cycle, to
+tighten a threshold I had not measured the flake rate of. Tightening a test on
+a hunch and re-recording every baseline to make it green is how a suite quietly
+stops meaning anything. Measure the run-to-run noise floor first, then set the
+budget just above it.
+
 ## Things I would rather be asked
 
 - Why the mutations project runs one worker (three "feature bugs" that were
