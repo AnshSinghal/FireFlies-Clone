@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 .PHONY: help dev down logs migrate migrate-down migration seed seed-reset test test-backend \
-        test-frontend e2e lint lint-frontend lint-backend lint-e2e typecheck format types \
+        test-frontend e2e e2e-crossbrowser lint lint-frontend lint-backend lint-e2e typecheck format types \
         seed-demo seed-validate install clean
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -69,6 +69,9 @@ test-frontend:
 
 e2e: ## Run the Playwright end-to-end suite
 	cd e2e && npm test
+
+e2e-crossbrowser: ## Run the @crossbrowser cases in Firefox and WebKit (T-42.12)
+	cd e2e && npm run test:crossbrowser
 
 # ── Quality gates ────────────────────────────────────────────────────────────
 lint: lint-backend lint-frontend lint-e2e ## Lint everything and check backend layering

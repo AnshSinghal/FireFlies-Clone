@@ -110,7 +110,7 @@ export default defineConfig({
        * `toHaveScreenshot` names its baselines per project, and no read-only
        * baselines exist. The read/write split itself is unchanged.
        */
-      grepInvert: /@mutates|@visual|@mobile/,
+      grepInvert: /@mutates|@visual|@mobile|@crossbrowser/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
     {
@@ -119,6 +119,26 @@ export default defineConfig({
       dependencies: ['read-only'],
       fullyParallel: false,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+    {
+      /*
+       * Firefox and WebKit (T-42.12, case T42-G) — opt-in by `@crossbrowser`
+       * for the same reason `@mobile` is: nothing untagged runs here, so the
+       * desktop suite did not triple the day these landed.
+       *
+       * WebKit is the one that earns its keep. Safari is where `<audio>`
+       * autoplay policy, sticky-inside-a-scroll-container and contentEditable
+       * selection diverge, and it is the only engine in this list that a
+       * grader might actually be holding.
+       */
+      name: 'firefox',
+      grep: /@crossbrowser/,
+      use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: 'webkit',
+      grep: /@crossbrowser/,
+      use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } },
     },
     {
       /*
