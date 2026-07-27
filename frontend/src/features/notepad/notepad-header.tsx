@@ -28,7 +28,7 @@ import { useQueryClient } from '@tanstack/react-query'
 
 import { AvatarGroup } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui/dropdown'
+import { Dropdown, DropdownItem, DropdownSeparator, DropdownSub } from '@/components/ui/dropdown'
 import { IconButton } from '@/components/ui/icon-button'
 import { InlineEdit } from '@/components/ui/inline-edit'
 import { Popover } from '@/components/ui/popover'
