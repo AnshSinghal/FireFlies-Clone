@@ -3048,6 +3048,48 @@ ingest path and deletes it again.
 
 ---
 
+## ADR-146 — Which lists paginate, and which do not
+
+**Context.** The project's hard rules say "every list endpoint uses the same
+6-key pagination envelope". The OpenAPI does not look like that: three
+endpoints return `Page_*`, four return bare arrays, `/search` returns a grouped
+object, and soundbites return `{items}` (ADR-119). Read against the rule and
+without this note, that is four rule violations and an inconsistency.
+
+It is one policy, and it was never written down.
+
+**Decision.** Paginate a collection when its size is driven by the CORPUS.
+Return a plain array when its size is driven by a single parent.
+
+- **Paged** — `/meetings`, `/users`, `/meetings/{id}/comments`. All three grow
+  without bound as the workspace does.
+- **Arrays** — `/meetings/{id}/speakers`, `/action-items`, `/highlights`,
+  `/bookmarks`. Each is bounded by one meeting: six speakers, a dozen action
+  items, tens of highlights. Pagination here is ceremony that every caller has
+  to unwrap, and two of them genuinely cannot use a page — highlights are
+  painted into transcript lines the reader is already looking at, so a page
+  boundary would leave some lines silently unmarked.
+- **Grouped** — `/search`, which returns two KINDS of hit. A title match means
+  "this meeting is about X"; a transcript match means "X was said at 18:42".
+  One `items` array cannot carry both without flattening away the distinction
+  the dropdown is built on, and the transcript half paginates by `offset` while
+  the title half never does (ADR-100).
+
+**Consequence.** The rule survives in the form that was always meant: a client
+unwraps ONE envelope, and does so wherever unwrapping is the right shape. What
+this ADR adds is the test an unfamiliar reader can apply — "is this list
+bounded by its parent?" — so the next endpoint lands in the right category
+instead of matching whichever neighbour was read first.
+
+The honest cost: a `/meetings/{id}/comments` thread and a `/highlights` list
+now differ in shape for a reason that is about growth rather than about being
+comments or highlights. That is the trade, and it is the one worth making —
+uniformity that forces every caller to unwrap a single-page envelope for six
+speakers buys consistency in the schema at the cost of consistency in the
+calling code.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
