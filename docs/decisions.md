@@ -2806,6 +2806,61 @@ counted in the summary toast, never clamped silently.
 **Consequence.** `/settings/tags` is a real route (cross-route active state
 can't ride `?tab=`), and the editor commits one PUT on close per ADR-039's
 draft-then-commit shape.
+## ADR-129 — Dialog focus restore survives a dropdown opener
+
+**Context.** Controlled Modals capture `document.activeElement` at open as the
+close-restore target (T10-C). A Radix dropdown ITEM unmounts with its menu,
+making restore impossible — closing a kebab-launched dialog dropped keyboard
+focus on `<body>`. Found by the T-40.12 traversal tests.
+
+**Decision.** In the Modal's open autofocus hook, if the captured element sits
+inside `[role="menu"]`, restore instead to the element named by the menu's
+`aria-labelledby` — the Radix-wired trigger, i.e. the kebab the keyboard user
+started at. Rejected: a `restoreFocusRef` prop (pushes bookkeeping to every
+caller for a primitive-level concern) and deferring dialog open until after
+menu close (timing-dependent — the original bug).
+
+**Consequence.** Every kebab-launched dialog (delete, edit, export) restores
+to its kebab; openers outside menus are unaffected.
+
+---
+
+## ADR-130 — Secondary row actions never render inside the row's anchor
+
+**Context.** T35-K flaked 1/328: the recent-search remove ✕ was a `<button>`
+inside the row's `<Link>`. `preventDefault` on mousedown does not cancel the
+following click, which bubbled to the anchor — and the synchronous re-render
+between the two events had moved the NEXT history entry under the pointer, so
+the ✕ occasionally ran the search it was deleting's neighbour.
+
+**Decision.** Remove the bubble path structurally: the ✕ is a positioned
+sibling of the anchor inside the `<li>` (the anchor reserves `pr-10`).
+Click-interception mitigations mask the structure problem; `<button>` inside
+`<a>` is invalid interactive content anyway. Rule for all rows: kebabs and
+remove affordances are siblings, never anchor children.
+
+**Consequence.** The flake's race path no longer exists (repeat-each ×10 and
+three full-file runs green); the fix was taken verbatim from the T-32 branch
+so that merge stays conflict-free.
+
+---
+
+## ADR-131 — Client-timeout tests use never-settling routes; `{}` payloads lock in actual floors
+
+**Context.** T-40.11. `delayRoute`'s `continue()` throws inside Playwright's
+handler once the client has aborted at its 15 s timeout, so genuine timeout
+paths cannot be simulated with delays.
+
+**Decision.** A `stallRoute` helper returns a promise that never settles,
+lifted with `unrouteAll({behavior:'ignoreErrors'})`. For malformed-payload
+cases the suite asserts each surface's *actual* degradation floor — list →
+empty state, detail → degraded panels, summary `{}` → the branded route
+boundary — rather than an aspirational one; the pre-existing `toDraft` gap
+(T-27) that routes an empty detail payload to the boundary is documented
+in-file as a follow-up, not silently patched during a test task.
+
+**Consequence.** ERR-A/ERR-B genuinely outwait the client timeout
+(`test.slow()`, ~1 min of wall time), which is what makes them evidence.
 
 ---
 
