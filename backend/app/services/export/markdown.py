@@ -11,21 +11,24 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, assert_never
 
 from app.services.export.blocks import (
+    DELETED_NOTE,
     Bullets,
     Checklist,
+    Discussion,
     Heading,
     Outline,
     Paragraph,
     Subheading,
     Transcript,
     clock,
+    note_meta,
     task_suffix,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from app.services.export.blocks import Block, ExportDocument
+    from app.services.export.blocks import Block, ExportDocument, Note
 
 
 def render_markdown(document: ExportDocument) -> Iterator[str]:
@@ -70,5 +73,20 @@ def _render_block(block: Block) -> Iterator[str]:
             # paste, rather than one run-on wall of text.
             for turn in turns:
                 yield f"\n**{turn.speaker}** [{clock(turn.start_ms)}] {turn.text}\n"
+        case Discussion(notes):
+            # A nested bullet list, because that is the one CommonMark
+            # construct that survives a paste into GitHub or Notion still
+            # showing which comment a reply hangs off.
+            yield "\n"
+            for note in notes:
+                yield f"{'  ' * note.depth}- {_note_markup(note)}\n"
         case _:
             assert_never(block)
+
+
+def _note_markup(note: Note) -> str:
+    if note.deleted:
+        return f"*{DELETED_NOTE}*"
+    meta = note_meta(note)
+    lead = f"**{note.author}**" + (f" {meta}" if meta else "")
+    return f"{lead} — {note.text}"

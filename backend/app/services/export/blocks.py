@@ -2,9 +2,15 @@
 
 Section loaders (registry.py) turn database rows into these blocks; each format
 renderer (markdown/text/pdf/word) knows how to draw every block type. That
-split is what makes a future section — comments, highlights — a one-line
-registration: its loader emits blocks the renderers can already draw, so no
-renderer changes with it.
+split is what keeps a new section cheap: a loader that reuses existing block
+types costs one `register_section` call and no renderer changes at all.
+
+`Discussion` is the one case that needed a new type — threading and the
+resolved/tombstone markers are shape no existing block carries — so wiring
+T-31's comments in cost four small renderer cases on top of the loader. The
+exhaustive `match` in each renderer is what made that safe: adding a member to
+`Block` turns every unhandled format into a type error rather than a silently
+missing section.
 """
 
 from __future__ import annotations
@@ -96,7 +102,59 @@ class Transcript:
     turns: tuple[Turn, ...]
 
 
-Block = Heading | Subheading | Paragraph | Bullets | Outline | Checklist | Transcript
+#: What a tombstoned comment reads as, in every format — the same words the
+#: comment flyout shows, so an export never invents wording the UI does not use.
+DELETED_NOTE = "Comment deleted"
+
+
+@dataclass(frozen=True)
+class Note:
+    """One comment. `depth` is 0 for the comment that opens a thread, 1 for a
+    reply — T-31 allows no third level, so renderers indent one step and never
+    recurse.
+
+    `deleted` is the tombstone: a parent whose replies outlived it. It keeps
+    its slot in the thread but carries no author, timestamp or words.
+    """
+
+    author: str
+    start_ms: int | None
+    text: str
+    resolved: bool
+    deleted: bool
+    depth: int
+
+
+@dataclass(frozen=True)
+class Discussion:
+    """The comment stream, FLATTENED — each thread's opener then its replies.
+
+    Flat rather than nested because `depth` already carries the only nesting
+    the schema permits, and a flat tuple is what every renderer wants: one
+    loop, one indent multiplier, no recursion in four places.
+    """
+
+    notes: tuple[Note, ...]
+
+
+Block = Heading | Subheading | Paragraph | Bullets | Outline | Checklist | Transcript | Discussion
+
+
+def note_meta(note: Note) -> str:
+    """``[04:32] (resolved)`` — the markers shared so no two formats drift.
+
+    Only a thread's opener is anchored: a reply inherits its parent's
+    timestamp, so repeating it under every reply is noise.
+    """
+    parts = [
+        part
+        for part in (
+            f"[{clock(note.start_ms)}]" if note.start_ms is not None else None,
+            "(resolved)" if note.resolved else None,
+        )
+        if part
+    ]
+    return " ".join(parts)
 
 
 def task_suffix(task: Task) -> str:

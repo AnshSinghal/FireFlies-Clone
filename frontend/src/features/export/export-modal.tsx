@@ -17,6 +17,7 @@
  * (T-34.8).
  */
 
+import { useQueryClient } from '@tanstack/react-query'
 import { AlignLeft, Copy, FileCode, FileText, FileType } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 
@@ -26,6 +27,7 @@ import { Modal } from '@/components/ui/modal'
 import { RadioCardGroup, type RadioCardOption } from '@/components/ui/radio-card'
 import { useToast } from '@/components/ui/toast'
 import { useActionItems } from '@/lib/api/action-items'
+import type { CommentOut } from '@/lib/api/comments'
 import {
   bulkExportUrl,
   downloadExport,
@@ -34,9 +36,10 @@ import {
   type ExportFormat,
 } from '@/lib/api/export'
 import { useMeeting } from '@/lib/api/meetings'
+import { qk } from '@/lib/api/query-keys'
 import { useSummary } from '@/lib/api/summaries'
 import { useTranscript } from '@/lib/api/transcript'
-import type { MeetingDetail } from '@/lib/api/types'
+import type { MeetingDetail, Page } from '@/lib/api/types'
 import { summaryToMarkdown } from '@/lib/summary/to-markdown'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { LOCALE, formatTimestamp, pluralize } from '@/lib/utils/format'
@@ -118,9 +121,22 @@ export function ExportModal({ open, onOpenChange, target }: ExportModalProps) {
   const { data: transcript } = useTranscript(meetingId)
   const { data: actionItems } = useActionItems(meetingId)
 
+  /*
+   * Comments are READ from the cache rather than subscribed to, because the
+   * export modal is not a reason to fetch them: the notepad's flyout has
+   * already loaded them whenever the user is somewhere they'd think about
+   * comments, and from a Notebook row an absent cache simply contributes
+   * nothing to the estimate and no section to the clipboard copy.
+   */
+  const client = useQueryClient()
+  const comments =
+    meetingId === null
+      ? undefined
+      : client.getQueryData<Page<CommentOut>>(qk.meetings.comments(meetingId))?.items
+
   const estimate = useMemo(
-    () => estimateExportSize({ include, summary, transcript, actionItems }),
-    [include, summary, transcript, actionItems],
+    () => estimateExportSize({ include, summary, transcript, actionItems, comments }),
+    [include, summary, transcript, actionItems, comments],
   )
 
   const includeList = EXPORT_SECTIONS.filter((section) => include.has(section.id)).map(
@@ -129,7 +145,9 @@ export function ExportModal({ open, onOpenChange, target }: ExportModalProps) {
   const nothingSelected = includeList.length === 0
 
   /** True once every INCLUDED section's data is loaded — excluded sections
-   * cannot hold the estimate (or the copy button) hostage. */
+   * cannot hold the estimate (or the copy button) hostage. Comments are absent
+   * from this list on purpose: nothing here fetches them, so waiting on them
+   * would be waiting forever. */
   const sourcesReady =
     (!include.has('summary') || summary !== undefined) &&
     (!include.has('transcript') || transcript !== undefined) &&
@@ -192,6 +210,7 @@ export function ExportModal({ open, onOpenChange, target }: ExportModalProps) {
       summary,
       transcript,
       actionItems,
+      comments,
     })
     void copy(text, TOAST_MESSAGES.markdownCopied)
   }

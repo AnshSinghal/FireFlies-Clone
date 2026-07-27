@@ -85,8 +85,31 @@ def _add_block(doc: DocumentObject, block: Block) -> None:
                 stamp = paragraph.add_run(f" [{clock(turn.start_ms)}] ")
                 stamp.font.color.rgb = _rgb(palette.MUTED)
                 paragraph.add_run(turn.text)
+        case blocks.Discussion(notes):
+            for note in notes:
+                _add_note(doc, note)
         case _:
             assert_never(block)
+
+
+def _add_note(doc: DocumentObject, note: blocks.Note) -> None:
+    paragraph = doc.add_paragraph()
+    # A real paragraph indent rather than leading spaces, so the nesting
+    # survives a reader reflowing the document.
+    paragraph.paragraph_format.left_indent = Pt(18 * note.depth)
+
+    if note.deleted:
+        tombstone = paragraph.add_run(blocks.DELETED_NOTE)
+        tombstone.italic = True
+        tombstone.font.color.rgb = _rgb(palette.MUTED)
+        return
+
+    paragraph.add_run(note.author).bold = True
+    meta = blocks.note_meta(note)
+    if meta:
+        stamp = paragraph.add_run(f" {meta}")
+        stamp.font.color.rgb = _rgb(palette.MUTED)
+    paragraph.add_run(f"  {note.text}")
 
 
 def _add_task(doc: DocumentObject, task: blocks.Task) -> None:

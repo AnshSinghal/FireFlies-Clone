@@ -22,8 +22,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import ActionItem, SummarySection
+from app.models import ActionItem, SummarySection, TranscriptSegment
 from app.models.enums import ActionItemStatus, SummarySectionKind
+from app.services.export.blocks import clock
 from app.services.export.filename import export_filename, slugify
 from app.services.export.registry import register_section
 from tests.factories import (
@@ -299,9 +300,10 @@ def test_empty_include_is_a_400_not_an_empty_file(client: TestClient, db: Sessio
 
 
 def test_unbuilt_sections_are_accepted_and_render_nothing(client: TestClient, db: Session) -> None:
-    """`comments` and `highlights` land on parallel branches (T-31/T-32); the
-    include vocabulary already admits them so those branches never touch this
-    endpoint's contract."""
+    """`highlights` still lands on a parallel branch (T-32); the include
+    vocabulary already admits it so that branch never touches this endpoint's
+    contract. A meeting with no comments renders no Comments heading either —
+    a bare heading reads as truncation, not emptiness."""
     meeting = make_full_meeting(db)
 
     response = client.get(
@@ -319,6 +321,135 @@ def test_register_section_rejects_a_key_outside_the_vocabulary() -> None:
     """A registration typo must fail loudly, not create an unvalidated value."""
     with pytest.raises(ValueError, match="minutes"):
         register_section("minutes", lambda _db, _meeting: None)
+
+
+# ── Comments · T-31 wired into the section registry ─────────────────────────
+
+#: Long enough that `Author [MM:SS]: body` must wrap at 100 columns.
+LONG_COMMENT = (
+    "Flagging this for the pricing review: if we hold the enterprise tier flat through Q3 "
+    "we lose the upgrade path we promised the design partners, so we should decide before "
+    "the board deck goes out."
+)
+
+
+def _post_comment(
+    client: TestClient,
+    meeting_id: int,
+    body: str,
+    *,
+    segment_id: int | None = None,
+    parent_id: int | None = None,
+) -> int:
+    """Create through the API, so the export reads what T-31 actually stores."""
+    payload: dict[str, object] = {"body": body}
+    if segment_id is not None:
+        payload["segment_id"] = segment_id
+    if parent_id is not None:
+        payload["parent_id"] = parent_id
+
+    response = client.post(f"/api/v1/meetings/{meeting_id}/comments", json=payload)
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    return int(response.json()["id"])
+
+
+def _segment(db: Session, meeting_id: int, sequence: int) -> TranscriptSegment:
+    return db.execute(
+        select(TranscriptSegment).where(
+            TranscriptSegment.meeting_id == meeting_id,
+            TranscriptSegment.sequence == sequence,
+        )
+    ).scalar_one()
+
+
+def test_comments_section_renders_threads_replies_and_tombstones(
+    client: TestClient, db: Session
+) -> None:
+    """The flyout's rules, in a file: timeline order, one level of indent, a
+    resolved marker, and a tombstone that keeps its replies but not its words."""
+    meeting = make_full_meeting(db)
+    anchor = _segment(db, meeting.id, 3)
+
+    anchored = _post_comment(
+        client, meeting.id, "The pricing tiers here need a second look.", segment_id=anchor.id
+    )
+    _post_comment(client, meeting.id, "I will pull last quarter's numbers.", parent_id=anchored)
+
+    resolved = _post_comment(client, meeting.id, "Who owns the board deck?")
+    client.patch(f"/api/v1/comments/{resolved}", json={"is_resolved": True})
+
+    doomed = _post_comment(client, meeting.id, "Ignore this, wrong meeting.")
+    _post_comment(client, meeting.id, "Kept so the thread does not collapse.", parent_id=doomed)
+    client.delete(f"/api/v1/comments/{doomed}")
+
+    body = client.get(_export_url(meeting.id), params={"format": "md", "include": "comments"}).text
+
+    assert "## Comments" in body
+    # Author, the anchoring segment's [MM:SS], then the body.
+    assert (
+        f"- **Sarah Chen** [{clock(anchor.start_ms)}] — The pricing tiers here need a second look."
+        in body
+    )
+    # A reply indents one level and drops the timestamp it inherited.
+    assert "  - **Sarah Chen** — I will pull last quarter's numbers." in body
+    # A resolved, unanchored thread: marker present, no timestamp invented.
+    assert "- **Sarah Chen** (resolved) — Who owns the board deck?" in body
+    # The tombstone keeps its slot without author or words; its reply survives.
+    assert "- *Comment deleted*" in body
+    assert "Ignore this, wrong meeting." not in body
+    assert "  - **Sarah Chen** — Kept so the thread does not collapse." in body
+
+    # Timeline order: the anchored thread precedes the unanchored ones.
+    assert body.index("The pricing tiers") < body.index("Who owns the board deck?")
+    # Still pure Markdown.
+    assert "<" not in body
+
+
+def test_default_include_carries_the_comments_section(client: TestClient, db: Session) -> None:
+    """`include=` omitted means every section, and comments are now one."""
+    meeting = make_full_meeting(db)
+    _post_comment(client, meeting.id, "Let us book the follow-up before Friday.")
+
+    body = client.get(_export_url(meeting.id), params={"format": "md"}).text
+
+    assert "## Comments" in body
+    assert "Let us book the follow-up before Friday." in body
+    # Canonical order closes the document with the discussion.
+    assert body.index("## Transcript") < body.index("## Comments")
+
+
+def test_include_summary_only_omits_the_comments_section(client: TestClient, db: Session) -> None:
+    meeting = make_full_meeting(db)
+    _post_comment(client, meeting.id, "Let us book the follow-up before Friday.")
+
+    body = client.get(_export_url(meeting.id), params={"format": "md", "include": "summary"}).text
+
+    assert "## Meeting Overview" in body
+    assert "## Comments" not in body
+    assert "follow-up before Friday" not in body
+
+
+def test_comment_bodies_wrap_at_100_columns_in_plain_text(client: TestClient, db: Session) -> None:
+    meeting = make_full_meeting(db)
+    anchor = _segment(db, meeting.id, 2)
+    parent = _post_comment(client, meeting.id, LONG_COMMENT, segment_id=anchor.id)
+    _post_comment(client, meeting.id, LONG_COMMENT, parent_id=parent)
+
+    body = client.get(_export_url(meeting.id), params={"format": "txt", "include": "comments"}).text
+
+    assert "\nComments\n========\n" in body
+    assert f"Sarah Chen [{clock(anchor.start_ms)}]: Flagging this for the pricing review" in body
+    assert "**" not in body
+    assert "<" not in body
+
+    longest = max(len(line) for line in body.splitlines())
+    assert longest <= 100, f"a comment ran to {longest} columns"
+
+    # A wrapped body continues at one indent; a REPLY starts at two, so the
+    # two can never begin in the same column and blur the nesting.
+    assert re.search(r"^ {4}through Q3 we lose", body, re.MULTILINE)
+    assert re.search(r"^ {8}Sarah Chen: Flagging this", body, re.MULTILINE)
+    assert re.search(r"^ {12}through Q3 we lose", body, re.MULTILINE)
 
 
 # ── T34-E · filename sanitisation ───────────────────────────────────────────

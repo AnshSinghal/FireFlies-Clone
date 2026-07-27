@@ -12,21 +12,24 @@ import textwrap
 from typing import TYPE_CHECKING, assert_never
 
 from app.services.export.blocks import (
+    DELETED_NOTE,
     Bullets,
     Checklist,
+    Discussion,
     Heading,
     Outline,
     Paragraph,
     Subheading,
     Transcript,
     clock,
+    note_meta,
     task_suffix,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from app.services.export.blocks import Block, ExportDocument
+    from app.services.export.blocks import Block, ExportDocument, Note
 
 #: The spec's hard-wrap column.
 WIDTH = 100
@@ -59,8 +62,11 @@ def _underlined(text: str) -> str:
     return "".join(f"{line}\n" for line in lines) + f"{rule}\n\n"
 
 
-def _wrapped(text: str, *, indent: str = "") -> str:
-    lines = textwrap.wrap(text, width=WIDTH, subsequent_indent=indent) or [""]
+def _wrapped(text: str, *, indent: str = "", first: str = "") -> str:
+    """Hard-wrap at `WIDTH`. `first` indents the opening line, `indent` the rest."""
+    lines = textwrap.wrap(text, width=WIDTH, initial_indent=first, subsequent_indent=indent) or [
+        first
+    ]
     return "".join(f"{line}\n" for line in lines)
 
 
@@ -90,5 +96,24 @@ def _render_block(block: Block) -> Iterator[str]:
                 line = f"[{clock(turn.start_ms)}] {turn.speaker}: {turn.text}"
                 yield _wrapped(line, indent=_INDENT)
                 yield "\n"
+        case Discussion(notes):
+            # Indentation is the only nesting cue plain text has, so a reply
+            # steps in TWICE the continuation indent: at one step a wrapped
+            # comment body and a reply would begin in the same column and the
+            # thread would stop being readable. A blank line opens each new
+            # thread, the way one opens each transcript turn.
+            for index, note in enumerate(notes):
+                if note.depth == 0 and index:
+                    yield "\n"
+                lead = _INDENT * 2 * note.depth
+                yield _wrapped(_note_line(note), first=lead, indent=lead + _INDENT)
+            yield "\n"
         case _:
             assert_never(block)
+
+
+def _note_line(note: Note) -> str:
+    if note.deleted:
+        return DELETED_NOTE
+    meta = note_meta(note)
+    return f"{note.author}{f' {meta}' if meta else ''}: {note.text}"

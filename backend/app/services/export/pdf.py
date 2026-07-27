@@ -86,6 +86,9 @@ _BODY = ParagraphStyle(
 )
 _LIST = ParagraphStyle("ExportListItem", parent=_BODY, leftIndent=14, bulletIndent=2, spaceAfter=3)
 _TURN = ParagraphStyle("ExportTurn", parent=_BODY, leading=14.5, spaceAfter=7)
+_NOTE = ParagraphStyle("ExportNote", parent=_BODY, leading=14.5, spaceAfter=5)
+#: A reply, indented one step — the flyout's 32px offset at this type scale.
+_NOTE_REPLY = ParagraphStyle("ExportNoteReply", parent=_NOTE, leftIndent=22)
 _META_LABEL = ParagraphStyle(
     "ExportMetaLabel",
     fontName="Helvetica-Bold",
@@ -194,8 +197,24 @@ def _flowables(block: Block) -> list[Any]:
                 )
                 for turn in turns
             ]
+        case blocks.Discussion(notes):
+            # Same page-break discipline as a turn: a comment split across
+            # pages reads as two half-comments (T-34.6).
+            return [
+                KeepTogether([Paragraph(_note_markup(note), _NOTE_REPLY if note.depth else _NOTE)])
+                for note in notes
+            ]
         case _:
             assert_never(block)
+
+
+def _note_markup(note: blocks.Note) -> str:
+    """Bold author, muted markers, then the body — a tombstone is muted italic."""
+    if note.deleted:
+        return f'<i><font color="{palette.MUTED}">{blocks.DELETED_NOTE}</font></i>'
+    meta = blocks.note_meta(note)
+    stamp = f' <font color="{palette.MUTED}">{escape(meta)}</font>' if meta else ""
+    return f"<b>{escape(note.author)}</b>{stamp}  {escape(note.text)}"
 
 
 def _task_markup(task: blocks.Task) -> str:

@@ -5,14 +5,11 @@ five canonical sections (Keywords, Meeting Overview, Meeting Outline,
 Bullet-Point Notes — ADR-015's composition, reused via `to_summary()`),
 `actions` is the fifth (Action Items), and `transcript` closes the document.
 
-`comments` and `highlights` are ACCEPTED today and render nothing: their
-services land on parallel branches (T-31/T-32). Wiring one in later is a single
-line from its own module —
-
-    register_section("comments", comment_blocks)
-
-— because a loader only has to emit `blocks.py` types, which every format
-renderer can already draw.
+`comments` joined them once T-31 landed: a loader that turns `CommentService`
+rows into `blocks.py` types, plus one `register_section` call. `highlights` is
+still ACCEPTED and renders nothing — a selected section with no registered
+loader is skipped, so T-32 lands the same way without touching this endpoint's
+contract.
 """
 
 from __future__ import annotations
@@ -24,11 +21,14 @@ from sqlalchemy import select
 from app.core.exceptions import BadRequestError, ValidationError
 from app.models import Speaker, TranscriptSegment
 from app.models.enums import ActionItemStatus
+from app.services.comments import CommentService
 from app.services.export.blocks import (
     Block,
     Bullets,
     Checklist,
+    Discussion,
     Heading,
+    Note,
     Outline,
     OutlineItem,
     Paragraph,
@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
     from app.models import Meeting
+    from app.schemas.comment import CommentOut
 
     SectionLoader = Callable[[Session, Meeting], tuple[Block, ...] | None]
 
@@ -189,6 +190,45 @@ def _transcript_blocks(db: Session, meeting: Meeting) -> tuple[Block, ...] | Non
     return (Heading("Transcript"), Transcript(turns))
 
 
+def _comment_blocks(db: Session, meeting: Meeting) -> tuple[Block, ...] | None:
+    """Comment threads, in the exact order the flyout lists them (T-31 → T-34).
+
+    Goes through `CommentService.threads()` rather than the table so the export
+    inherits every rule T-31 settled: timeline ordering, replies one level in,
+    and tombstoned parents kept only while a live reply still hangs off them.
+    Nothing is dropped here that the service did not already drop.
+
+    Mentions need no work: they are stored as rows for STYLING, and the body
+    they were parsed out of still reads `@Priya Sharma` — so plain text is
+    already the right rendering.
+    """
+    threads = CommentService(db).threads(meeting)
+    if not threads:
+        return None
+
+    notes: list[Note] = []
+    for thread in threads:
+        notes.append(_note(thread, depth=0))
+        notes.extend(_note(reply, depth=1) for reply in thread.replies)
+    return (Heading("Comments"), Discussion(tuple(notes)))
+
+
+def _note(comment: CommentOut, *, depth: int) -> Note:
+    return Note(
+        author=comment.author.name,
+        # Only the opener is anchored — a reply inherited this same timestamp
+        # from its parent, and four formats repeating it reads as noise.
+        start_ms=comment.start_ms if depth == 0 else None,
+        # Whitespace collapses: a body is free text, and a hard line break
+        # inside a Markdown list item ends the list under the reply it owns.
+        text=" ".join(comment.body.split()),
+        resolved=comment.is_resolved,
+        deleted=comment.is_deleted,
+        depth=depth,
+    )
+
+
 register_section("summary", _summary_blocks)
 register_section("actions", _action_blocks)
 register_section("transcript", _transcript_blocks)
+register_section("comments", _comment_blocks)
