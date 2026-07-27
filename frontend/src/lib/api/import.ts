@@ -10,7 +10,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { api, API_BASE_URL, ApiError } from './client'
+import { api, ApiError, resolveApiBase } from './client'
 import { qk } from './query-keys'
 import type { MeetingDetail } from './types'
 
@@ -50,7 +50,7 @@ export const STRATEGY_LABELS: Record<string, string> = {
  * boundary — overriding it produces a request the server cannot split.
  */
 async function postForm(body: FormData): Promise<TranscriptPreview> {
-  const response = await fetch(new URL('/api/v1/meetings/parse', API_BASE_URL), {
+  const response = await fetch(new URL('/api/v1/meetings/parse', resolveApiBase()), {
     method: 'POST',
     body,
   })

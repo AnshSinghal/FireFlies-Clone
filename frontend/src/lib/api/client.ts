@@ -31,7 +31,7 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost
  * T-44). Empty therefore means "this page's origin" in the browser, and the
  * dev backend during SSR, where no page origin exists.
  */
-function resolveBase(): string {
+export function resolveApiBase(): string {
   if (API_BASE_URL !== '') return API_BASE_URL
   return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000'
 }
@@ -102,7 +102,7 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
 export type RequestParams = Record<string, string | number | boolean | undefined | null | string[]>
 
 function buildUrl(path: string, params: RequestOptions['params']): string {
-  const url = new URL(path.startsWith('/') ? path : `/${path}`, resolveBase())
+  const url = new URL(path.startsWith('/') ? path : `/${path}`, resolveApiBase())
 
   for (const [key, value] of Object.entries(params ?? {})) {
     if (value === undefined || value === null || value === '') continue
