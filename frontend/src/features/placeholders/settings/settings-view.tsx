@@ -35,7 +35,7 @@ export function SettingsView() {
       <SettingsNav active={active} />
 
       {/*
-        `mx-auto max-w-xl` on the BODY, not on each panel.
+        `mx-auto max-w-settings` on the BODY, not on each panel.
 
         Measured against `docs/reference/fireflies/07.png` (T-46.1): Fireflies
         constrains its settings measure too — the card group spans 927px of a
@@ -44,12 +44,19 @@ export function SettingsView() {
         against a 570px one. Not a margin, a page that looks like it stopped
         rendering.
 
-        576px here is 60.4% of the column with symmetric ~188px gutters, which
-        puts the measure and the symmetry where the reference has them. The
-        panels no longer set their own width — one place decides it, so a new
-        tab cannot reintroduce the asymmetry by forgetting.
+        The 548px `settings` token is 57.5% of the column, which is the
+        reference's 57.6% to within rounding. It arrived from the parallel
+        session (241177d), which measured the same defect independently and
+        landed a closer value than the `max-w-xl` this started as; that commit's
+        own merge dropped it, so it is reinstated here.
+
+        The placement stays on the body rather than per-panel: one place decides
+        the measure, so a new tab cannot reintroduce the asymmetry by
+        forgetting, and the heading and its form are inside the same box so they
+        share an edge — the misalignment that per-panel placement has to solve
+        separately does not arise.
       */}
-      <div className="mx-auto w-full min-w-0 max-w-xl flex-1">
+      <div className="mx-auto w-full min-w-0 max-w-settings flex-1">
         {active === 'appearance' && <AppearancePanel />}
         {active === 'preferences' && <PreferencesPanel />}
         {activeTab.soon && <SoonPanel tab={activeTab} />}

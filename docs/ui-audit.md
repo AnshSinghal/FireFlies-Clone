@@ -210,10 +210,27 @@ wrong by estimating. Edge-detecting vertical rules in both images:
 | Right gutter | 345px | 570px | **190px** |
 | Block ÷ column | 57.6% | 40.2% | **60.3%** |
 
-**Fixed.** `mx-auto max-w-xl` on the settings body rather than `max-w-sm` on
-each panel — one place decides the measure, so a new tab cannot reintroduce the
-asymmetry by forgetting. Gutters are now equal within 2px, against the
-reference's 9px.
+**Fixed** — at 547px, 57.4% of the column, gutters 202/204. The reference is
+57.6% with gutters equal within 9px.
+
+Worth recording how it landed, because it is the clearest example of the
+parallel-session hazard this repository has produced. Both sessions measured
+this defect independently and both fixed it, within an hour of each other. The
+values differed: `max-w-xl` (576px, 60.3%) here, a named `settings: 548px`
+token (57.5%) there. Theirs was closer, and it transferred the reference's
+*ratio* rather than its pixels — the right instinct when the two columns are
+different widths.
+
+Then their own merge commit dropped it. `origin/main` kept `max-w-xl` and the
+better implementation vanished into a merge that reported success and
+conflicted with nothing. Reconciled by hand afterwards: their value and named
+token, kept on the settings body rather than per-panel so one place decides the
+measure and a heading cannot drift from the form beneath it.
+
+The lesson is not "merge more carefully". It is that a silent merge resolution
+between two agents editing the same file is indistinguishable from success, and
+neither session would have noticed if the pixel measurement had not been re-run
+afterwards.
 
 Fireflies does **not** run its settings full-bleed either — it constrains to
 57.6% and centres, with gutters equal within 3% (336 vs 345). Ours constrains
