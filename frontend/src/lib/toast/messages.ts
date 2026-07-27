@@ -23,6 +23,7 @@ export const TOAST_MESSAGES = {
   selectionCopied: 'Selection copied to clipboard',
   transcriptCopied: 'Transcript copied to clipboard',
   summaryCopied: 'Summary copied to clipboard',
+  answerCopied: 'Answer copied to clipboard',
 
   saveFailed: "Couldn't save changes. Please try again.",
   // The clipboard API refuses on an insecure origin and when the user has
