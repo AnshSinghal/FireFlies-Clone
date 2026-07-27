@@ -100,5 +100,9 @@ class Bookmark(Base, TimestampMixin):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
+    #: No back_populates: nothing ever asks a segment for its bookmarks — the
+    #: flyout asks the MEETING, and the star state ships with the bookmark list.
+    segment: Mapped[TranscriptSegment] = relationship()
+
     def __repr__(self) -> str:
         return f"<Bookmark seg={self.segment_id}>"

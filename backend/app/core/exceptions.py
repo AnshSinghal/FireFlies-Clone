@@ -75,6 +75,11 @@ class SoundbiteNotFoundError(NotFoundError):
     message = "Soundbite not found."
 
 
+class HighlightNotFoundError(NotFoundError):
+    code = "HIGHLIGHT_NOT_FOUND"
+    message = "Highlight not found."
+
+
 class ForbiddenError(AppException):
     status_code = 403
     code = "FORBIDDEN"

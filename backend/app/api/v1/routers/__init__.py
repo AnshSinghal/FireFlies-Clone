@@ -14,6 +14,7 @@ from app.api.v1.routers import (
     channels,
     comments,
     export,
+    highlights,
     me,
     meetings,
     search,
@@ -38,5 +39,6 @@ api_router.include_router(ask.router)
 api_router.include_router(users.router)
 api_router.include_router(comments.router)
 api_router.include_router(soundbites.router)
+api_router.include_router(highlights.router)
 
 __all__ = ["api_router"]

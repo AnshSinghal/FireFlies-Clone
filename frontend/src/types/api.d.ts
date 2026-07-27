@@ -68,6 +68,27 @@ export interface paths {
     patch: operations['update_comment_api_v1_comments__comment_id__patch']
     trace?: never
   }
+  '/api/v1/highlights/{highlight_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Remove a highlight */
+    delete: operations['delete_highlight_api_v1_highlights__highlight_id__delete']
+    options?: never
+    head?: never
+    /**
+     * Recolour or annotate a highlight
+     * @description `note: null` clears the note; an absent field leaves it alone.
+     */
+    patch: operations['update_highlight_api_v1_highlights__highlight_id__patch']
+    trace?: never
+  }
   '/api/v1/me': {
     parameters: {
       query?: never
@@ -374,6 +395,50 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/{meeting_id}/bookmarks': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List bookmarks
+     * @description Active bookmarks in timeline order, with a snippet per moment.
+     */
+    get: operations['list_bookmarks_api_v1_meetings__meeting_id__bookmarks_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/bookmarks/{segment_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Bookmark a segment
+     * @description Idempotent: bookmarking a bookmarked segment returns the existing star.
+     */
+    put: operations['set_bookmark_api_v1_meetings__meeting_id__bookmarks__segment_id__put']
+    post?: never
+    /**
+     * Remove a bookmark
+     * @description Idempotent: un-starring a plain segment succeeds silently.
+     */
+    delete: operations['clear_bookmark_api_v1_meetings__meeting_id__bookmarks__segment_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/meetings/{meeting_id}/comments': {
     parameters: {
       query?: never
@@ -412,6 +477,30 @@ export interface paths {
     get: operations['export_meeting_api_v1_meetings__meeting_id__export_get']
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/highlights': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List highlights
+     * @description Every highlight in transcript order, each carrying the highlighted excerpt sliced from the segment's current text. Unpaginated: the transcript panel needs ALL of them to paint, and a partial paint is indistinguishable from data loss.
+     */
+    get: operations['list_highlights_api_v1_meetings__meeting_id__highlights_get']
+    put?: never
+    /**
+     * Add a highlight
+     * @description Character offsets into one segment's current text. The range must fit — a selection made against stale text is refused, not clamped.
+     */
+    post: operations['create_highlight_api_v1_meetings__meeting_id__highlights_post']
     delete?: never
     options?: never
     head?: never
@@ -795,6 +884,24 @@ export interface components {
        */
       text?: string | null
     }
+    /** BookmarkOut */
+    BookmarkOut: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Id */
+      id: number
+      /** Segment Id */
+      segment_id: number
+      /** Snippet */
+      snippet: string
+      /** Speaker */
+      speaker: string
+      /** Start Ms */
+      start_ms: number
+    }
     /** BulkDeleteRequest */
     BulkDeleteRequest: {
       /** Ids */
@@ -995,6 +1102,62 @@ export interface components {
        * @description Deployed application version.
        */
       version: string
+    }
+    /**
+     * HighlightColor
+     * @enum {string}
+     */
+    HighlightColor: 'amber' | 'green' | 'blue' | 'pink'
+    /** HighlightCreate */
+    HighlightCreate: {
+      /** @default amber */
+      color: components['schemas']['HighlightColor']
+      /** End Offset */
+      end_offset: number
+      /** Note */
+      note?: string | null
+      /** Segment Id */
+      segment_id: number
+      /** Start Offset */
+      start_offset: number
+    }
+    /** HighlightOut */
+    HighlightOut: {
+      color: components['schemas']['HighlightColor']
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** End Offset */
+      end_offset: number
+      /** Id */
+      id: number
+      /** Note */
+      note: string | null
+      /** Segment Id */
+      segment_id: number
+      /** Speaker */
+      speaker: string
+      /** Start Ms */
+      start_ms: number
+      /** Start Offset */
+      start_offset: number
+      /** Text */
+      text: string
+    }
+    /**
+     * HighlightUpdate
+     * @description Partial edit: colour and/or note.
+     *
+     *     `note: null` MEANS "clear the note" — the router distinguishes an explicit
+     *     null from an absent field via `model_fields_set`, the same PATCH contract
+     *     the rest of the API uses.
+     */
+    HighlightUpdate: {
+      color?: components['schemas']['HighlightColor'] | null
+      /** Note */
+      note?: string | null
     }
     /**
      * ImportedSegment
@@ -1880,6 +2043,88 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['CommentOut']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  delete_highlight_api_v1_highlights__highlight_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        highlight_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  update_highlight_api_v1_highlights__highlight_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        highlight_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['HighlightUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HighlightOut']
         }
       }
       /** @description Validation Error */
@@ -2912,6 +3157,180 @@ export interface operations {
       }
     }
   }
+  list_bookmarks_api_v1_meetings__meeting_id__bookmarks_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BookmarkOut'][]
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  set_bookmark_api_v1_meetings__meeting_id__bookmarks__segment_id__put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+        segment_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BookmarkOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  clear_bookmark_api_v1_meetings__meeting_id__bookmarks__segment_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+        segment_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
   list_comments_api_v1_meetings__meeting_id__comments_get: {
     parameters: {
       query?: {
@@ -3091,6 +3510,126 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  list_highlights_api_v1_meetings__meeting_id__highlights_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HighlightOut'][]
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  create_highlight_api_v1_meetings__meeting_id__highlights_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['HighlightCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HighlightOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
         }
       }
       /** @description Unexpected error. `details.request_id` correlates to logs. */
