@@ -65,6 +65,14 @@ class MediaNotFoundError(NotFoundError):
     code = "MEDIA_NOT_FOUND"
 
 
+class HighlightNotFoundError(NotFoundError):
+    code = "HIGHLIGHT_NOT_FOUND"
+
+
+class BookmarkNotFoundError(NotFoundError):
+    code = "BOOKMARK_NOT_FOUND"
+
+
 class GoneError(AppException):
     """410, not 404.
 

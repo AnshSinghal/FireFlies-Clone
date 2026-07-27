@@ -267,6 +267,99 @@
         "title": "Body_parse_transcript_preview_api_v1_meetings_parse_post",
         "type": "object"
       },
+      "BookmarkCreate": {
+        "properties": {
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "segment_id"
+        ],
+        "title": "BookmarkCreate",
+        "type": "object"
+      },
+      "BookmarkOut": {
+        "description": "A starred segment, with the snippet the flyout renders.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "meeting_id": {
+            "title": "Meeting Id",
+            "type": "integer"
+          },
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "integer"
+          },
+          "speaker_id": {
+            "title": "Speaker Id",
+            "type": "integer"
+          },
+          "speaker_label": {
+            "title": "Speaker Label",
+            "type": "string"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "meeting_id",
+          "segment_id",
+          "start_ms",
+          "speaker_id",
+          "speaker_label",
+          "text",
+          "created_at"
+        ],
+        "title": "BookmarkOut",
+        "type": "object"
+      },
+      "BookmarkToggleOut": {
+        "description": "The result of toggling a star.\n\nReturns the resulting STATE rather than 201/204, so an optimistic client\nthat fired two toggles in quick succession can reconcile against the truth\ninstead of inferring it from a status code.",
+        "properties": {
+          "bookmark": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BookmarkOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bookmarked": {
+            "title": "Bookmarked",
+            "type": "boolean"
+          },
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "segment_id",
+          "bookmarked",
+          "bookmark"
+        ],
+        "title": "BookmarkToggleOut",
+        "type": "object"
+      },
       "BulkDeleteRequest": {
         "properties": {
           "ids": {
@@ -541,6 +634,163 @@
           "ai_provider"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HighlightColor": {
+        "enum": [
+          "amber",
+          "green",
+          "blue",
+          "pink"
+        ],
+        "title": "HighlightColor",
+        "type": "string"
+      },
+      "HighlightCreate": {
+        "description": "A new highlight, addressed by segment and character offsets.\n\nThe client sends offsets rather than the selected string: the server would\notherwise have to guess WHICH occurrence of \"we should ship it\" was meant,\nand would guess wrong on the second one.",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/HighlightColor",
+            "default": "amber"
+          },
+          "end_offset": {
+            "exclusiveMinimum": 0.0,
+            "title": "End Offset",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "integer"
+          },
+          "start_offset": {
+            "minimum": 0.0,
+            "title": "Start Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "segment_id",
+          "start_offset",
+          "end_offset"
+        ],
+        "title": "HighlightCreate",
+        "type": "object"
+      },
+      "HighlightOut": {
+        "description": "A highlight plus enough context to render it in a list.",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/HighlightColor"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "end_offset": {
+            "title": "End Offset",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "meeting_id": {
+            "title": "Meeting Id",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "segment_id": {
+            "title": "Segment Id",
+            "type": "integer"
+          },
+          "speaker_id": {
+            "title": "Speaker Id",
+            "type": "integer"
+          },
+          "speaker_label": {
+            "title": "Speaker Label",
+            "type": "string"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          },
+          "start_offset": {
+            "title": "Start Offset",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "meeting_id",
+          "segment_id",
+          "start_offset",
+          "end_offset",
+          "color",
+          "note",
+          "text",
+          "start_ms",
+          "speaker_id",
+          "speaker_label",
+          "created_at"
+        ],
+        "title": "HighlightOut",
+        "type": "object"
+      },
+      "HighlightUpdate": {
+        "description": "Recolour or annotate an existing highlight (T-32.5).\n\nThe RANGE is deliberately immutable. Re-selecting is one gesture; dragging a\nstored offset pair around is a second, subtly different editing model that\nthe popover has no affordance for.\n\n`note` is nullable on purpose \u2014 sending `null` clears it, which is how the\npopover's \"remove note\" works without a second endpoint.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HighlightColor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "HighlightUpdate",
         "type": "object"
       },
       "ImportedSegment": {
@@ -3494,6 +3744,528 @@
         "summary": "Add an action item",
         "tags": [
           "meetings"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/bookmarks": {
+      "get": {
+        "operationId": "list_bookmarks_api_v1_meetings__meeting_id__bookmarks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BookmarkOut"
+                  },
+                  "title": "Response List Bookmarks Api V1 Meetings  Meeting Id  Bookmarks Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Bookmarked moments, in recording order",
+        "tags": [
+          "highlights"
+        ]
+      },
+      "post": {
+        "description": "Idempotent in the sense that matters: the response states the resulting state rather than leaving the client to infer it, so two toggles racing each other reconcile against the server instead of flickering.",
+        "operationId": "toggle_bookmark_api_v1_meetings__meeting_id__bookmarks_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookmarkCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookmarkToggleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Toggle a segment's star",
+        "tags": [
+          "highlights"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/bookmarks/{bookmark_id}": {
+      "delete": {
+        "operationId": "delete_bookmark_api_v1_meetings__meeting_id__bookmarks__bookmark_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bookmark_id",
+            "required": true,
+            "schema": {
+              "title": "Bookmark Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Remove a bookmark by id",
+        "tags": [
+          "highlights"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/highlights": {
+      "get": {
+        "description": "Returned unpaginated and in reading order. Highlights are painted into the transcript, so the client needs all of them before it renders any of them \u2014 a page boundary would leave lines silently unhighlighted.\n\nEach row carries the quoted text, the segment's timestamp and its speaker, so the flyout can render without the transcript.",
+        "operationId": "list_highlights_api_v1_meetings__meeting_id__highlights_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/HighlightOut"
+                  },
+                  "title": "Response List Highlights Api V1 Meetings  Meeting Id  Highlights Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Every highlight in a meeting",
+        "tags": [
+          "highlights"
+        ]
+      },
+      "post": {
+        "operationId": "create_highlight_api_v1_meetings__meeting_id__highlights_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HighlightCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HighlightOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Highlight a character range",
+        "tags": [
+          "highlights"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/highlights/{highlight_id}": {
+      "delete": {
+        "operationId": "delete_highlight_api_v1_meetings__meeting_id__highlights__highlight_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "highlight_id",
+            "required": true,
+            "schema": {
+              "title": "Highlight Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Remove a highlight",
+        "tags": [
+          "highlights"
+        ]
+      },
+      "patch": {
+        "description": "The range is immutable \u2014 re-select to change it. Sending `note: null` clears the note.",
+        "operationId": "update_highlight_api_v1_meetings__meeting_id__highlights__highlight_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "highlight_id",
+            "required": true,
+            "schema": {
+              "title": "Highlight Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HighlightUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HighlightOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid payload; `details` is keyed by field path."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Recolour or annotate a highlight",
+        "tags": [
+          "highlights"
         ]
       }
     },

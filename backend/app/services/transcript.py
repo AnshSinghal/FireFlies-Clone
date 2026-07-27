@@ -24,6 +24,7 @@ from app.schemas.transcript import (
     SpeakerUpdate,
     TranscriptPage,
 )
+from app.services.highlights import HighlightService
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -185,10 +186,18 @@ class TranscriptService:
             segment.speaker_id = payload.speaker_id
 
         if payload.text is not None and payload.text != segment.text:
+            previous = segment.text
             if segment.original_text is None:
                 segment.original_text = segment.text
             segment.text = payload.text
             segment.is_edited = True
+
+            # Before the commit, while BOTH strings are in hand: highlights are
+            # character offsets into the text that just changed, and once this
+            # transaction lands there is no way to work out where they moved to
+            # (T-32.11). Kept as a call into `HighlightService` rather than
+            # inlined so the rule has exactly one home.
+            HighlightService(self.db).remap_after_edit(segment.id, previous, payload.text)
 
             if segment.meeting.summary is not None:
                 segment.meeting.summary.is_stale = True

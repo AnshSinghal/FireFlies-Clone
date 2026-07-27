@@ -310,6 +310,88 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/meetings/{meeting_id}/bookmarks': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Bookmarked moments, in recording order */
+    get: operations['list_bookmarks_api_v1_meetings__meeting_id__bookmarks_get']
+    put?: never
+    /**
+     * Toggle a segment's star
+     * @description Idempotent in the sense that matters: the response states the resulting state rather than leaving the client to infer it, so two toggles racing each other reconcile against the server instead of flickering.
+     */
+    post: operations['toggle_bookmark_api_v1_meetings__meeting_id__bookmarks_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/bookmarks/{bookmark_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Remove a bookmark by id */
+    delete: operations['delete_bookmark_api_v1_meetings__meeting_id__bookmarks__bookmark_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/highlights': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Every highlight in a meeting
+     * @description Returned unpaginated and in reading order. Highlights are painted into the transcript, so the client needs all of them before it renders any of them — a page boundary would leave lines silently unhighlighted.
+     *
+     *     Each row carries the quoted text, the segment's timestamp and its speaker, so the flyout can render without the transcript.
+     */
+    get: operations['list_highlights_api_v1_meetings__meeting_id__highlights_get']
+    put?: never
+    /** Highlight a character range */
+    post: operations['create_highlight_api_v1_meetings__meeting_id__highlights_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/meetings/{meeting_id}/highlights/{highlight_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Remove a highlight */
+    delete: operations['delete_highlight_api_v1_meetings__meeting_id__highlights__highlight_id__delete']
+    options?: never
+    head?: never
+    /**
+     * Recolour or annotate a highlight
+     * @description The range is immutable — re-select to change it. Sending `note: null` clears the note.
+     */
+    patch: operations['update_highlight_api_v1_meetings__meeting_id__highlights__highlight_id__patch']
+    trace?: never
+  }
   '/api/v1/meetings/{meeting_id}/media': {
     parameters: {
       query?: never
@@ -578,6 +660,51 @@ export interface components {
        */
       text?: string | null
     }
+    /** BookmarkCreate */
+    BookmarkCreate: {
+      /** Segment Id */
+      segment_id: number
+    }
+    /**
+     * BookmarkOut
+     * @description A starred segment, with the snippet the flyout renders.
+     */
+    BookmarkOut: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Id */
+      id: number
+      /** Meeting Id */
+      meeting_id: number
+      /** Segment Id */
+      segment_id: number
+      /** Speaker Id */
+      speaker_id: number
+      /** Speaker Label */
+      speaker_label: string
+      /** Start Ms */
+      start_ms: number
+      /** Text */
+      text: string
+    }
+    /**
+     * BookmarkToggleOut
+     * @description The result of toggling a star.
+     *
+     *     Returns the resulting STATE rather than 201/204, so an optimistic client
+     *     that fired two toggles in quick succession can reconcile against the truth
+     *     instead of inferring it from a status code.
+     */
+    BookmarkToggleOut: {
+      bookmark: components['schemas']['BookmarkOut'] | null
+      /** Bookmarked */
+      bookmarked: boolean
+      /** Segment Id */
+      segment_id: number
+    }
     /** BulkDeleteRequest */
     BulkDeleteRequest: {
       /** Ids */
@@ -728,6 +855,79 @@ export interface components {
        * @description Deployed application version.
        */
       version: string
+    }
+    /**
+     * HighlightColor
+     * @enum {string}
+     */
+    HighlightColor: 'amber' | 'green' | 'blue' | 'pink'
+    /**
+     * HighlightCreate
+     * @description A new highlight, addressed by segment and character offsets.
+     *
+     *     The client sends offsets rather than the selected string: the server would
+     *     otherwise have to guess WHICH occurrence of "we should ship it" was meant,
+     *     and would guess wrong on the second one.
+     */
+    HighlightCreate: {
+      /** @default amber */
+      color: components['schemas']['HighlightColor']
+      /** End Offset */
+      end_offset: number
+      /** Note */
+      note?: string | null
+      /** Segment Id */
+      segment_id: number
+      /** Start Offset */
+      start_offset: number
+    }
+    /**
+     * HighlightOut
+     * @description A highlight plus enough context to render it in a list.
+     */
+    HighlightOut: {
+      color: components['schemas']['HighlightColor']
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** End Offset */
+      end_offset: number
+      /** Id */
+      id: number
+      /** Meeting Id */
+      meeting_id: number
+      /** Note */
+      note: string | null
+      /** Segment Id */
+      segment_id: number
+      /** Speaker Id */
+      speaker_id: number
+      /** Speaker Label */
+      speaker_label: string
+      /** Start Ms */
+      start_ms: number
+      /** Start Offset */
+      start_offset: number
+      /** Text */
+      text: string
+    }
+    /**
+     * HighlightUpdate
+     * @description Recolour or annotate an existing highlight (T-32.5).
+     *
+     *     The RANGE is deliberately immutable. Re-selecting is one gesture; dragging a
+     *     stored offset pair around is a second, subtly different editing model that
+     *     the popover has no affordance for.
+     *
+     *     `note` is nullable on purpose — sending `null` clears it, which is how the
+     *     popover's "remove note" works without a second endpoint.
+     */
+    HighlightUpdate: {
+      color?: components['schemas']['HighlightColor'] | null
+      /** Note */
+      note?: string | null
     }
     /**
      * ImportedSegment
@@ -2309,6 +2509,396 @@ export interface operations {
       }
       /** @description Deleted, but restorable. */
       410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  list_bookmarks_api_v1_meetings__meeting_id__bookmarks_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BookmarkOut'][]
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  toggle_bookmark_api_v1_meetings__meeting_id__bookmarks_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BookmarkCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BookmarkToggleOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  delete_bookmark_api_v1_meetings__meeting_id__bookmarks__bookmark_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+        bookmark_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description No such resource. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  list_highlights_api_v1_meetings__meeting_id__highlights_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HighlightOut'][]
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  create_highlight_api_v1_meetings__meeting_id__highlights_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['HighlightCreate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HighlightOut']
+        }
+      }
+      /** @description No meeting with this id. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Deleted, but restorable. */
+      410: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Invalid payload; `details` is keyed by field path. */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  delete_highlight_api_v1_meetings__meeting_id__highlights__highlight_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+        highlight_id: number
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description No such resource. */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+      /** @description Unexpected error. `details.request_id` correlates to logs. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ErrorResponse']
+        }
+      }
+    }
+  }
+  update_highlight_api_v1_meetings__meeting_id__highlights__highlight_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        meeting_id: number
+        highlight_id: number
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['HighlightUpdate']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HighlightOut']
+        }
+      }
+      /** @description No such resource. */
+      404: {
         headers: {
           [name: string]: unknown
         }
