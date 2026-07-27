@@ -8,6 +8,8 @@
 
 import type { LucideIcon } from 'lucide-react'
 
+import { SettingCard, SettingGroup } from './setting-card'
+
 import { Badge } from '@/components/ui/chip'
 import { Switch } from '@/components/ui/controls'
 
@@ -42,17 +44,28 @@ export function SoonPanel({ tab }: SoonPanelProps) {
         {tab.label.toLowerCase()} for the whole workspace.
       </p>
 
-      <div className="space-y-3">
+      {/*
+        Cards here too, so every Settings tab reads the same. These toggles are
+        deliberately inert — the panel says so above — but a disabled control in
+        a card still shows the shape the real thing would take, which is the
+        point of a placeholder that explains itself (T-30).
+      */}
+      <SettingGroup title={tab.label}>
         {(SAMPLE_TOGGLES[tab.id] ?? []).map((label) => (
-          <Switch
+          <SettingCard
             key={label}
-            checked={false}
-            onCheckedChange={() => undefined}
-            disabled
-            label={label}
+            title={label}
+            trailing={
+              <Switch
+                checked={false}
+                onCheckedChange={() => undefined}
+                disabled
+                ariaLabel={label}
+              />
+            }
           />
         ))}
-      </div>
+      </SettingGroup>
     </section>
   )
 }
