@@ -402,6 +402,15 @@ Two differences remain, both deliberate and neither a measurement:
 - **Settings cards carry no icon.** Fireflies puts a small product glyph left of
   each title. Ours would be invented — there is no calendar integration behind a
   calendar icon here.
+
+*(A note on how the Settings measure was finally made consistent: it took three
+passes. The panels beside each other were done first, then Appearance, then
+`tags-settings-view.tsx` — which shares the shell but lives in `features/tags/`,
+so it ran full-width and the page jumped on switching to that tab. Each pass
+looked complete from inside the folder being edited. The lesson is that "every
+tab" is a claim about a rendered surface, not about a directory, and the only
+way I caught the third one was following the demo script's route rather than
+the file tree.)*
 - **Muted text is darker than theirs** (4.97:1 against their 2.60:1). The one
   place this clone knowingly departs from the reference on colour, traded for
   legibility. See §3.2 of `design.md`.

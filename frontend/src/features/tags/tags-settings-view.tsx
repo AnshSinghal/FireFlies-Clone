@@ -54,7 +54,22 @@ export function TagsSettingsView() {
     <div className="flex flex-col gap-6 py-6 md:flex-row" data-testid="settings-view">
       <SettingsNav active="tags" />
 
-      <section className="min-w-0 flex-1 space-y-6" data-testid="tags-settings-page">
+      {/*
+        `mx-auto max-w-settings`, the same measure every other Settings tab uses.
+        Without it this tab ran full-width while Preferences, Appearance and the
+        soon-panels sat in a 548px centred column, so the content jumped width on
+        switching to Tags — the same defect fixed for Appearance, missed here
+        because this view lives in `features/tags/` rather than beside the others
+        and shares only the shell.
+
+        Cards are NOT applied. The tag list is already a bordered container with
+        divided rows, which is the reference's pattern for a list of things; a
+        card per tag would nest a border inside a border to no end.
+      */}
+      <section
+        className="mx-auto w-full min-w-0 max-w-settings flex-1 space-y-6"
+        data-testid="tags-settings-page"
+      >
         <header className="space-y-1">
           <h2 className="text-h3 text-primary">Tags</h2>
           <p className="text-sm text-secondary">
