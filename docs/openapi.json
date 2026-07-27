@@ -1833,6 +1833,145 @@
         "title": "SidebarChannels",
         "type": "object"
       },
+      "SoundbiteCreate": {
+        "properties": {
+          "auto_generated": {
+            "default": false,
+            "title": "Auto Generated",
+            "type": "boolean"
+          },
+          "end_ms": {
+            "exclusiveMinimum": 0.0,
+            "title": "End Ms",
+            "type": "integer"
+          },
+          "start_ms": {
+            "minimum": 0.0,
+            "title": "Start Ms",
+            "type": "integer"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "start_ms",
+          "end_ms"
+        ],
+        "title": "SoundbiteCreate",
+        "type": "object"
+      },
+      "SoundbiteListOut": {
+        "description": "Every clip of one meeting, ordered by `start_ms`.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SoundbiteOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SoundbiteListOut",
+        "type": "object"
+      },
+      "SoundbiteOut": {
+        "properties": {
+          "auto_generated": {
+            "title": "Auto Generated",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "end_ms": {
+            "title": "End Ms",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "meeting_id": {
+            "title": "Meeting Id",
+            "type": "integer"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "meeting_id",
+          "title",
+          "start_ms",
+          "end_ms",
+          "auto_generated",
+          "created_at"
+        ],
+        "title": "SoundbiteOut",
+        "type": "object"
+      },
+      "SoundbiteProposalListOut": {
+        "description": "Exactly the provider's proposals \u2014 at most three, timeline-ordered.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SoundbiteProposalOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SoundbiteProposalListOut",
+        "type": "object"
+      },
+      "SoundbiteProposalOut": {
+        "description": "An unsaved auto-clip candidate.\n\nNo `id` on purpose \u2014 proposals are never persisted (T-33.8). Saving one is\na plain `POST /soundbites` with `auto_generated=true`; dismissing one is a\nclient-side matter.",
+        "properties": {
+          "end_ms": {
+            "title": "End Ms",
+            "type": "integer"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "start_ms": {
+            "title": "Start Ms",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "start_ms",
+          "end_ms",
+          "score"
+        ],
+        "title": "SoundbiteProposalOut",
+        "type": "object"
+      },
       "SpeakerCreate": {
         "description": "A voice the diariser did not find (T-25.6).",
         "properties": {
@@ -4187,6 +4326,243 @@
         ]
       }
     },
+    "/api/v1/meetings/{meeting_id}/soundbites": {
+      "get": {
+        "description": "Every clip of the meeting, ordered by start time.",
+        "operationId": "list_soundbites_api_v1_meetings__meeting_id__soundbites_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoundbiteListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "List soundbites",
+        "tags": [
+          "soundbites"
+        ]
+      },
+      "post": {
+        "description": "A named clip of the meeting. The range must be 3 seconds to 3 minutes long and end inside the meeting.",
+        "operationId": "create_soundbite_api_v1_meetings__meeting_id__soundbites_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SoundbiteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoundbiteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Create a soundbite",
+        "tags": [
+          "soundbites"
+        ]
+      }
+    },
+    "/api/v1/meetings/{meeting_id}/soundbites/proposals": {
+      "get": {
+        "description": "Up to three clip candidates from the segments with the highest keyword density. Deterministic per meeting and never persisted \u2014 saving one is a plain POST with `auto_generated=true`.",
+        "operationId": "propose_soundbites_api_v1_meetings__meeting_id__soundbites_proposals_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "title": "Meeting Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SoundbiteProposalListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No meeting with this id."
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Deleted, but restorable."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Propose auto-generated soundbites",
+        "tags": [
+          "soundbites"
+        ]
+      }
+    },
     "/api/v1/meetings/{meeting_id}/speakers": {
       "get": {
         "operationId": "get_speakers_api_v1_meetings__meeting_id__speakers_get",
@@ -4731,6 +5107,62 @@
         "summary": "Search meetings and transcripts",
         "tags": [
           "search"
+        ]
+      }
+    },
+    "/api/v1/soundbites/{soundbite_id}": {
+      "delete": {
+        "description": "Hard delete \u2014 a clip is a pointer into the transcript, and two integers recreate it. Nothing to restore, so no tombstone.",
+        "operationId": "delete_soundbite_api_v1_soundbites__soundbite_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "soundbite_id",
+            "required": true,
+            "schema": {
+              "title": "Soundbite Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "No such resource."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unexpected error. `details.request_id` correlates to logs."
+          }
+        },
+        "summary": "Delete a soundbite",
+        "tags": [
+          "soundbites"
         ]
       }
     },
