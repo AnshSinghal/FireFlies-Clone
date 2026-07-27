@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import re
+import time
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.models import Meeting, Speaker, TranscriptSegment
 from app.services.search import SearchService
 from tests.factories import make_full_meeting, make_meeting, make_segments, make_speaker, make_user
 
@@ -127,7 +130,6 @@ def test_t43_9_search_goes_through_the_fts_index_not_a_scan(db: Session) -> None
     and every other test still passes — only the plan betrays that search has
     become a full-table scan.
     """
-    from sqlalchemy import text
 
     from app.db.search import _SEARCH_SQL
 
@@ -136,6 +138,11 @@ def test_t43_9_search_goes_through_the_fts_index_not_a_scan(db: Session) -> None
         {
             "query": "pricing",
             "meeting_id": None,
+            # T-35 added these filters to the shared WHERE clause.
+            "speaker": None,
+            "host": None,
+            "before": None,
+            "after": None,
             "limit": 20,
             "offset": 0,
             "open": "[",
@@ -151,3 +158,153 @@ def test_t43_9_search_goes_through_the_fts_index_not_a_scan(db: Session) -> None
     assert re.search(r"\bSCAN (transcript_segments|meetings|speakers|s|m|sp|p)\b", plan) is None, (
         f"full-table scan crept in: {plan}"
     )
+
+
+class TestGlobalSearch:
+    """The /search page's contract (T-35, cases T35-A → T35-F)."""
+
+    @pytest.fixture()
+    def corpus(self, db: Session) -> dict[str, Meeting]:
+        """Three meetings with known, distinct content."""
+        pricing = make_meeting(db, title="Q3 pricing sync")
+        sarah = make_speaker(db, pricing, label="Sarah Chen", color_index=0)
+        marcus = make_speaker(db, pricing, label="Marcus Patel", color_index=1)
+        _segments(
+            db,
+            pricing,
+            [
+                (sarah, "The pricing model needs a usage tier."),
+                (marcus, "Pricing again — and churn is up this month."),
+                (sarah, "Let's finalise the pricing model on Friday."),
+            ],
+        )
+
+        churn = make_meeting(db, title="Churn review", host=make_user(db, name="Grace Hopper"))
+        grace = make_speaker(db, churn, label="Grace Hopper", color_index=0)
+        _segments(db, churn, [(grace, "Churn pricing pressure in enterprise.")])
+
+        unrelated = make_meeting(db, title="Design crit", host=make_user(db, name="Ada Lovelace"))
+        ada = make_speaker(db, unrelated, label="Ada Lovelace", color_index=0)
+        _segments(db, unrelated, [(ada, "The new onboarding flow looks great.")])
+
+        db.commit()
+        return {"pricing": pricing, "churn": churn, "unrelated": unrelated}
+
+    def test_t35a_a_term_finds_ranked_snippets(
+        self, client: TestClient, corpus: dict[str, Meeting]
+    ) -> None:
+        body = client.get("/api/v1/search", params={"q": "pricing"}).json()
+
+        # Both meetings that say it, none that do not.
+        meeting_ids = {hit["meeting_id"] for hit in body["transcripts"]}
+        assert corpus["pricing"].id in meeting_ids
+        assert corpus["churn"].id in meeting_ids
+        assert corpus["unrelated"].id not in meeting_ids
+
+        # Every snippet carries the term and offsets that point at it.
+        for hit in body["transcripts"]:
+            assert "pricing" in hit["snippet"].lower()
+            assert hit["matches"], "a hit with no match ranges cannot be highlighted"
+            first = hit["matches"][0]
+            marked = hit["snippet"][first["start"] : first["end"]].lower()
+            assert "pricing" in marked or marked in "pricing"
+
+        # And the total is the corpus's, not the page's.
+        assert body["total"] >= len(body["transcripts"])
+
+    def test_t35b_a_quoted_phrase_matches_only_the_phrase(
+        self, client: TestClient, corpus: dict[str, Meeting]
+    ) -> None:
+        body = client.get("/api/v1/search", params={"q": '"pricing model"'}).json()
+
+        snippets = [hit["snippet"].lower() for hit in body["transcripts"]]
+        assert snippets, "the phrase exists in the corpus"
+        assert all("pricing model" in snippet for snippet in snippets)
+        # "Churn pricing pressure" contains the word but not the phrase.
+        assert corpus["churn"].id not in {hit["meeting_id"] for hit in body["transcripts"]}
+
+    def test_t35c_a_minus_excludes(self, client: TestClient, corpus: dict[str, Meeting]) -> None:
+        body = client.get("/api/v1/search", params={"q": "pricing -churn"}).json()
+
+        snippets = [hit["snippet"].lower() for hit in body["transcripts"]]
+        assert snippets
+        assert all("churn" not in snippet for snippet in snippets)
+
+    def test_t35d_speaker_filter_narrows_to_that_voice(
+        self, client: TestClient, corpus: dict[str, Meeting]
+    ) -> None:
+        body = client.get("/api/v1/search", params={"q": "speaker:Sarah pricing"}).json()
+
+        assert body["transcripts"], "Sarah says 'pricing' twice"
+        assert all(hit["speaker"] == "Sarah Chen" for hit in body["transcripts"])
+
+    # The EXPLAIN QUERY PLAN claim lives in `test_t43_9_...` above — T-43
+    # landed the stronger version (a no-SCAN regex over every base table)
+    # while this suite was in flight, and one strong test beats two twins.
+
+    def test_t35f_a_large_corpus_answers_quickly(self, client: TestClient, db: Session) -> None:
+        """Sub-200ms over 500 segments (T-35.11).
+
+        Generous against the plan's own number — the point is catching an
+        accidental O(n) re-rank in Python, not benchmarking SQLite.
+        """
+        meeting = make_meeting(db, title="Marathon planning session")
+        speaker = make_speaker(db, meeting, label="Speaker 1", color_index=0)
+        _segments(
+            db,
+            meeting,
+            [
+                (speaker, f"Line {i} discusses budget planning and roadmap topic {i % 7}.")
+                for i in range(500)
+            ],
+        )
+        db.commit()
+
+        start = time.perf_counter()
+        response = client.get("/api/v1/search", params={"q": "budget roadmap"})
+        elapsed_ms = (time.perf_counter() - start) * 1000
+
+        assert response.status_code == 200
+        assert response.json()["total"] >= 500
+        assert elapsed_ms < 200, f"took {elapsed_ms:.0f}ms"
+
+    def test_pagination_is_stable_with_a_real_total(
+        self, client: TestClient, corpus: dict[str, Meeting]
+    ) -> None:
+        first = client.get("/api/v1/search", params={"q": "pricing", "limit": 2}).json()
+        assert len(first["transcripts"]) == 2
+        assert first["has_more"] is True
+
+        second = client.get(
+            "/api/v1/search", params={"q": "pricing", "limit": 2, "offset": 2}
+        ).json()
+
+        # No overlap between pages, and the totals agree.
+        first_ids = {hit["segment_id"] for hit in first["transcripts"]}
+        second_ids = {hit["segment_id"] for hit in second["transcripts"]}
+        assert not first_ids & second_ids
+        assert second["total"] == first["total"]
+        # Titles are sent once, on the first page only — appending would
+        # otherwise duplicate them.
+        assert second["meetings"] == []
+
+
+def _segments(
+    db: Session,
+    meeting: Meeting,
+    lines: list[tuple[Speaker, str]],
+) -> None:
+    for index, (speaker, line) in enumerate(lines):
+        db.add(
+            TranscriptSegment(
+                meeting_id=meeting.id,
+                speaker_id=speaker.id,
+                sequence=index,
+                start_ms=index * 10_000,
+                end_ms=index * 10_000 + 8_000,
+                text=line,
+            )
+        )
+    db.flush()
+    # The seeder rebuilds FTS explicitly; tests write through the triggers, so
+    # nothing more is needed — which is itself part of what is under test.

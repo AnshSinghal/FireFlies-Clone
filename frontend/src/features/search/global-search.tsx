@@ -97,6 +97,12 @@ export function GlobalSearch() {
     setExpanded(false)
   }, [])
 
+  /** Removes ONE remembered search — the ✕ on a recent row (T-35.9). */
+  const forgetSearch = useCallback(
+    (term: string) => setRecent(recent.filter((r) => r !== term)),
+    [recent, setRecent],
+  )
+
   const focusSearch = useCallback(() => {
     setExpanded(true)
     setOpen(true)
@@ -116,13 +122,20 @@ export function GlobalSearch() {
 
   const select = useCallback(
     (row: SearchRow) => {
+      if (row.kind === 'clear') {
+        // Clears and stays open: the user is mid-interaction with the
+        // dropdown, and closing it would read as the whole thing vanishing.
+        setRecent([])
+        return
+      }
+
       // A recent search or a "see all" row is itself a search; a result is not.
       if (row.kind !== 'action') rememberSearch(row.kind === 'recent' ? row.label : value)
       close()
       inputRef.current?.blur()
       router.push(row.href)
     },
-    [close, rememberSearch, router, value],
+    [close, rememberSearch, router, value, setRecent],
   )
 
   // ⌘K. The binding lives in useCommandPalette so T-22's ⌘F is designed against
@@ -258,6 +271,7 @@ export function GlobalSearch() {
               listboxId={listboxId}
               onSelect={select}
               onHover={setPreferredId}
+              onRemoveRecent={forgetSearch}
             />
           )}
         </div>

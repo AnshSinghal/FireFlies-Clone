@@ -8,10 +8,11 @@
  * second.
  */
 
-import { ArrowRight, Clock, FileText, MessageSquare, Search } from 'lucide-react'
+import { ArrowRight, Clock, FileText, MessageSquare, Search, Trash2, X } from 'lucide-react'
 import Link from 'next/link'
 
 import { Highlighter } from '@/components/ui/highlighter'
+import { IconButton } from '@/components/ui/icon-button'
 import { Skeleton } from '@/components/ui/skeleton'
 
 import type { SearchRow, SearchSection } from './rows'
@@ -22,6 +23,7 @@ const ROW_ICON = {
   meeting: FileText,
   transcript: MessageSquare,
   all: Search,
+  clear: Trash2,
 } as const
 
 interface SearchDropdownProps {
@@ -33,6 +35,8 @@ interface SearchDropdownProps {
   listboxId: string
   onSelect: (row: SearchRow) => void
   onHover: (id: string) => void
+  /** Removes one remembered search (T-35.9). Rendered only on recent rows. */
+  onRemoveRecent?: (term: string) => void
 }
 
 export function SearchDropdown({
@@ -43,6 +47,7 @@ export function SearchDropdown({
   listboxId,
   onSelect,
   onHover,
+  onRemoveRecent,
 }: SearchDropdownProps) {
   return (
     <div
@@ -76,6 +81,7 @@ export function SearchDropdown({
                     active={row.id === activeId}
                     onSelect={onSelect}
                     onHover={onHover}
+                    onRemoveRecent={onRemoveRecent}
                   />
                 ))}
               </ul>
@@ -91,11 +97,13 @@ function Row({
   active,
   onSelect,
   onHover,
+  onRemoveRecent,
 }: {
   row: SearchRow
   active: boolean
   onSelect: (row: SearchRow) => void
   onHover: (id: string) => void
+  onRemoveRecent?: (term: string) => void
 }) {
   const Icon = ROW_ICON[row.kind]
 
@@ -107,6 +115,7 @@ function Row({
       data-testid={row.id}
       data-active={active}
       onPointerEnter={() => onHover(row.id)}
+      className="group/row relative"
     >
       <Link
         href={row.href}
@@ -132,6 +141,29 @@ function Row({
               ranges={row.ranges}
               className="truncate text-body-strong text-primary"
             />
+            {row.kind === 'recent' && onRemoveRecent && (
+              /*
+               * Pointer-only, and OUTSIDE the tab order (tabIndex -1), like the
+               * link itself: focus lives in the input while the listbox is
+               * driven by aria-activedescendant. The keyboard's route to the
+               * same outcome is the "Clear history" row below.
+               */
+              <IconButton
+                label={`Remove "${row.label}" from history`}
+                size="sm"
+                icon={<X size={14} strokeWidth={2} />}
+                tabIndex={-1}
+                hideTooltip
+                data-testid={`${row.id}-remove`}
+                onMouseDown={(event) => {
+                  // Neither blur the input nor run the row's own search.
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onRemoveRecent(row.label)
+                }}
+                className="shrink-0 opacity-0 transition-opacity duration-fast group-hover/row:opacity-100"
+              />
+            )}
             {row.meta && row.kind === 'meeting' && (
               <span className="shrink-0 text-xs text-muted">{row.meta}</span>
             )}

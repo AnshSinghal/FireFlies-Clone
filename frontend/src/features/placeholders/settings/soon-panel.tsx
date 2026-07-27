@@ -34,8 +34,8 @@ export function SoonPanel({ tab }: SoonPanelProps) {
         <Badge variant="neutral">Soon</Badge>
       </header>
       <p className="text-sm text-secondary">
-        Not part of this build. In the real Fireflies this group configures {tab.label.toLowerCase()}
-        {' '}for the whole workspace.
+        Not part of this build. In the real Fireflies this group configures{' '}
+        {tab.label.toLowerCase()} for the whole workspace.
       </p>
 
       <div className="max-w-sm space-y-3">

@@ -1418,12 +1418,20 @@
       "SearchResults": {
         "description": "Grouped, because the two kinds of hit mean different things.\n\nA title match is \"this meeting is about X\"; a transcript match is \"X was\nsaid at 18:42\". Flattening them loses that distinction and makes the\ndropdown harder to scan.",
         "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
           "meetings": {
             "items": {
               "$ref": "#/components/schemas/MeetingHit"
             },
             "title": "Meetings",
             "type": "array"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
           },
           "query": {
             "title": "Query",
@@ -1446,6 +1454,8 @@
           "query",
           "meetings",
           "transcripts",
+          "has_more",
+          "offset",
           "total"
         ],
         "title": "SearchResults",
@@ -4087,12 +4097,12 @@
         "operationId": "search_api_v1_search_get",
         "parameters": [
           {
-            "description": "Search term. Treated literally, not as a pattern.",
+            "description": "Search term. Supports quoted phrases, `-exclusion`, `speaker:Name`, `before:` and `after:` dates (T-35.3); everything else is matched literally, never as a pattern.",
             "in": "query",
             "name": "q",
             "required": true,
             "schema": {
-              "description": "Search term. Treated literally, not as a pattern.",
+              "description": "Search term. Supports quoted phrases, `-exclusion`, `speaker:Name`, `before:` and `after:` dates (T-35.3); everything else is matched literally, never as a pattern.",
               "title": "Q",
               "type": "string"
             }
@@ -4109,6 +4119,50 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "description": "Into the transcript hits only.",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Into the transcript hits only.",
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Restrict to one host, by exact name (the facets list supplies them).",
+            "in": "query",
+            "name": "host",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Restrict to one host, by exact name (the facets list supplies them).",
+              "title": "Host"
+            }
+          },
+          {
+            "description": "Which groups to return.",
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "description": "Which groups to return.",
+              "pattern": "^(all|meetings|transcript)$",
+              "title": "Scope",
+              "type": "string"
             }
           }
         ],

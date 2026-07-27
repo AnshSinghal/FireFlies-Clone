@@ -41,8 +41,7 @@ export const DEFAULT_THEME: Theme = 'light'
 /** What actually lands on `<html data-theme>` — `system` resolves at read time. */
 export function resolveTheme(theme: Theme): 'light' | 'dark' {
   if (theme !== 'system') return theme
-  return typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
     ? 'dark'
     : 'light'
 }
@@ -70,9 +69,7 @@ export const DEFAULT_PAGE_SIZE: PageSize = 20
 
 export function parsePageSize(raw: string | null): PageSize {
   const value = Number(raw)
-  return (PAGE_SIZES as readonly number[]).includes(value)
-    ? (value as PageSize)
-    : DEFAULT_PAGE_SIZE
+  return (PAGE_SIZES as readonly number[]).includes(value) ? (value as PageSize) : DEFAULT_PAGE_SIZE
 }
 
 export function usePageSizePref() {
@@ -94,9 +91,7 @@ export const DATE_FORMATS = ['relative', 'absolute'] as const
 export type DateFormat = (typeof DATE_FORMATS)[number]
 
 export function parseDateFormat(raw: string | null): DateFormat {
-  return (DATE_FORMATS as readonly string[]).includes(raw ?? '')
-    ? (raw as DateFormat)
-    : 'relative'
+  return (DATE_FORMATS as readonly string[]).includes(raw ?? '') ? (raw as DateFormat) : 'relative'
 }
 
 export function useDateFormatPref() {
