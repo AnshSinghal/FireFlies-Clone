@@ -136,11 +136,19 @@ was re-deriving the arithmetic before typing the edit.
 
 **The row height is deliberately still 1.29 against their 1.51.** Matching it
 means 72px → ~85px, and that token is load-bearing in a way the gaps are not:
-`design.md` §3.7 fixes it, T12-B asserts it, ADR-036 kept it on purpose, the
-skeleton is pinned to it, and the virtualiser sizes its items from it — a wrong
-value there breaks scrolling rather than looking slightly off. Closing a 54%
-deviation and leaving a 15% one is the right trade when the second costs an
-order of magnitude more risk. Open, not dropped.
+`design.md` §3.7 fixes it, T12-B asserts it, ADR-036 kept it on purpose, and
+the skeleton is pinned to it.
+
+**This used to say "and the virtualiser sizes its items from it, so a wrong
+value breaks scrolling". That is false.** The virtualiser is on the transcript
+list and estimates from its own `ESTIMATED_ROW_PX = 92`; the notebook is not
+virtualised. The claim was written once, repeated into three documents, and
+believed for a day because it sounded like a reason.
+
+The real obstacle is that the target is ambiguous: scaling their card by the
+topbar gives ~85px, by the type scale ~79px, because it is short against both
+anchors (17% and 12%). A ±3px band on a token three tests pin is a decision to
+take deliberately, not a risk to hide behind. Open, not dropped.
 
 ## Differences we are keeping, and why
 
@@ -374,8 +382,9 @@ rather than by re-reading the code:
 
 - **The list's gaps were 54% and 18% tighter than the reference** — measured,
   not eyeballed. **Fixed** (ADR-149). The row height remains 15% tighter and is
-  deliberately open: matching it means changing a token the virtualiser sizes
-  from, which trades a visible-but-small difference for a scrolling bug.
+  open — and NOT because of the virtualiser, which does not touch this token
+  (see the correction above). The obstacle is that the reference scales to
+  ~79-85px depending on which anchor you transfer through.
 
 Items 2–8 remain scope or convention decisions with reasons. Item 9 is a
 deliberate behaviour with a missing affordance. If an evaluator disagrees with

@@ -121,8 +121,12 @@ row, and the budget is the thing that makes "it feels fast" falsifiable.
   reference's 1.51 (`docs/ui-audit.md`). The two gap tokens next to it were
   measured and fixed (ADR-149); this one is deliberately still open because
   `72px` is load-bearing — `design.md` §3.7 fixes it, T12-B asserts it, the
-  skeleton mirrors it and the virtualiser sizes items from it, so a wrong value
-  breaks scrolling rather than looking slightly off.
+  skeleton mirrors it. (This bullet used to end "and the virtualiser sizes items
+  from it, so a wrong value breaks scrolling" — my claim, propagated from
+  ADR-149, and false: the virtualiser is on the TRANSCRIPT list and estimates
+  from its own `ESTIMATED_ROW_PX = 92`; the notebook is not virtualised. The
+  real obstacle is that the reference scales to ~79-85px depending on whether
+  you transfer through the topbar or the type scale.)
 
 *(A fourth item lived here until 2026-07-27: "revisit `formatMeetingMeta`,
 rows show `7:13` where Fireflies shows `30 min` — kept for consistency with the

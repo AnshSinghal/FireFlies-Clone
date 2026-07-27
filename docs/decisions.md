@@ -3409,13 +3409,32 @@ sizes are named rather than inlined — and because the skeleton has to mirror
 them exactly.
 
 **Why the row height is NOT changed**, though it is 15% tighter than the
-reference at 1.29 against 1.51. Matching it means 72px → ~85px, and that token
-is load-bearing in a way the gaps are not: `design.md` §3.7 fixes it, T12-B
-asserts it, ADR-036 deliberately kept it, the skeleton is pinned to it, and the
-virtualiser sizes its items from it — a wrong value there breaks scrolling
-rather than looking slightly off. Closing a 54% deviation while leaving a 15%
-one is the right trade when the second costs an order of magnitude more risk.
-It is recorded as open in `docs/ui-audit.md` rather than quietly dropped.
+reference at 1.29 against 1.51. Left alone for now, but **the reason first given
+here was wrong and is corrected below.**
+
+> **Correction, 2026-07-28.** This entry said the row token was load-bearing
+> because "the virtualiser sizes its items from it — a wrong value there breaks
+> scrolling rather than looking slightly off". That is false, and it was
+> repeated into `ui-audit.md`, `interview-notes.md` and several commit messages
+> before anyone checked it.
+>
+> The virtualiser is on the **transcript** list
+> (`features/notepad/transcript/transcript-list.tsx`) and estimates from its own
+> `ESTIMATED_ROW_PX = 92`. The notebook list is not virtualised at all. Nothing
+> about the row token can break scrolling.
+>
+> What actually constrains it: `h-row` on the card (`meeting-row.tsx`) and on
+> the skeleton that mirrors it, three assertions (`08-notebook` on the row,
+> `07-primitives` and `12-states` on the skeleton), and `design.md:87`. Every
+> one is updatable — the same shape as the gap tokens this ADR *did* change,
+> with their tests, in one commit.
+>
+> So the deferral was justified by a risk that does not exist. The change is
+> still open, and now for the honest reason: the target is ambiguous. Scaling
+> the reference by the topbar gives ~85px, by the type scale ~79px, because the
+> card is short against both anchors (17% and 12%). Picking a number inside a
+> ±3px band, on a token three tests pin, deserves a decision rather than a
+> guess — but "it would break scrolling" was never the obstacle.
 
 **Consequences.** Six visual baselines moved — `notebook-list` in both themes
 and the four responsive widths — and nothing else, which is itself the evidence
