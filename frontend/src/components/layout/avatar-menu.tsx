@@ -3,10 +3,10 @@
 /**
  * Avatar menu (T-08.6).
  *
- * The theme rows record a preference and nothing else — T-38 adds the
- * `data-theme` switch and the no-flash script that make them visible. They are
- * here rather than deferred because the menu's shape (a submenu, not three flat
- * rows) is what T-38 has to fit into.
+ * The theme rows write the shared theme preference (`lib/prefs/app-prefs`) —
+ * `ThemeApplier` and the before-paint boot script make the choice visible
+ * (T-30.7), and Settings → Appearance edits the same store, so the two
+ * surfaces can never disagree.
  */
 
 import { ChevronDown, LogOut, Monitor, Moon, Settings, Sun, User } from 'lucide-react'
@@ -16,12 +16,8 @@ import { Button } from '@/components/ui/button'
 import { MenuDivider, MenuItem, MenuLabel, MenuPanel, MenuRadioItem } from '@/components/ui/menu'
 import { useToast } from '@/components/ui/toast'
 import { useCurrentUser } from '@/lib/api/me'
-import { useLocalStorage } from '@/lib/hooks/use-local-storage'
 import { usePopover } from '@/lib/hooks/use-popover'
-
-export const THEME_KEY = 'ff.theme'
-
-export type ThemePreference = 'light' | 'dark' | 'system'
+import { useThemePref } from '@/lib/prefs/app-prefs'
 
 const THEMES = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -33,7 +29,7 @@ export function AvatarMenu() {
   const { open, toggle, close, ref } = usePopover()
   const { data: user } = useCurrentUser()
   const toast = useToast()
-  const { value: theme, setValue: setTheme } = useLocalStorage<ThemePreference>(THEME_KEY, 'system')
+  const [theme, setTheme] = useThemePref()
 
   return (
     <div ref={ref} className="relative">

@@ -9,12 +9,13 @@
  * the Notepad has already fetched, so neither costs a request.
  */
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 
 import { useSummary } from '@/lib/api/summaries'
 import { useTranscript } from '@/lib/api/transcript'
 import { useNotepadCommands } from '@/lib/notepad/commands'
 import { usePlayer } from '@/lib/player/player-context'
+import { useAutoplayPref } from '@/lib/prefs/app-prefs'
 import { cn } from '@/lib/utils/cn'
 
 import { Seekbar, type Chapter, type SpeakerCue } from './seekbar'
@@ -33,6 +34,17 @@ export function PlayerCard({ meetingId, src, className }: PlayerCardProps) {
   // Chapter ticks are an explicit "take me there", so they reveal the target
   // in the transcript even if the reader has scrolled away (T-21.6).
   const { seekTo } = useNotepadCommands()
+
+  // Settings → Preferences → "Autoplay on open" (T-30.7). One shot per mount,
+  // never per pref change — flipping the setting mid-meeting must not
+  // restart playback. Off by default, so nothing changes unless opted into.
+  const [autoplay] = useAutoplayPref()
+  const autoplayFired = useRef(false)
+  useEffect(() => {
+    if (!autoplay || autoplayFired.current) return
+    autoplayFired.current = true
+    player.play()
+  }, [autoplay, player])
 
   // Both are already in the cache — the panels mounted with them. React Query
   // returns them without a second request.

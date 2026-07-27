@@ -31,11 +31,24 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  // `data-theme` is set statically for now. T-38.2 replaces it with a
-  // before-paint inline script reading localStorage, so the theme is correct on
-  // first paint and the page never flashes white before going dark.
+  /*
+   * Before-paint theme boot (T-30.7 / T-38.2). Runs before hydration so a
+   * dark-theme user never sees a white flash. The SSR attribute stays "light"
+   * as the no-JS fallback; `suppressHydrationWarning` covers the one
+   * attribute this script may have changed by the time React compares.
+   * Constant markup, not user text — the dangerouslySetInnerHTML rule guards
+   * against the latter.
+   */
+  const themeBoot =
+    "(function(){try{var t=JSON.parse(localStorage.getItem('ff.theme'));" +
+    "var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);" +
+    "document.documentElement.dataset.theme=d?'dark':'light'}catch(e){}})()"
+
   return (
-    <html lang="en" data-theme="light" className={inter.variable}>
+    <html lang="en" data-theme="light" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
+      </head>
       <body>
         <Providers>
           {/* First tab stop, visually hidden until focused (T-42.3). */}

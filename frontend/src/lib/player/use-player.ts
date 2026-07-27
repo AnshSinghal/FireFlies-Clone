@@ -31,7 +31,7 @@ import {
   serialiseNumber,
   type PlaybackRate,
 } from './prefs'
-import { usePref } from './use-pref'
+import { usePref } from '@/lib/hooks/use-pref'
 
 /**
  * How often the clock ticks.

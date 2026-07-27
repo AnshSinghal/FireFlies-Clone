@@ -17,6 +17,8 @@
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 
+import { useDefaultSortPref, usePageSizePref } from '@/lib/prefs/app-prefs'
+
 export type ParamValue = string | number | boolean | null | undefined | string[]
 
 export interface SetParamsOptions {
@@ -143,6 +145,12 @@ const NON_FILTERS = new Set(['sort', 'page', 'pageSize', 'q', 'tags', 'details']
 export function useNotebookParams() {
   const { getParam, getAll, getNumber, setParams, clearParams } = useQueryParams()
 
+  // Settings → Preferences supplies the DEFAULTS (T-30.7); an explicit URL
+  // param always wins, because a shared link must mean the same view on the
+  // recipient's machine regardless of their preferences.
+  const [defaultSort] = useDefaultSortPref()
+  const [defaultPageSize] = usePageSizePref()
+
   const filters = useMemo(
     () => ({
       q: getParam('q') ?? undefined,
@@ -161,11 +169,11 @@ export function useNotebookParams() {
       // The details drawer's open meeting (T-15.12). Not a filter: it narrows
       // nothing, so it is excluded from the Filters badge below.
       details: getParam('details') ? getNumber('details', 0) : undefined,
-      sort: getParam('sort') ?? '-started_at',
+      sort: getParam('sort') ?? defaultSort,
       page: getNumber('page', 1),
-      pageSize: getNumber('page_size', 20),
+      pageSize: getNumber('page_size', defaultPageSize),
     }),
-    [getParam, getNumber, getAll],
+    [getParam, getNumber, getAll, defaultSort, defaultPageSize],
   )
 
   const activeFilterCount = useMemo(
