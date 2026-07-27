@@ -472,6 +472,16 @@ make typecheck   # mypy --strict and tsc --noEmit
 three times on `ruff format --check` and `prettier --check` while `ruff check`, `eslint` and `tsc`
 were all green locally — the formatters are part of `lint`, and nothing had been running `lint`.
 
+**The same gap runs the other way, and it is worth knowing before adding a check.** CI does not
+invoke `make lint`; `.github/workflows/ci.yml` lists the individual commands. So a check added to the
+Makefile guards your machine and nothing else until it is added to the workflow too. That happened
+here — `check_design_tokens.py` and `check_reference_ratios.py` were local-only for an hour before
+anyone looked. Both definitions of "the checks" are maintained by hand and neither is derived from
+the other; the honest fix is to add to both and say so, which is what the comment in the workflow
+does. One deliberate asymmetry: locally the ratio check *skips* when pillow and numpy are missing, so
+a fresh clone can still run `make lint`; in CI it is a hard step, because CI has `uv` and a silently
+skipped check is worse than none.
+
 Playwright starts its own copies of both apps on ports **3140/8140**, so `make dev` can stay running
 on 3000/8000 while the suite executes, and a run can never accidentally test whatever else happens to
 be listening. Override with `E2E_FRONTEND_PORT` / `E2E_BACKEND_PORT`.
