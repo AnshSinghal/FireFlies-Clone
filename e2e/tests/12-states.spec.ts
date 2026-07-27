@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+import { expect, test } from '../fixtures'
 
 /**
  * Empty, loading, error and offline states (T-16, cases T16-A → T16-J).

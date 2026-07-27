@@ -1,4 +1,6 @@
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
+
+import { expect, test } from '../fixtures'
 
 /**
  * Media player (T-19, cases T19-A → T19-O).
