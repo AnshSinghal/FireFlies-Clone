@@ -82,34 +82,47 @@ bare `test`** and therefore never got `fixtures.ts`'s auto-fixture that pins
 
 **Ten have since been converted, in two batches read one failure at a time.**
 Batch 1 took the four with the most timing surface — `12-states`, `14-player`,
-`16-sync`, `17-find` — and read clean, 55/55 first run. Batch 2 took the six
-mutation specs — `20-transcript-edit`, `21-create`, `22-edit`, `23-delete`,
-`25-comments`, `26-soundbites` — and was clean and stayed clean.
+`16-sync`, `17-find`. Batch 2 took the six mutation specs —
+`20-transcript-edit`, `21-create`, `22-edit`, `23-delete`, `25-comments`,
+`26-soundbites`.
 
-**`17-find` was reverted afterwards. Batch 1's clean read was 50/50 luck.** The
-full suite on the merged tree failed T22-I, the debounce assertion. Measured on
-one machine minutes apart, the only variable being which module `test` comes
-from: **pinned 2/5 pass, unpinned 5/5 pass**, and 5/5 again after reverting.
-
-T22-I is the one test here whose *subject* is elapsed time — it types seven
-characters and counts how many searches were committed, so a frozen `Date.now()`
-is the input being measured, not a background condition. `fixtures.ts` says
-`setFixedTime` keeps timers running so debounces behave normally; true for a
-debounce built on `setTimeout` alone, evidently not for this one.
-
-The reason it survived its batch is the useful part: **it is intermittent where
-`27-tags` is deterministic.** A spec that fails every run gets caught by any
-check. One that fails half the time has even odds of passing the check that was
-supposed to catch it. Converting in batches was right; verifying each batch once
-is not enough for this class of change. Re-run a converted spec several times,
-or accept that half the flakes ship.
+`17-find` was then reverted: it passed its batch run 55/55 and a full 552/552
+suite, and both were luck. Measured at 12 repeats in an isolated worktree, T22-I
+fails 5 times in 12 with the clock pinned and 0 times in 12 without it. **One
+green run is not evidence that a conversion is clean** when the failure is
+intermittent — the batch runs above proved less than they appeared to.
 
 Fifteen still import the bare `test`: `00-smoke`, `02-tokens`, `04-sidebar`,
 `05-topbar`, `06-toasts`, `07-primitives`, `11-details`, `17-find`,
 `24-placeholders`, `24-search`, `25-dark-mode`, `27-tags`, `34-export`,
-`98-smoke`, `99-capture`.
-Three of those have a positive reason to stay: `99-capture` is a camera and pins
-the clock itself, `27-tags` is the case below, and `17-find` is the case above.
+`98-smoke`, `99-capture`. Three have a positive reason to stay: `99-capture` is
+a camera and pins the clock itself, and `17-find` and `27-tags` are the two
+cases below.
+
+### How to check a conversion, and how not to
+
+`--repeat-each` is the right probe for a **read-only** spec: the three surviving
+batch-1 files ran 205/205 at five repeats.
+
+It is the wrong probe for a **mutations** spec, and misleadingly so. Those tests
+mutate a database that `global-setup` seeds once per run, so re-running one
+in-process without a reseed makes it act on state its predecessor left behind.
+`25-comments` T31-A and T31-K duly failed 2-of-3 under `--repeat-each=3` — and
+failed **identically on the wall clock**, which is what proves the repeat, not
+the clock, is the cause. Anyone who skips that control will file a clock bug
+that does not exist.
+
+The honest repeat for a mutations spec is a repeated FULL suite run, because
+each one reseeds. That is what the ×5 verification is for.
+
+**Independently confirmed, by the other session, by a different method.** The
+merged tree failed T22-I in a full-suite run; five separate invocations — each a
+fresh process that reseeds, so the control above is satisfied — gave **2/5
+passing pinned and 5/5 unpinned**, then 5/5 again after reverting. Two people,
+two methods, the same conclusion, arrived at within the hour. Recorded because
+concurrent duplication on a real bug is a much better outcome than concurrent
+duplication on a feature, and because two independent measurements of a flake
+are worth more than one careful one.
 
 Count these by import SOURCE, not by prefix — `grep "^import { expect, test"`
 matches the converted form too, and reports 37 of 38 files as unconverted.

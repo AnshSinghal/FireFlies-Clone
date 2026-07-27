@@ -1,28 +1,8 @@
-import type { Page } from '@playwright/test'
-
-/*
- * `@playwright/test`, NOT `../fixtures` — deliberately, and this is the second
- * spec to earn that exemption after `27-tags`.
- *
- * Converting it introduced a 50% flake in T22-I, the debounce assertion.
- * Measured on the same machine minutes apart, the only variable being which
- * module `test` comes from: **pinned 2/5 pass, unpinned 5/5 pass.**
- *
- * T22-I is the one test in this suite whose SUBJECT is elapsed time. It types
- * seven characters and counts how many searches were committed, so a frozen
- * `Date.now()` is not incidental to it — it is the input being measured.
- * `fixtures.ts` says `setFixedTime` keeps timers running so debounces behave
- * normally; that holds for a debounce built on `setTimeout` alone and evidently
- * not for this one.
- *
- * It slipped through the conversion batch because it is INTERMITTENT where
- * `27-tags` was deterministic. A spec that fails every run gets caught; one that
- * fails half the time has even odds of looking clean in a single check.
- *
- * Nothing here asserts a date, so the wall clock is safe — the same reasoning
- * that made the other conversions correct.
- */
-import { expect, test } from '@playwright/test'
+// `@playwright/test`, not `../fixtures` — one of three specs that stay on the
+// wall clock on purpose. Pinning the clock makes T22-I flaky roughly half the
+// time; the measurement and the reasoning are in `COVERAGE.md`, "How to check a
+// conversion, and how not to".
+import { expect, test, type Page } from '@playwright/test'
 
 /**
  * Find in transcript & Smart Search (T-22, cases T22-A → T22-N).
