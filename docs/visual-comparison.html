@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visual comparison — Fireflies reference vs clone</title>
+<!--
+  T-41.7 · Side-by-side comparison harness.
+
+  Open this file directly (file:// works — images are plain relative <img>
+  loads, no fetch()). References live in docs/reference/fireflies/01..08.png;
+  our captures land in docs/screenshots/<key>.png via:
+
+      cd e2e && CAPTURE=1 npx playwright test tests/99-capture.spec.ts
+
+  Standalone doc, not an app component — the tokens.css hex rule governs
+  frontend/src, so this page carries its own minimal palette.
+-->
+<style>
+  :root {
+    --bg: #f7f7f8; --card: #ffffff; --text: #1a1d21; --muted: #6b7280;
+    --border: #e2e4e8; --accent: #2563eb; --warn-bg: #fef3c7; --warn-text: #92400e;
+    --miss-bg: #f3f4f6; --handle: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101215; --card: #191c20; --text: #e7e9ec; --muted: #9aa1ab;
+      --border: #2a2e34; --accent: #60a5fa; --warn-bg: #3a2f10; --warn-text: #fbd38d;
+      --miss-bg: #202329; --handle: #60a5fa;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 20px 64px; }
+  header h1 { font-size: 22px; margin: 0 0 6px; }
+  header p { margin: 4px 0; color: var(--muted); max-width: 78ch; }
+  .hue-note {
+    margin: 14px 0 0; padding: 10px 14px; border-radius: 8px;
+    background: var(--warn-bg); color: var(--warn-text); max-width: none;
+  }
+  .toolbar { display: flex; gap: 8px; margin: 20px 0 8px; }
+  .toolbar button {
+    font: inherit; padding: 6px 14px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+  }
+  .toolbar button[aria-pressed="true"] {
+    border-color: var(--accent); color: var(--accent); font-weight: 600;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 18px 20px; margin: 18px 0;
+  }
+  .card h2 { font-size: 17px; margin: 0 0 2px; }
+  .card .meta { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .card .meta code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 999px;
+    vertical-align: 2px; margin-left: 8px;
+  }
+  .badge.oos { background: var(--warn-bg); color: var(--warn-text); }
+  .badge.miss { background: var(--miss-bg); color: var(--muted); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .pair { grid-template-columns: 1fr; } }
+  figure { margin: 0; min-width: 0; }
+  figcaption { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+  .shot, .missing {
+    width: 100%; display: block; border: 1px solid var(--border); border-radius: 8px;
+  }
+  .missing {
+    border-style: dashed; background: var(--miss-bg); color: var(--muted);
+    aspect-ratio: 1440 / 900; display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 20px; font-size: 13px;
+  }
+  .missing code { display: block; margin-top: 8px; font-size: 12px; }
+  .single { max-width: 720px; }
+  /* Overlay (wipe) mode — reference clipped over our capture, slider reveals. */
+  .wipe {
+    position: relative; aspect-ratio: 1440 / 900; overflow: hidden;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--miss-bg);
+  }
+  .wipe img.under { position: absolute; top: 0; left: 0; width: 100%; }
+  .wipe .top { position: absolute; top: 0; left: 0; bottom: 0; width: 50%; overflow: hidden; }
+  .wipe .top img { position: absolute; top: 0; left: 0; max-width: none; }
+  .wipe .handle {
+    position: absolute; top: 0; bottom: 0; left: 50%; width: 2px;
+    background: var(--handle); pointer-events: none;
+  }
+  .wipe .tag {
+    position: absolute; top: 8px; font-size: 11px; font-weight: 700; color: #fff;
+    background: rgba(0,0,0,.55); padding: 2px 8px; border-radius: 999px; pointer-events: none;
+  }
+  .wipe .tag.l { left: 8px; }
+  .wipe .tag.r { right: 8px; }
+  .wipe-slider { width: 100%; margin-top: 8px; accent-color: var(--accent); }
+  .dark-slot { margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .dark-slot img { margin-top: 6px; }
+  /* Global mode switching: each card renders both views, body class picks one. */
+  body.mode-overlay .view-pair { display: none; }
+  body:not(.mode-overlay) .view-overlay { display: none; }
+  footer { margin-top: 32px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Visual comparison — Fireflies reference vs this clone</h1>
+    <p>
+      Each pair shows the reference screenshot (<code>docs/reference/fireflies/</code>) beside our
+      capture (<code>docs/screenshots/</code>) at matched width. References were taken at 2000&#215;~1050
+      (2&#215; scale, wider window); ours at 1440&#215;900&#64;1&#215; — so compare proportions, not pixel
+      dimensions, and expect ours to run slightly taller at equal width.
+    </p>
+    <p class="hue-note">
+      <strong>Expected hue difference:</strong> design.md fixes this clone&#8217;s accent as
+      <strong>blue</strong>; Fireflies uses violet. Accent-hue deltas are deliberate, not drift.
+      The comparison targets are <strong>layout, spacing and type scale</strong>.
+    </p>
+    <p>
+      Refresh captures with
+      <code>cd e2e &amp;&amp; CAPTURE=1 npx playwright test tests/99-capture.spec.ts</code>.
+      Dark-theme slots stay placeholders until T-38 (dark-mode audit) merges.
+    </p>
+  </header>
+
+  <div class="toolbar" role="group" aria-label="Comparison mode">
+    <button type="button" id="btn-pair" aria-pressed="true">Side by side</button>
+    <button type="button" id="btn-overlay" aria-pressed="false">Overlay wipe</button>
+  </div>
+
+  <noscript><p>This harness needs JavaScript to probe which captures exist and to drive the wipe slider.</p></noscript>
+  <div id="cards"></div>
+
+  <footer>
+    T-41.7 harness &#183; owned alongside <code>e2e/tests/99-capture.spec.ts</code> &#183;
+    keys map 1:1 to the reference numbering so a missing capture is immediately visible.
+  </footer>
+</main>
+
+<script>
+'use strict';
+
+var CAPTURE_CMD = 'cd e2e && CAPTURE=1 npx playwright test tests/99-capture.spec.ts';
+
+var PAIRS = [
+  {
+    n: '01', key: '01-home', surface: 'Home',
+    route: '/notebook',
+    note: "Fireflies' Home is a recent-meetings hub; our / redirects to the Notebook, the closest hub surface we ship."
+  },
+  {
+    n: '02', key: '02-meetings-list', surface: 'Meetings list',
+    route: '/notebook?channel=all-meetings',
+    note: 'The All Meetings channel view — the notebook as a list: rows, toolbar, filters, pagination.'
+  },
+  {
+    n: '03', key: '03-meeting-status', surface: 'Meeting Status',
+    route: null,
+    note: "Fireflies' Meeting Status is the notetaker-bot join feed (Completed / Not allowed in). This clone ingests transcripts and has no bot, so there is no honest equivalent — shown for completeness rather than compared."
+  },
+  {
+    n: '04', key: '04-uploads', surface: 'Uploads',
+    route: '/upload?tab=upload',
+    note: "The create modal's Upload tab over the Notebook — our transcript-upload entry point."
+  },
+  {
+    n: '05', key: '05-analytics', surface: 'Analytics',
+    route: '/analytics',
+    note: 'A designed T-30 placeholder with a chart preview, not a built feature — compared for shell and layout fidelity only.'
+  },
+  {
+    n: '06', key: '06-profile-menu', surface: 'Profile menu',
+    route: '/notebook + topbar avatar menu open',
+    note: 'The topbar avatar menu: identity block, Settings, theme radio group, sign out.'
+  },
+  {
+    n: '07', key: '07-settings-recording', surface: 'Settings · Recording',
+    route: '/settings?tab=preferences',
+    note: 'Recording &amp; Privacy is a deliberate soon-panel here; Preferences is the nearest functional tab for comparing the settings shell, sub-nav and form layout.'
+  },
+  {
+    n: '08', key: '08-settings-ai', surface: 'Settings · AI',
+    route: '/settings?tab=appearance',
+    note: 'AI settings is a soon-panel here; Appearance is the nearest functional tab, and doubles as the theming surface.'
+  }
+];
+
+function el(tag, cls, html) {
+  var node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (html !== undefined) node.innerHTML = html;
+  return node;
+}
+
+/** Probe an image URL; cb(srcOrNull). Plain <img> loads work from file://. */
+function probe(src, cb) {
+  var img = new Image();
+  img.onload = function () { cb(src); };
+  img.onerror = function () { cb(null); };
+  img.src = src;
+}
+
+function missingTile(label) {
+  return el('div', 'missing',
+    '<div>' + label + '<code>' + CAPTURE_CMD + '</code></div>');
+}
+
+function shotFigure(caption, src, alt) {
+  var fig = el('figure');
+  fig.appendChild(el('figcaption', null, caption));
+  if (src) {
+    var img = el('img', 'shot');
+    img.src = src; img.alt = alt; img.loading = 'lazy';
+    fig.appendChild(img);
+  } else {
+    fig.appendChild(missingTile('Not captured yet — run:'));
+  }
+  return fig;
+}
+
+function wipeView(refSrc, oursSrc, key) {
+  var wrap = el('div', 'view-overlay');
+  if (!oursSrc) {
+    var fig = shotFigure('Fireflies (reference) — ours not captured yet', refSrc, key + ' reference');
+    fig.className = 'single';
+    wrap.appendChild(fig);
+    return wrap;
+  }
+  var wipe = el('div', 'wipe');
+  var under = el('img', 'under');
+  under.src = oursSrc; under.alt = key + ' — this clone'; under.loading = 'lazy';
+  var top = el('div', 'top');
+  var over = document.createElement('img');
+  over.src = refSrc; over.alt = key + ' — Fireflies reference'; over.loading = 'lazy';
+  top.appendChild(over);
+  var handle = el('div', 'handle');
+  wipe.appendChild(under); wipe.appendChild(top); wipe.appendChild(handle);
+  wipe.appendChild(el('span', 'tag l', 'Fireflies'));
+  wipe.appendChild(el('span', 'tag r', 'Clone'));
+
+  // The clipped image must stay sized to the FULL container so both layers
+  // share one coordinate space; the clip window alone narrows.
+  function sync() { over.style.width = wipe.clientWidth + 'px'; }
+  if (typeof ResizeObserver === 'function') new ResizeObserver(sync).observe(wipe);
+  over.addEventListener('load', sync);
+  sync();
+
+  var slider = el('input', 'wipe-slider');
+  slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.value = '50';
+  slider.setAttribute('aria-label', 'Reveal reference (left) vs clone (right) for ' + key);
+  slider.addEventListener('input', function () {
+    top.style.width = slider.value + '%';
+    handle.style.left = slider.value + '%';
+  });
+
+  wrap.appendChild(wipe);
+  wrap.appendChild(slider);
+  return wrap;
+}
+
+function darkSlot(card, key) {
+  var slot = el('div', 'dark-slot');
+  card.appendChild(slot);
+  probe('screenshots/' + key + '-dark.png', function (src) {
+    if (src) {
+      slot.innerHTML = '<strong>Dark theme capture:</strong>';
+      var img = el('img', 'shot');
+      img.src = src; img.alt = key + ' — dark theme'; img.loading = 'lazy';
+      img.style.maxWidth = '480px';
+      slot.appendChild(img);
+    } else {
+      slot.innerHTML = 'Dark theme: <span class="badge miss">not captured yet</span> — pending T-38 (dark-mode audit).';
+    }
+  });
+}
+
+function buildCard(pair) {
+  var refSrc = 'reference/fireflies/' + pair.n + '.png';
+  var card = el('section', 'card');
+  card.id = pair.key;
+
+  var title = el('h2', null, pair.n + ' &#183; ' + pair.surface);
+  card.appendChild(title);
+
+  var meta = pair.route
+    ? 'Ours: <code>' + pair.route + '</code> &#183; key <code>' + pair.key + '.png</code><br>' + pair.note
+    : pair.note;
+  card.appendChild(el('p', 'meta', meta));
+
+  if (!pair.route) {
+    // No equivalent surface: show the reference honestly, badged — never an
+    // empty slot pretending a capture is merely late.
+    title.appendChild(el('span', 'badge oos', 'Out of scope'));
+    var fig = shotFigure('Fireflies (reference) — no clone equivalent', refSrc, pair.key + ' reference');
+    fig.className = 'single';
+    card.appendChild(fig);
+    return card;
+  }
+
+  probe('screenshots/' + pair.key + '.png', function (oursSrc) {
+    if (!oursSrc) title.appendChild(el('span', 'badge miss', 'Not captured yet'));
+
+    var pairView = el('div', 'view-pair pair');
+    pairView.appendChild(shotFigure('Fireflies (reference)', refSrc, pair.key + ' — Fireflies reference'));
+    pairView.appendChild(shotFigure('This clone', oursSrc, pair.key + ' — this clone'));
+    card.appendChild(pairView);
+
+    card.appendChild(wipeView(refSrc, oursSrc, pair.key));
+    darkSlot(card, pair.key);
+  });
+
+  return card;
+}
+
+var cards = document.getElementById('cards');
+for (var i = 0; i < PAIRS.length; i++) cards.appendChild(buildCard(PAIRS[i]));
+
+var btnPair = document.getElementById('btn-pair');
+var btnOverlay = document.getElementById('btn-overlay');
+function setMode(overlay) {
+  document.body.classList.toggle('mode-overlay', overlay);
+  btnPair.setAttribute('aria-pressed', String(!overlay));
+  btnOverlay.setAttribute('aria-pressed', String(overlay));
+}
+btnPair.addEventListener('click', function () { setMode(false); });
+btnOverlay.addEventListener('click', function () { setMode(true); });
+</script>
+</body>
+</html>

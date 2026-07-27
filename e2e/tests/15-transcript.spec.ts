@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+import { expect, test } from '../fixtures'
 
 /**
  * Transcript panel (T-20, cases T20-A → T20-P).
@@ -152,7 +154,7 @@ test.describe('transcript panel', () => {
       .locator('li')
       .filter({ hasText: name })
       .first()
-      .locator('span[style*="background-color"]')
+      .getByTestId('details-talktime-bar')
 
     const inDrawer = await bar.evaluate((el) => getComputedStyle(el).backgroundColor)
 
@@ -276,8 +278,10 @@ test.describe('transcript panel', () => {
     await expect.poll(() => opacity(actions)).toBe('1')
   })
 
-  test('T20-K · Copy text puts exactly that line on the clipboard', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  test('T20-K · Copy text puts exactly that line on the clipboard', async ({
+    page,
+    clipboard,
+  }) => {
     await openTranscript(page)
 
     const row = segmentRow(page).first()
@@ -288,7 +292,7 @@ test.describe('transcript panel', () => {
     await page.getByTestId('segment-copy-text').click()
 
     await expect(page.getByTestId('toast')).toContainText('Segment copied')
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(text)
+    expect(await clipboard.readText()).toBe(text)
   })
 
   test('T20-L · selecting text raises the selection toolbar', async ({ page }) => {
@@ -315,9 +319,8 @@ test.describe('transcript panel', () => {
 
   test('T20-M · Copy transcript writes every line in [MM:SS] Speaker: text form', async ({
     page,
-    context,
+    clipboard,
   }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await openTranscript(page)
 
     const total = Number((await page.getByTestId('transcript-count').innerText()).split(' ')[0])
@@ -325,7 +328,7 @@ test.describe('transcript panel', () => {
     await page.getByTestId('transcript-copy-all').click()
     await expect(page.getByTestId('toast')).toContainText('Transcript copied')
 
-    const copied = await page.evaluate(() => navigator.clipboard.readText())
+    const copied = await clipboard.readText()
     const lines = copied.split('\n')
 
     // Every line, not just the ones that happened to be rendered — the point

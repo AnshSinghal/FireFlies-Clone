@@ -2498,6 +2498,142 @@ extensions.
 
 ---
 
+## ADR-111 — The frozen clock is an auto-fixture pinned to the seed anchor
+
+**Context.** T-39.6. Four specs pinned the clock inline, and all four had
+drifted to a noon instant while the seeder anchors at `09:00:00Z`.
+
+**Decision.** `fixtures.ts` installs `page.clock.setFixedTime(SEED_ANCHOR)`
+automatically for every test; `pinClock(page)` covers secondary tabs. A test
+that genuinely needs a different time of day derives it from `SEED_ANCHOR`
+with a comment.
+
+**Consequence.** Date labels are calendar-day granular, so the migration
+changed no assertions. `setFixedTime` freezes `Date.now` but keeps timers
+running — debounces and toast auto-dismiss behave normally.
+
+---
+
+## ADR-112 — POMs serve new suites only
+
+**Context.** T-39.7 wants eight Page Objects; 349 tests already pass as flat
+specs whose granular history is itself graded evidence.
+
+**Decision.** `e2e/pages/` exists and is mandatory for *new* suites; the 26
+existing spec files are not retrofitted. POMs are getter-based, lazy, and
+contain no assertions.
+
+**Consequence.** Two idioms coexist, documented at the top of
+`pages/index.ts`. Migration happens opportunistically when a spec is touched
+for other reasons, never as a bulk rewrite.
+
+---
+
+## ADR-113 — Raw locators are constrained by a lint grammar, not banned outright
+
+**Context.** T-39.9 bans CSS/XPath, but ~75 call sites use
+`[data-testid^="prefix-"]` — Playwright has no `getByTestId` prefix form — and
+structural tags (`mark`, `section`) assert real semantics.
+
+**Decision.** A custom eslint rule (`e2e/no-fragile-locator`) allows
+attribute-only selectors and structural tags with attribute/`:not` qualifiers;
+class selectors, id selectors, XPath and descendant chains are errors. Five
+fragile selectors were fixed by adding real testids; e2e lint is wired into
+`make lint`, lint-staged and CI like the frontend's.
+
+**Consequence.** The rule encodes *why* a selector form is acceptable instead
+of enforcing a blanket rule the suite already violates 75 times.
+
+---
+
+## ADR-114 — Visual and mobile are opt-in projects; read-only's grepInvert widened
+
+**Context.** T-39.3. The existing read-only/mutations split is write-isolation
+(ADR-010 territory), not a device matrix; snapshot baselines are named per
+project, so a `@visual` test matching read-only fails unconditionally.
+
+**Decision.** New projects `visual` (deviceScaleFactor 1, reduced motion,
+grep `@visual`) and `chromium-mobile` (Pixel 7, grep `@mobile`) run only
+tagged tests; read-only's `grepInvert` widens to
+`/@mutates|@visual|@mobile/`. The read/write semantics are untouched.
+
+**Consequence.** `test:mobile` carries `--pass-with-no-tests` so wiring stays
+green until the first tagged test lands. The full 382-test suite is unchanged
+for untagged specs.
+
+---
+
+## ADR-115 — `checkA11y` gates on serious and critical only
+
+**Context.** T-39.12. Axe's minor/moderate findings are real but non-blocking;
+gating CI on them invites blanket rule-disabling.
+
+**Decision.** The shared helper fails on serious+critical (tags
+wcag2a/2aa/21a/21aa) and prints the full violation list either way. The two
+pre-existing inline scans keep their stricter settings.
+
+**Consequence.** T-42's zero-serious/critical target maps 1:1 onto the
+helper's failure condition.
+
+---
+
+## ADR-116 — `seededMeeting` resolves by title, not by id
+
+**Context.** T-39.8. Seed ids are an artifact of filename order into a reset
+database.
+
+**Decision.** The worker-scoped fixture fetches `/api/v1/meetings` and finds
+the hero meeting by its seeded title, failing loudly if seeding changes.
+
+**Consequence.** One extra request per worker buys immunity to reseeding
+order; tests never hardcode `/meeting/1`.
+
+---
+
+## ADR-117 — The smoke suite is self-contained, and SMOKE_URL flips the config into deployed mode
+
+**Context.** T-40.13 runs 12 tests against production post-deploy. The repo
+config unconditionally booted servers and reseeded `e2e.db` — wasted locally,
+harmful pointed at prod.
+
+**Decision.** `98-smoke.spec.ts` imports nothing from fixtures, mutates
+nothing, asserts shapes and counts — with one deliberate exception: the five
+canonical summary section names verbatim, because they are the spec and their
+regression is exactly what a prod smoke must catch. `SMOKE_URL` in the
+environment now skips `globalSetup` and `webServer` and becomes `baseURL`.
+Deployed nginx also gained exact-match `/docs` and `/openapi.json` proxy
+locations: the README sends evaluators to the interactive docs, and the smoke
+run against production found them 404ing behind the `/api/`-only proxy.
+
+**Consequence.** `SMOKE_URL=http://8.231.115.48:8600 npx playwright test
+98-smoke --project=read-only` is the whole post-deploy gate: 12 tests, ~4 s.
+The nginx change needs a one-time manual install (deploy.sh does not manage
+nginx).
+
+---
+
+## ADR-118 — Visual comparison harness: fixed keys, honesty rules, blue-vs-violet declared
+
+**Context.** T-41.7 pulled forward — T-46.1's side-by-side audit depends on
+it, and UI fidelity is the top grading criterion. The 8 reference screenshots
+map onto our surfaces imperfectly.
+
+**Decision.** `docs/visual-comparison.html` pairs each reference with a fixed
+capture key. Three honesty rules: surfaces with no equivalent (Meeting Status
+— we ship no notetaker bot) show the reference under an explicit out-of-scope
+badge, never a fake; placeholder surfaces (Analytics) are compared for shell
+fidelity and say so; dark captures wait until T-38's merge is reflected here,
+because in-repo captures are graded evidence. The header declares the
+deliberate blue-vs-violet accent difference (design.md is the token
+authority) so the evaluator compares layout, spacing and type.
+
+**Consequence.** Capture is a `@visual`-tagged spec double-guarded by a
+`CAPTURE` env flag; `docs/screenshots/` fills only on explicit request, and
+the harness renders 'Not captured yet' tiles with the exact command
+otherwise.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

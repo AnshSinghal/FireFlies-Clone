@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 .PHONY: help dev down logs migrate migrate-down migration seed seed-reset test test-backend \
-        test-frontend e2e lint lint-frontend lint-backend typecheck format types \
+        test-frontend e2e lint lint-frontend lint-backend lint-e2e typecheck format types \
         seed-demo seed-validate install clean
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ e2e: ## Run the Playwright end-to-end suite
 	cd e2e && npm test
 
 # ── Quality gates ────────────────────────────────────────────────────────────
-lint: lint-backend lint-frontend ## Lint everything and check backend layering
+lint: lint-backend lint-frontend lint-e2e ## Lint everything and check backend layering
 
 lint-backend:
 	cd backend && uv run ruff check .
@@ -81,6 +81,9 @@ lint-backend:
 lint-frontend:
 	cd frontend && npm run lint
 	cd frontend && npm run format:check
+
+lint-e2e:
+	cd e2e && npm run lint
 
 typecheck: ## Typecheck both apps
 	cd backend && uv run mypy app

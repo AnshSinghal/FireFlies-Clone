@@ -1,23 +1,19 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+import { expect, pinClock, test } from '../fixtures'
 
 /**
  * Search and filters (T-13, cases T13-A → T13-P).
  *
  * The panel is DRAFT-THEN-APPLY (ADR-039), so most of these open it, change
- * something, and assert that nothing happened until Apply.
+ * something, and assert that nothing happened until Apply. The `frozenClock`
+ * fixture pins every page to the seed anchor, which is what makes the
+ * date-preset cases ("Today", "Last 7 days") deterministic.
  */
-
-const ANCHOR = '2026-07-26T12:00:00Z'
 
 async function notebook(page: Page): Promise<void> {
   await page.goto('/notebook')
   await expect(page.getByTestId('meeting-list')).toBeVisible()
-}
-
-/** For the date-preset cases, which need "Today" to mean the seeded day. */
-async function notebookAtAnchor(page: Page): Promise<void> {
-  await page.clock.setFixedTime(new Date(ANCHOR))
-  await notebook(page)
 }
 
 async function openFilters(page: Page): Promise<void> {
@@ -112,7 +108,7 @@ test.describe('search', () => {
 })
 
 test.describe('filters panel', () => {
-  test.beforeEach(async ({ page }) => notebookAtAnchor(page))
+  test.beforeEach(async ({ page }) => notebook(page))
 
   test('the panel is populated from real data, never hardcoded', async ({ page }) => {
     await openFilters(page)
@@ -267,7 +263,10 @@ test.describe('filters panel', () => {
     const results = await count(page).textContent()
 
     const second = await context.newPage()
-    await second.clock.setFixedTime(new Date(ANCHOR))
+    // A page from `context.newPage()` sits outside the auto-fixture, so its
+    // clock is pinned by hand — otherwise its "Last 7 days" preset resolves
+    // against the real date and disagrees with the first page's.
+    await pinClock(second)
     await second.goto('/notebook?from=2026-07-20&to=2026-07-26&has_action_items=true')
     await expect(second.getByTestId('notebook-count')).toHaveText(results!)
 

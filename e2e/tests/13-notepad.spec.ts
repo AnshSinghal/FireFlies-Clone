@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+import { expect, test } from '../fixtures'
 
 /**
  * Notepad shell (T-18, cases T18-A → T18-K).
@@ -85,14 +87,11 @@ test.describe('notepad shell', () => {
     await expect(page.getByTestId('panel-handle')).toHaveAttribute('aria-valuenow', ratio!)
   })
 
-  test('T18-F · Copy link copies the current URL', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-
+  test('T18-F · Copy link copies the current URL', async ({ page, clipboard }) => {
     await page.getByTestId('notepad-copy-link').click()
     await expect(page.getByTestId('toast').first()).toContainText('Link copied')
 
-    const copied = await page.evaluate(() => navigator.clipboard.readText())
-    expect(copied).toContain('/meeting/1')
+    expect(await clipboard.readText()).toContain('/meeting/1')
   })
 
   test('the kebab offers every documented action', async ({ page }) => {
