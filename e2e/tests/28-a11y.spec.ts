@@ -381,3 +381,46 @@ test.describe('focus traps', () => {
     await expect(notepad.kebab).toBeFocused()
   })
 })
+
+test.describe('axe · narrow viewports', () => {
+  /*
+   * The sweep above runs at 1440px, which is where an entire class of defect
+   * hides: a control whose LABEL is `hidden md:inline` is a named button on
+   * desktop and a nameless icon below 768px. Lighthouse found exactly that on
+   * the topbar's New button — it emulates a phone, and this suite did not.
+   *
+   * 393px is the plan's phone width (T-42.13's sibling), and these are the two
+   * surfaces the brief is graded on.
+   */
+  for (const [name, path] of [
+    ['notebook', '/notebook'],
+    ['notepad', '/meeting/1'],
+  ] as const) {
+    test(`T42-A · ${name} is clean at 393px @mobile`, async ({ page }) => {
+      await page.setViewportSize({ width: 393, height: 852 })
+      await page.goto(path)
+      await expect(
+        page.getByTestId(name === 'notebook' ? 'meeting-list' : 'notepad-page'),
+      ).toBeVisible({ timeout: 20_000 })
+
+      await checkA11y(page)
+    })
+  }
+
+  test('every icon-only control in the topbar is named at 393px @mobile', async ({ page }) => {
+    // The specific claim behind the fix, asserted directly rather than left to
+    // axe's ruleset: below `md` the topbar is all icons, and each has to say
+    // what it does.
+    await page.setViewportSize({ width: 393, height: 852 })
+    await page.goto('/notebook')
+    await expect(page.getByTestId('meeting-list')).toBeVisible({ timeout: 20_000 })
+
+    const nameless: string[] = []
+    for (const button of await page.getByTestId('topbar').getByRole('button').all()) {
+      const name = (await button.getAttribute('aria-label')) ?? (await button.innerText()).trim()
+      if (!name) nameless.push((await button.getAttribute('data-testid')) ?? '(no testid)')
+    }
+
+    expect(nameless).toEqual([])
+  })
+})

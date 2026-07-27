@@ -283,6 +283,30 @@ compresses its HTML and RSC responses but serves `/_next/static` untouched, and 
 point had no `gzip` block — so every visitor was downloading ~2.7× these numbers. Fixed in
 `deploy/nginx-fireflies.conf`.
 
+### Lighthouse (T-42.7)
+
+Run against the deployed origin with Chrome's mobile emulation, which is the profile that finds
+things a 1440px suite cannot.
+
+| Category | Score | Plan target | |
+|---|---|---|---|
+| Accessibility | **95** | ≥ 95 | met |
+| Performance | 79 | ≥ 85 | LCP 4.0s is the whole gap |
+| Best Practices | 79 | ≥ 95 | both failures are "no HTTPS" |
+
+**Best Practices** is entirely `is-on-https` and `redirects-http`. The demo is served over plain
+HTTP on a bare IP — there is no domain to issue a certificate against — so this is an infrastructure
+limit, not a code one. Put it behind a hostname with TLS and the category is 100.
+
+**Performance** is LCP: 4.0s against FCP 0.8s, CLS 0, Speed Index 1.1s. The shell paints fast and
+the largest element is the meeting list, which waits on a client-side fetch. The fix is to render
+the first page on the server — real work, and a change to the RSC-vs-client-data decision recorded
+in ADR-001 rather than a tuning pass, so it is written down rather than half-done.
+
+Lighthouse did find one real defect, and it is the reason to run tools that emulate a phone: the
+topbar's **New** button had no accessible name below 768px, where its label is `hidden md:inline`.
+Our axe sweep runs at 1440px and never saw it. Fixed, with `28-a11y.spec.ts` now sweeping 393px too.
+
 Backend latency budgets (T-42.10) and the 5,000-segment stress case (T-42.11) are asserted in
 `backend/tests/test_performance.py`. Two of those assert a *ratio* rather than a stopwatch reading,
 because the ratio is what stays true on someone else's hardware: a page of 20 must not slow down as

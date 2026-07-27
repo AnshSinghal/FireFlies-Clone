@@ -34,6 +34,16 @@ export function NewMenu() {
         variant="primary"
         onClick={toggle}
         data-testid="topbar-new-button"
+        /*
+         * Named even when the label is not rendered.
+         *
+         * The visible "New" is `hidden md:inline`, so below 768px this is an
+         * icon-only button with no accessible name at all — a Lighthouse
+         * `button-name` failure and, more to the point, a button a screen
+         * reader announces as "button". The desktop axe sweep never saw it
+         * because at 1440px the label is there; Lighthouse emulates a phone.
+         */
+        aria-label="New"
         aria-haspopup="menu"
         aria-expanded={open}
         leftIcon={<Plus size={16} strokeWidth={2.25} className="shrink-0" />}
