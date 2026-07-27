@@ -117,9 +117,20 @@ row, and the budget is the thing that makes "it feels fast" falsifiable.
   copies resolved token values because a PDF cannot read CSS custom properties
   (ADR-105); generating it from `tokens.css` at build time would remove the one
   sanctioned place where a hex code lives outside the token layer.
-- **Revisit `formatMeetingMeta`.** Rows show `7:13` where Fireflies shows
-  `30 min` (`docs/ui-audit.md`, item 1) — kept for consistency with the player
-  clock, but it is a defensible thing to change if the evaluator disagrees.
+- **Close the last density gap.** Card height is 1.29× the topbar against the
+  reference's 1.51 (`docs/ui-audit.md`). The two gap tokens next to it were
+  measured and fixed (ADR-149); this one is deliberately still open because
+  `72px` is load-bearing — `design.md` §3.7 fixes it, T12-B asserts it, the
+  skeleton mirrors it and the virtualiser sizes items from it, so a wrong value
+  breaks scrolling rather than looking slightly off.
+
+*(A fourth item lived here until 2026-07-27: "revisit `formatMeetingMeta`,
+rows show `7:13` where Fireflies shows `30 min` — kept for consistency with the
+player clock." It was not a refactor to consider, it was a defect I had argued
+myself into keeping. The pinned test I cited as justification was named
+`matches the reference screenshots` and asserted `30:00` for 1800 seconds — the
+reference's own row. Fixed in ADR-148; the reasoning is dissected in the audit
+because the failure mode is worth more than the fix.)*
 
 ## 8 · Which bugs did the tests find that reading the code could not?
 
