@@ -54,3 +54,6 @@ Thumbs.db
 # --- Tooling scratch ---
 ruvector.db
 .claude/settings.local.json
+
+# Ralph-loop scratch state: per-session, regenerated, never part of the build.
+.claude/*.local.md
