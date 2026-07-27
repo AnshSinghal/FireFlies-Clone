@@ -90,16 +90,41 @@ test.describe('AskFred', () => {
 
     await page.getByTestId('askfred-citation-0').click()
 
+    /*
+     * Both waits below carry an explicit 30s budget rather than the config's
+     * 10s default.
+     *
+     * This test failed exactly once in ~27 full-suite runs, on a box that was
+     * simultaneously running another `next build` and a second Playwright
+     * suite. It has since survived 30 attempts — 10 sequential, then 20 more
+     * at 8 workers — without reproducing, so what went wrong is NOT
+     * established and this comment does not pretend otherwise.
+     *
+     * What is safe either way: these assert END STATES (the playhead reached
+     * the citation; the cited row is on screen), so a longer budget changes
+     * only how long we wait for the same truth — unlike a sleep, which would
+     * assert nothing. `playwright.config.ts` already sets a 60s per-test
+     * timeout for precisely this machine, with precisely this reasoning; the
+     * two assertions here were the ones still on the shorter default.
+     *
+     * If it recurs, the trace is retained (`--trace=retain-on-failure`) and
+     * the question to answer first is WHICH of the two failed: the seek not
+     * landing points at the player, the reveal not landing at the virtualiser.
+     */
     // The player seeked to the citation (and plays from it — allow drift).
     const seconds = Math.floor(cited.start_ms / 1000)
     await expect
-      .poll(async () => Number(await page.getByTestId('player-seekbar').getAttribute('aria-valuenow')))
+      .poll(
+        async () =>
+          Number(await page.getByTestId('player-seekbar').getAttribute('aria-valuenow')),
+        { timeout: 30_000 },
+      )
       .toBeGreaterThanOrEqual(seconds)
 
     // And the transcript revealed the cited line — the reveal scroll is the
     // "flash": the row it lands on wears the active-line tint.
     await expect(page.getByTestId(`transcript-segment-${cited.segment_id}`)).toBeInViewport({
-      timeout: 10_000,
+      timeout: 30_000,
     })
   })
 

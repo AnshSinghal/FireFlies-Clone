@@ -1,4 +1,13 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+// `test` comes from `../fixtures`, not from Playwright directly, so the
+// frozen-clock auto-fixture applies. This file groups meetings by day and its
+// comments talk about "Today"; on the raw wall clock that word stops being
+// true the moment the date passes the seed anchor, and a later assertion on a
+// group LABEL would then fail at midnight for reasons unrelated to bulk
+// selection. Same correction as 19-action-items, where an unpinned clock let
+// T24-L's "Due today" badge pass only because the real date happened to match.
+import { expect, test } from '../fixtures'
 
 /**
  * Bulk selection and pagination (T-14, cases T14-A → T14-M).
@@ -129,8 +138,27 @@ test.describe('bulk selection', () => {
     await expect(page.getByTestId('meeting-list')).toBeVisible()
 
     await selectRow(page, 0)
+
+    /*
+     * Wait for page 2's ROWS, not merely for the list to be visible.
+     *
+     * The list element never unmounts across a page change, so
+     * `toBeVisible()` is satisfied instantly — by page 1, still on screen
+     * while page 2 loads. `selectRow(0)` then clicked the row already
+     * selected and toggled it OFF, so the bulk bar unmounted and the next
+     * assertion found no `bulk-count` at all.
+     *
+     * It passed for years on the wall clock and failed the moment the frozen
+     * clock changed the query's staleness timing — the race was always there,
+     * the timing merely hid it. Anchoring on the first row's href makes the
+     * wait mean "page 2 is rendered" instead of "something is rendered".
+     */
+    const firstHref = await page.getByTestId('meeting-row').first().locator('a').getAttribute('href')
     await page.getByTestId('pagination-page-2').click()
-    await expect(page.getByTestId('meeting-list')).toBeVisible()
+    await expect(page.getByTestId('meeting-row').first().locator('a')).not.toHaveAttribute(
+      'href',
+      firstHref ?? '',
+    )
 
     // Three on page 1 plus two on page 2 means five — paging is not a filter.
     await expect(page.getByTestId('bulk-count')).toHaveText('1 selected')
