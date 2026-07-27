@@ -30,6 +30,8 @@ import { useTimeLink } from '@/lib/player/use-time-link'
 import { notebookReturnUrl } from '@/lib/notebook-return'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 
+import { EditMeetingModal } from '@/features/edit/edit-meeting-modal'
+
 import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
 import { NotepadHeader } from './notepad-header'
 import { ShortcutsModal } from './player/shortcuts-modal'
@@ -48,6 +50,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
 
   const [openPanel, setOpenPanel] = useState<RailItemId | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState('summary')
 
   // Below 1024px the split becomes tabs (T-18.9): two 300px panels side by side
@@ -135,6 +138,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
                 })
               }
               onDelete={() => setConfirmingDelete(true)}
+              onEditDetails={() => setEditing(true)}
             />
 
             <div className="flex min-h-0 flex-1 flex-col md:flex-row">
@@ -197,6 +201,8 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
             and its duration is known.
           */}
             <PlayerKeyboard />
+
+            <EditMeetingModal meeting={meeting} open={editing} onOpenChange={setEditing} />
 
             <ConfirmDialog
               open={confirmingDelete}

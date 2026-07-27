@@ -36,6 +36,8 @@ import { pluralize } from '@/lib/utils/format'
 import { RemovableChip } from '@/components/ui/chip'
 
 import { BulkBar } from './bulk-bar'
+import { EditMeetingModalById } from '@/features/edit/edit-meeting-modal'
+
 import { DetailsDrawer } from './details-drawer'
 
 import { activeFilterChips, draftFromFilters, filtersFromDraft } from './filter-presets'
@@ -121,6 +123,15 @@ export function NotebookView() {
    * The drawer's open state lives in the URL (T-15.12), so it is deep-linkable
    * and survives a refresh. `showDetails(null)` closes it.
    */
+  /*
+   * Which meeting the edit modal is open on.
+   *
+   * Component state rather than a URL parameter, unlike the drawer: the drawer
+   * is a VIEW of a meeting and worth linking to, while a half-finished edit is
+   * not something to restore on reload.
+   */
+  const [editingId, setEditingId] = useState<number | null>(null)
+
   const detailsId = filters.details ?? null
   const showDetails = useCallback(
     (id: number | null) =>
@@ -331,6 +342,7 @@ export function NotebookView() {
           query={filters.q}
           onDelete={(id) => void deleteWithUndo(id)}
           onShowDetails={showDetails}
+          onEditDetails={setEditingId}
           onPrefetch={(id) =>
             void client.prefetchQuery({
               queryKey: qk.meetings.detail(id),
@@ -366,6 +378,8 @@ export function NotebookView() {
           }
         />
       )}
+
+      <EditMeetingModalById meetingId={editingId} onClose={() => setEditingId(null)} />
 
       {detailsId !== null && (
         <DetailsDrawer
@@ -417,6 +431,7 @@ interface GroupedListProps {
   query?: string
   onDelete: (id: number) => void
   onShowDetails: (id: number) => void
+  onEditDetails: (id: number) => void
   onPrefetch: (id: number) => void
 }
 
@@ -426,6 +441,7 @@ function GroupedList({
   query,
   onDelete,
   onShowDetails,
+  onEditDetails,
   onPrefetch,
 }: GroupedListProps) {
   const flat = useMemo(() => groups.flatMap((group) => group.items), [groups])
@@ -504,6 +520,7 @@ function GroupedList({
                   query={query}
                   onDelete={onDelete}
                   onShowDetails={onShowDetails}
+                  onEditDetails={onEditDetails}
                   onPrefetch={() => onPrefetch(meeting.id)}
                   tabIndex={meeting.id === activeId ? 0 : -1}
                   onFocus={() => setPreferredId(meeting.id)}

@@ -86,6 +86,10 @@ class ParticipantDetail(BaseModel):
     display_name: str
     email: str | None = None
     avatar_url: str | None = None
+    #: The account behind this person, when there is one. Null for an external
+    #: attendee — and the host selector reads it, because a participant with no
+    #: account cannot be the host (the host is a user).
+    user_id: int | None = None
     #: Invited but absent is a real and useful distinction — the drawer lists
     #: "Invited" and "Attended" separately.
     attended: bool
@@ -268,6 +272,33 @@ class MeetingUpdate(BaseModel):
     language: str | None = None
     visibility: Visibility | None = None
     channel_id: int | None = None
+
+    #: The full list, replacing what is there. Names, not ids: the editor is a
+    #: token input over free text, and resolving a name to a participant row is
+    #: the server's job — it is the side that knows which ones already exist.
+    participant_names: list[str] | None = Field(default=None, max_length=200)
+    #: Must be one of the participants. Enforced in the service, since the two
+    #: fields can arrive in the same request.
+    host_participant_id: int | None = None
+
+    @field_validator("participant_names")
+    @classmethod
+    def _no_duplicate_participants(cls, value: list[str] | None) -> list[str] | None:
+        """Two people with the same name in one meeting is a mistake, not a case.
+
+        Blocked rather than de-duplicated: silently dropping one of them leaves
+        the user looking at a list that does not match what they typed.
+        """
+        if value is None:
+            return None
+
+        names = [name.strip() for name in value if name.strip()]
+        lowered = [name.lower() for name in names]
+        duplicates = {name for name in lowered if lowered.count(name) > 1}
+        if duplicates:
+            raise ValueError(f"Duplicate participant: {', '.join(sorted(duplicates))}.")
+
+        return names
 
     @field_validator("title")
     @classmethod

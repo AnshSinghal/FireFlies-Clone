@@ -2046,6 +2046,64 @@ the paste box) does not lose corrections that still apply.
 
 ---
 
+## ADR-088 — Dirty state is a comparison, not a flag
+
+**Context.** `Save` must be disabled until something changes (T-27.5), and the
+PATCH must carry only what changed (T-27.6).
+
+**Decision.** One `useMemo` builds the patch by comparing the draft against the
+meeting as loaded, and `dirty` is `Object.keys(patch).length > 0`. There is no
+per-field flag.
+
+A flag set on every edit stays set when a field is changed and changed back,
+which leaves `Save` enabled with nothing to save — and then sends a PATCH that
+resets a field to the value it already had, overwriting anyone who changed it in
+between.
+
+**Consequence.** The two requirements are one piece of code, so they cannot
+disagree: what enables the button IS what gets sent.
+
+---
+
+## ADR-089 — Participants are reconciled by name, not replaced
+
+**Context.** The editor sends the whole participant list. The obvious
+implementation deletes the rows and re-adds them.
+
+**Decision.** Match the existing rows by name (case- and padding-insensitive),
+delete what is gone, add what is new, and leave the rest untouched.
+
+A participant's id is load-bearing: action items are assigned to it, speakers
+link to it, and talk time hangs off it. Delete-and-re-add orphans all three
+while looking like it worked — the names are identical afterwards, and only the
+action item assignments are quietly gone.
+
+**Consequence.** A test asserts that a surviving participant keeps their id AND
+that their action item still points at somebody. The host is set through a
+participant id for the same reason: the editor picks from the room, and the
+service resolves that to the user account the meeting is filtered by.
+
+---
+
+## ADR-090 — One error toast, from the global handler
+
+**Context.** The edit modal raised its own error toast with a Retry. The app
+already raises one for every failed mutation (T-09.11).
+
+**Decision.** Delete the local one. The global handler prefers the API's own
+message, offers Retry only when retrying could plausibly work, and re-runs the
+exact mutation with the exact variables — all of which the local version had to
+reimplement worse.
+
+What the modal owns is staying OPEN with the input intact, which it does by not
+closing except on success.
+
+**Consequence.** Its own test caught the duplication: `getByTestId('toast')`
+resolved to two elements. Worth remembering as a smell — a strict-mode
+violation on a notification is usually two systems reporting the same event.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

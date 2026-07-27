@@ -40,9 +40,15 @@ interface NotepadHeaderProps {
   meeting: MeetingDetail
   onRegenerate: () => void
   onDelete: () => void
+  onEditDetails: () => void
 }
 
-export function NotepadHeader({ meeting, onRegenerate, onDelete }: NotepadHeaderProps) {
+export function NotepadHeader({
+  meeting,
+  onRegenerate,
+  onDelete,
+  onEditDetails,
+}: NotepadHeaderProps) {
   const router = useRouter()
   const toast = useToast()
 
@@ -127,7 +133,11 @@ export function NotepadHeader({ meeting, onRegenerate, onDelete }: NotepadHeader
           <DropdownItem icon={<Pencil size={16} strokeWidth={1.75} />} soon>
             Rename
           </DropdownItem>
-          <DropdownItem icon={<SlidersHorizontal size={16} strokeWidth={1.75} />} soon>
+          <DropdownItem
+            icon={<SlidersHorizontal size={16} strokeWidth={1.75} />}
+            onSelect={onEditDetails}
+            testId="notepad-edit-details"
+          >
             Edit details
           </DropdownItem>
           <DropdownItem

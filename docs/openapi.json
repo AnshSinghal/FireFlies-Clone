@@ -1075,6 +1075,17 @@
             ],
             "title": "Description"
           },
+          "host_participant_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Host Participant Id"
+          },
           "language": {
             "anyOf": [
               {
@@ -1085,6 +1096,21 @@
               }
             ],
             "title": "Language"
+          },
+          "participant_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Participant Names"
           },
           "started_at": {
             "anyOf": [
@@ -1278,6 +1304,17 @@
           "talk_seconds": {
             "title": "Talk Seconds",
             "type": "integer"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
           }
         },
         "required": [

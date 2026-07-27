@@ -870,3 +870,132 @@ Ada Lovelace: Nothing blocking on my side.
     await expect(page.getByTestId('meeting-row')).toHaveCount(before, { timeout: 20_000 })
   })
 })
+
+test.describe('edit meeting', { tag: '@mutates' }, () => {
+  const HERO = 1
+
+  async function openEdit(page: Page): Promise<void> {
+    await page.goto(`/meeting/${HERO}`)
+    await expect(page.getByTestId('notepad-header')).toBeVisible({ timeout: 20_000 })
+    await page.getByTestId('notepad-kebab').click()
+    await page.getByTestId('notepad-edit-details').click()
+    await expect(page.getByTestId('edit-modal')).toBeVisible()
+  }
+
+  test('T27-A/I · a title change reaches every surface, and sends only the title', async ({
+    page,
+  }) => {
+    await openEdit(page)
+    const original = await page.getByTestId('edit-title').inputValue()
+
+    // Captured, to prove the PATCH is partial (T-27.6).
+    const bodies: string[] = []
+    await page.route(`**/api/v1/meetings/${HERO}`, (route) => {
+      if (route.request().method() === 'PATCH') bodies.push(route.request().postData() ?? '')
+      return route.continue()
+    })
+
+    await page.getByTestId('edit-title').fill('Renamed by the edit suite')
+    await page.getByTestId('edit-save').click()
+
+    await expect(page.getByTestId('toast')).toContainText('Changes saved')
+    await expect(page.getByTestId('edit-modal')).toBeHidden()
+
+    // ONLY the title. A PATCH that resends everything is a PUT in disguise.
+    expect(bodies).toHaveLength(1)
+    expect(Object.keys(JSON.parse(bodies[0]!))).toEqual(['title'])
+
+    // The Notepad header, without a reload.
+    await expect(page.getByTestId('notepad-title')).toHaveText('Renamed by the edit suite')
+    // The tab title, which follows the meeting (T-18.11).
+    await expect.poll(() => page.title()).toContain('Renamed by the edit suite')
+
+    // And the Notebook row, from the same cache.
+    await page.goto('/notebook')
+    await expect(page.getByTestId(`meeting-row-${HERO}`)).toContainText(
+      'Renamed by the edit suite',
+      { timeout: 20_000 },
+    )
+
+    await page.request.patch(`http://127.0.0.1:8100/api/v1/meetings/${HERO}`, {
+      data: { title: original },
+    })
+  })
+
+  test('T27-D · adding a participant shows up in the drawer', async ({ page, request }) => {
+    // Captured FIRST, and restored through the API at the end — a failure
+    // partway through this test must not leave a participant behind for the
+    // next one to trip over.
+    const original = (
+      (await (await request.get(`http://127.0.0.1:8100/api/v1/meetings/${HERO}`)).json()) as {
+        participants: Array<{ display_name: string }>
+      }
+    ).participants.map((person) => person.display_name)
+
+    await openEdit(page)
+
+    await page.getByTestId('edit-participant-input').fill('Temporary Attendee')
+    await page.getByTestId('edit-participant-input').press('Enter')
+
+    await expect(page.locator('[data-testid^="edit-participant-token-"]')).toHaveCount(
+      original.length + 1,
+    )
+
+    /*
+     * `force`, because the button disables itself as a RESULT of this click.
+     *
+     * A successful save makes the draft match the meeting, which is what
+     * `Save` being disabled means — and Playwright's actionability re-check
+     * sees that as evidence the click never landed, then retries until the
+     * test times out. Forcing dispatches once; the assertions below are what
+     * decide whether it worked.
+     */
+    await page.getByTestId('edit-save').click({ force: true })
+    await expect(page.getByTestId('toast').first()).toContainText('Changes saved')
+
+    await page.goto(`/notebook?details=${HERO}`)
+    await expect(page.getByTestId('details-drawer')).toBeVisible({ timeout: 20_000 })
+    await expect(page.getByTestId('details-attended-list')).toContainText('Temporary Attendee')
+
+    await request.patch(`http://127.0.0.1:8100/api/v1/meetings/${HERO}`, {
+      data: { participant_names: original },
+    })
+  })
+
+  test('T27-J · a failed save keeps the modal and the input', async ({ page }) => {
+    await openEdit(page)
+    const original = await page.getByTestId('edit-title').inputValue()
+
+    await page.route(`**/api/v1/meetings/${HERO}`, (route) =>
+      route.request().method() === 'PATCH'
+        ? route.fulfill({
+            status: 500,
+            json: { error: { code: 'INTERNAL_ERROR', message: 'Boom', details: {} } },
+          })
+        : route.continue(),
+    )
+
+    await page.getByTestId('edit-title').fill('An edit that will fail')
+    await page.getByTestId('edit-save').click()
+
+    /*
+     * The API's own message, not the generic line.
+     *
+     * The global mutation handler prefers what the server said when it said
+     * anything — a routed 500 carrying "Boom" surfaces as "Boom", which is the
+     * correct behaviour and the reason this asserts on the RETRY rather than
+     * on wording the test itself chose.
+     */
+    await expect(page.getByTestId('toast').first()).toBeVisible()
+    await expect(page.getByTestId('toast-action').first()).toHaveText('Retry')
+
+    // Still open, with what was typed — closing it would throw the work away
+    // to show an error about not being able to save it.
+    await expect(page.getByTestId('edit-modal')).toBeVisible()
+    await expect(page.getByTestId('edit-title')).toHaveValue('An edit that will fail')
+    // The header never showed the failed title.
+    await page.unrouteAll({ behavior: 'ignoreErrors' })
+    await page.reload()
+    await expect(page.getByTestId('notepad-title')).toHaveText(original, { timeout: 20_000 })
+  })
+})
