@@ -8,7 +8,9 @@ times. So segments are paginated by cursor, and speakers are sent BY REFERENCE.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.schemas.common import MatchRange
 
@@ -23,7 +25,14 @@ class SpeakerRef(BaseModel):
     #: Server-assigned, and authoritative — every surface reads it rather than
     #: re-deriving a colour from the name (ADR-013).
     color_index: int
-    participant_id: int | None = None
+    participant_id: int | None
+
+    #: How many lines this voice has. Drives the legend's share and the rename
+    #: popover's "will update 84 segments" — counted here because the client
+    #: only ever holds a page of segments and cannot count the rest.
+    segment_count: int
+    #: Time spent talking, in ms, for the legend's percentages.
+    talk_ms: int
 
 
 class SegmentOut(BaseModel):
@@ -38,9 +47,13 @@ class SegmentOut(BaseModel):
     #: The speaker's id only. `TranscriptPage.speakers` carries the details.
     speaker_id: int
     text: str
-    is_edited: bool = False
+    is_edited: bool
+    #: What it said before the first edit — `None` when it has never been
+    #: edited. Sent so "Revert to original" is a client-side action rather than
+    #: another endpoint, and so the revert is exact rather than remembered.
+    original_text: str | None
     #: Present only on a `?q=` request, and only for segments that matched.
-    matches: list[MatchRange] | None = None
+    matches: list[MatchRange] | None
 
 
 class TranscriptPage(BaseModel):
@@ -64,8 +77,22 @@ class TranscriptPage(BaseModel):
 class SegmentUpdate(BaseModel):
     """Edit a line's text, reassign its speaker, or both (T-17.5)."""
 
-    text: str | None = Field(default=None, min_length=1)
+    #: Trimmed and bounded. The ceiling is not arbitrary: a transcript line is
+    #: a sentence or two, and anything past five thousand characters is a paste
+    #: accident that would break the row's layout and the FTS index's
+    #: usefulness at once.
+    text: (
+        Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=5000)]
+        | None
+    ) = None
     speaker_id: int | None = None
+
+
+class SpeakerCreate(BaseModel):
+    """A voice the diariser did not find (T-25.6)."""
+
+    label: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
+    participant_id: int | None = None
 
 
 class SpeakerUpdate(BaseModel):

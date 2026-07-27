@@ -14,6 +14,7 @@ from app.core.exceptions import MediaNotFoundError
 from app.schemas.transcript import (
     SegmentOut,
     SegmentUpdate,
+    SpeakerCreate,
     SpeakerRef,
     SpeakerUpdate,
     TranscriptPage,
@@ -60,6 +61,23 @@ def get_transcript(
 def get_speakers(db: DbSession, meeting_id: int) -> list[SpeakerRef]:
     MeetingService(db).get(meeting_id)
     return TranscriptService(db).speakers(meeting_id)
+
+
+@router.post(
+    "/{meeting_id}/speakers",
+    response_model=SpeakerRef,
+    status_code=201,
+    responses={**NOT_FOUND_OR_GONE, **VALIDATION},
+    summary="Add a speaker",
+    description=(
+        "For a voice the diariser missed. The colour index continues the "
+        "meeting's sequence, so the new speaker is visibly distinct from the "
+        "ones already on screen."
+    ),
+)
+def create_speaker(db: DbSession, meeting_id: int, payload: SpeakerCreate) -> SpeakerRef:
+    MeetingService(db).get(meeting_id)
+    return TranscriptService(db).create_speaker(meeting_id, payload)
 
 
 @router.patch(

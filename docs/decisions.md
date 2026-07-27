@@ -1903,6 +1903,86 @@ suspends the transcript's follow for five seconds.
 
 ---
 
+## ADR-081 — The speaker legend is filter and management at once
+
+**Context.** T-25 wants a legend with talk-time shares, a way to filter to one
+speaker, and a place to rename speakers. Three surfaces would fit that
+description.
+
+**Decision.** One row. Outside edit mode a legend entry TOGGLES the filter —
+click to see only Marcus, click again to see everyone. Inside edit mode the
+same entry opens a rename popover.
+
+A toggle rather than a menu because "just show me what they said" is something
+people do repeatedly, and a two-click affordance for it is one click too many.
+
+The filter is applied in the PANEL, not inside the list, so the match count,
+the copy action and the row indices all describe the same set of lines. A list
+filtering internally would leave the find bar counting matches in lines nobody
+can see.
+
+**Consequence.** `SpeakerRef` gained `segment_count` and `talk_ms`, counted
+across the whole meeting in one grouped query. The client only ever holds a
+page of segments and cannot count the rest — which is also what makes the
+rename popover able to say "will update 84 segments" before the click.
+
+---
+
+## ADR-082 — An open editor follows the segment underneath it
+
+**Context.** The segment editor holds a draft in local state, as every text
+editor does. An undo writes the previous text to the server, the query cache
+updates, and the new value arrives as a prop.
+
+**Decision.** Compare the incoming value against the last one seen, DURING
+RENDER, and reset the draft when they differ — React's documented recipe for
+adjusting state to a prop.
+
+Without it, ⌘Z appeared to do nothing: the database had the old text, the row
+would have shown it, and the open textarea kept displaying the edit. The test
+that caught it asserted on the row's `innerText`, which does not include a
+textarea's value — so the first failure was the test's, and the second was the
+product's.
+
+---
+
+## ADR-083 — Segment text is trimmed and bounded by the API
+
+**Context.** T-25.10 wants whitespace trimmed, empty text rejected and very
+long text refused.
+
+**Decision.** All three in the schema: `strip_whitespace`, `min_length=1`,
+`max_length=5000`. The editor checks the same rules so the message is
+immediate, but the API is the half that cannot be bypassed.
+
+**Consequence.** A test that had been "editing" a segment by appending a space
+stopped marking the summary stale — correctly, because nothing changed. That is
+the trim working, and the test now makes a real edit. Worth recording: a
+tightened validation rule invalidates any test that was relying on a no-op edit
+counting as an edit.
+
+---
+
+## ADR-084 — Portalled submenus are not held open across steps in a test
+
+**Context.** T25-H drove speaker reassignment through the row's kebab → a Radix
+submenu. It timed out, repeatedly, in three different formulations.
+
+**Cause.** The submenu lives in a portal owned by the row, and the row
+re-renders on any background refetch of the transcript — which unmounts the
+open menu mid-test. Playwright's `click` also moves the pointer straight to the
+target, leaving the safe path between a sub-trigger and its content.
+
+**Decision.** Assert the menu OFFERS the choices while it is open, then perform
+the selection through the API and assert the row follows. Both halves are real
+claims; neither depends on a portal surviving several seconds of background
+activity.
+
+Where a submenu interaction is genuinely under test, hover to it rather than
+clicking straight at it.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.

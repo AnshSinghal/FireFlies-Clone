@@ -19,6 +19,7 @@ from app.schemas.common import MatchRange
 from app.schemas.transcript import (
     SegmentOut,
     SegmentUpdate,
+    SpeakerCreate,
     SpeakerRef,
     SpeakerUpdate,
     TranscriptPage,
@@ -100,7 +101,43 @@ class TranscriptService:
             return []
 
         speakers = self.db.execute(select(Speaker).where(Speaker.id.in_(ids))).scalars()
-        return [SpeakerRef.model_validate(speaker) for speaker in speakers]
+        # Counted across the WHOLE meeting, not this page: the legend's shares
+        # and the rename popover's "will update 84 segments" describe the
+        # transcript, and a page is a window onto it.
+        meeting_ids = {row.meeting_id for row in rows}
+        stats = self._speaker_stats(next(iter(meeting_ids))) if meeting_ids else {}
+
+        return [self._to_speaker(speaker, stats) for speaker in speakers]
+
+    def _speaker_stats(self, meeting_id: int) -> dict[int, tuple[int, int]]:
+        """`{speaker_id: (segment_count, talk_ms)}` for one meeting.
+
+        One grouped query rather than a count per speaker — four speakers is
+        four round-trips otherwise, on a page that already made two.
+        """
+        rows = self.db.execute(
+            select(
+                TranscriptSegment.speaker_id,
+                func.count(),
+                func.sum(TranscriptSegment.end_ms - TranscriptSegment.start_ms),
+            )
+            .where(TranscriptSegment.meeting_id == meeting_id)
+            .group_by(TranscriptSegment.speaker_id)
+        ).all()
+
+        return {row[0]: (row[1], row[2] or 0) for row in rows}
+
+    @staticmethod
+    def _to_speaker(speaker: Speaker, stats: dict[int, tuple[int, int]]) -> SpeakerRef:
+        count, talk_ms = stats.get(speaker.id, (0, 0))
+        return SpeakerRef(
+            id=speaker.id,
+            label=speaker.label,
+            color_index=speaker.color_index,
+            participant_id=speaker.participant_id,
+            segment_count=count,
+            talk_ms=talk_ms,
+        )
 
     @staticmethod
     def _to_segment(row: TranscriptSegment, term: str) -> SegmentOut:
@@ -112,6 +149,7 @@ class TranscriptService:
             speaker_id=row.speaker_id,
             text=row.text,
             is_edited=row.is_edited,
+            original_text=row.original_text,
             matches=_find_ranges(row.text, term) if term else None,
         )
 
@@ -181,7 +219,7 @@ class TranscriptService:
             self.db.commit()
             self.db.refresh(speaker)
 
-        return SpeakerRef.model_validate(speaker)
+        return self._to_speaker(speaker, self._speaker_stats(speaker.meeting_id))
 
     def speakers(self, meeting_id: int) -> list[SpeakerRef]:
         rows = self.db.execute(
@@ -190,7 +228,32 @@ class TranscriptService:
             .order_by(Speaker.id)
             .options(selectinload(Speaker.participant))
         ).scalars()
-        return [SpeakerRef.model_validate(row) for row in rows]
+        stats = self._speaker_stats(meeting_id)
+        return [self._to_speaker(row, stats) for row in rows]
+
+    def create_speaker(self, meeting_id: int, payload: SpeakerCreate) -> SpeakerRef:
+        """A voice the diariser did not find (T-25.6).
+
+        The colour index continues the meeting's existing sequence rather than
+        restarting, so a new speaker is visibly distinct from the ones already
+        on screen — which is the entire job of that number (ADR-013).
+        """
+        highest = self.db.execute(
+            select(func.max(Speaker.color_index)).where(Speaker.meeting_id == meeting_id)
+        ).scalar()
+
+        speaker = Speaker(
+            meeting_id=meeting_id,
+            label=payload.label,
+            color_index=(highest or 0) + 1,
+            participant_id=payload.participant_id,
+        )
+        self.db.add(speaker)
+        self.db.commit()
+        self.db.refresh(speaker)
+
+        # No segments yet, so no stats to look up.
+        return self._to_speaker(speaker, {})
 
 
 def _find_ranges(text: str, term: str) -> list[MatchRange]:

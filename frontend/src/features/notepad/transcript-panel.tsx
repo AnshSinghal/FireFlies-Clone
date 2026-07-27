@@ -10,26 +10,29 @@
  * and then fail silently.
  */
 
-import { Copy, Search } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { Copy, Pencil, Redo2, Search, Undo2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { IconButton } from '@/components/ui/icon-button'
 import { SkeletonText } from '@/components/ui/skeleton'
 import { StateView } from '@/components/ui/state-view'
 import { useToast } from '@/components/ui/toast'
-import { useTranscript } from '@/lib/api/transcript'
+import { useRenameSpeaker, useTranscript, useUpdateSegment } from '@/lib/api/transcript'
 import type { SegmentOut } from '@/lib/api/types'
 import { useNotepadCommands } from '@/lib/notepad/commands'
 import { usePlayer } from '@/lib/player/player-context'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { activeSegmentIndex, toPlainText } from '@/lib/transcript/grouping'
+import { cn } from '@/lib/utils/cn'
 import { formatTimestamp, pluralize } from '@/lib/utils/format'
 
 import { PlayerCard } from './player/player-card'
 import { FindBar } from './transcript/find-bar'
 import { SelectionToolbar } from './transcript/selection-toolbar'
+import { SpeakerLegend } from './transcript/speaker-legend'
 import { TranscriptList } from './transcript/transcript-list'
+import { useEditSession } from './transcript/use-edit-session'
 import { useTranscriptSearch } from './transcript/use-transcript-search'
 
 interface TranscriptPanelProps {
@@ -85,6 +88,35 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
     [copy],
   )
 
+  // ── Editing (T-25) ────────────────────────────────────────────────────────
+
+  const updateSegment = useUpdateSegment(meetingId)
+  const renameSpeaker = useRenameSpeaker(meetingId)
+
+  const saveSegment = useCallback(
+    (id: number, text: string) => updateSegment.mutateAsync({ id, text }),
+    [updateSegment],
+  )
+  const edit = useEditSession({ onSave: saveSegment })
+
+  const [speakerFilter, setSpeakerFilter] = useState<number | null>(null)
+
+  /*
+   * The filter is applied HERE rather than in the list, so the match count,
+   * the copy action and the row indices all describe the same set of segments.
+   * A list that filtered internally would leave the find bar counting matches
+   * in lines nobody can see.
+   */
+  const shown = useMemo(
+    () =>
+      speakerFilter === null
+        ? segments
+        : segments.filter((segment) => segment.speaker_id === speakerFilter),
+    [segments, speakerFilter],
+  )
+
+  const search = useTranscriptSearch(shown)
+
   /*
    * Resolved HERE so the list can take an index (T-21.4).
    *
@@ -92,9 +124,7 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
    * `player.currentMs` — but it renders almost nothing. Passing the index down
    * keeps the ten-times-a-second cadence out of the transcript.
    */
-  const activeIndex = activeSegmentIndex(segments, player.currentMs)
-
-  const search = useTranscriptSearch(segments)
+  const activeIndex = activeSegmentIndex(shown, player.currentMs)
 
   /*
    * A keyword clicked in the SUMMARY opens this bar on that term (T-23.2).
@@ -162,13 +192,63 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
       </div>
 
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-subtle px-4">
-        <h2 className="text-label uppercase text-muted">Transcript</h2>
+        <h2 className="shrink-0 text-label uppercase text-muted">Transcript</h2>
         {segments.length > 0 && (
-          <span className="text-xs text-muted" data-testid="transcript-count">
+          <span className="shrink-0 text-xs text-muted" data-testid="transcript-count">
             {pluralize(segments.length, 'segment')}
           </span>
         )}
+        {edit.editing && (
+          <span
+            data-testid="transcript-edit-status"
+            // Truncated rather than wrapped: this row is a fixed 36px, and a
+            // status that wraps pushes the controls onto a second line.
+            className="min-w-0 truncate text-xs text-muted"
+            // Polite: the status changes while the user is typing, and an
+            // assertive region would interrupt them mid-sentence.
+            aria-live="polite"
+          >
+            {edit.status === 'saving'
+              ? 'Saving…'
+              : edit.status === 'saved'
+                ? 'Saved'
+                : edit.status === 'error'
+                  ? "Couldn't save"
+                  : 'Editing — changes save automatically'}
+          </span>
+        )}
+
         <span className="ml-auto flex items-center gap-1">
+          {edit.editing && (
+            <>
+              <IconButton
+                label="Undo"
+                size="sm"
+                icon={<Undo2 size={16} strokeWidth={1.75} />}
+                onClick={edit.undo}
+                disabled={!edit.canUndo}
+                data-testid="transcript-undo"
+              />
+              <IconButton
+                label="Redo"
+                size="sm"
+                icon={<Redo2 size={16} strokeWidth={1.75} />}
+                onClick={edit.redo}
+                disabled={!edit.canRedo}
+                data-testid="transcript-redo"
+              />
+            </>
+          )}
+          <IconButton
+            label={edit.editing ? 'Done editing' : 'Edit transcript'}
+            size="sm"
+            icon={<Pencil size={16} strokeWidth={1.75} />}
+            onClick={edit.toggle}
+            aria-pressed={edit.editing}
+            disabled={segments.length === 0}
+            data-testid="transcript-edit-toggle"
+            className={cn(edit.editing && 'bg-accent-subtle text-accent')}
+          />
           <IconButton
             label="Find in transcript"
             size="sm"
@@ -202,6 +282,16 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
         />
       )}
 
+      {speakers.length > 0 && (
+        <SpeakerLegend
+          speakers={speakers}
+          filterId={speakerFilter}
+          onFilter={setSpeakerFilter}
+          editing={edit.editing}
+          onRename={(id, label) => renameSpeaker.mutate({ id, label })}
+        />
+      )}
+
       <div ref={bodyRef} className="flex min-h-0 flex-1 flex-col">
         {isPending && <SkeletonText lines={14} className="p-5" />}
 
@@ -229,16 +319,24 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
           />
         )}
 
-        {segments.length > 0 && (
+        {shown.length > 0 && (
           <TranscriptList
             meetingId={meetingId}
-            segments={segments}
+            segments={shown}
             speakers={speakers}
             activeIndex={activeIndex}
             isPlaying={player.isPlaying}
             onSeek={seekTo}
             onCopyText={onCopyText}
             onCopyLink={onCopyLink}
+            editing={edit.editing}
+            onEditText={edit.change}
+            onCommitEdit={edit.flush}
+            onReassign={(id, speakerId) => updateSegment.mutate({ id, speaker_id: speakerId })}
+            onRevert={(segment) =>
+              segment.original_text !== null &&
+              updateSegment.mutate({ id: segment.id, text: segment.original_text })
+            }
             matchRanges={search.ranges}
             currentMatch={
               currentMatch
