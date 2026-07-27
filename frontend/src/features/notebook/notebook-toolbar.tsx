@@ -75,7 +75,23 @@ export function NotebookToolbar({
   return (
     <div className="space-y-3" data-testid="notebook-toolbar">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="min-w-0 flex-1 sm:max-w-search">
+        {/*
+          `basis-full` below `sm`, or the search collapses and its input spills
+          over the Filters button.
+
+          The row is `flex-wrap`, but nothing wraps while this item is willing
+          to absorb the whole shortfall: `flex-1 min-w-0` lets the wrapper
+          shrink to 42px at 393px while the input inside keeps its intrinsic
+          102px and overflows visibly — the toolbar then reads "lters" across
+          the search field. Giving the search its own row at mobile lets the
+          controls wrap underneath, which is what `flex-wrap` was there for.
+
+          Found by the T-41.10 393px baseline. The document-overflow assertion
+          beside it passed throughout: the collision is inside the toolbar, so
+          the page never overflows — which is precisely why that check needs a
+          snapshot next to it.
+        */}
+        <div className="min-w-0 basis-full sm:basis-auto sm:flex-1 sm:max-w-search">
           <SearchInput
             ref={searchRef}
             value={query}
@@ -97,7 +113,9 @@ export function NotebookToolbar({
           />
         </div>
 
-        {filtersTrigger}
+        {/* `shrink-0` so the controls wrap as a unit rather than compressing
+            individually — the view toggle below guards itself the same way. */}
+        <div className="shrink-0">{filtersTrigger}</div>
 
         <Select
           label="Sort by"
@@ -106,6 +124,7 @@ export function NotebookToolbar({
           onValueChange={onSortChange}
           options={SORT_OPTIONS.map((option) => ({ ...option }))}
           testId="notebook-sort"
+          className="shrink-0"
         />
 
         {/* Segmented list/grid toggle. `aria-pressed` on each half rather than

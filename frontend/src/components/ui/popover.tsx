@@ -71,5 +71,3 @@ export function Popover({
     </Primitive.Root>
   )
 }
-
-export const PopoverClose = Primitive.Close

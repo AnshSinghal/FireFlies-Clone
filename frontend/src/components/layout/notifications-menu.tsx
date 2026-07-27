@@ -33,7 +33,7 @@ const NOTIFICATIONS: readonly MockNotification[] = [
     id: 'summary-ready',
     icon: Sparkles,
     title: 'Summary ready',
-    body: 'Q3 Product Roadmap Sync has been summarised.',
+    body: 'Q3 Product Roadmap Sync has been summarized.',
     when: '12m ago',
   },
   {

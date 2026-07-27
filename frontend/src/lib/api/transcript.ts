@@ -133,18 +133,3 @@ export function useRenameSpeaker(meetingId: number) {
     },
   })
 }
-
-export function useCreateSpeaker(meetingId: number) {
-  const client = useQueryClient()
-
-  return useMutation({
-    mutationFn: (label: string) =>
-      api.post<SpeakerRef>(`/api/v1/meetings/${meetingId}/speakers`, { label }),
-
-    onSuccess: () => {
-      // A new speaker changes the page's speaker list, which is derived from
-      // the segments — so this one does need a refetch.
-      void client.invalidateQueries({ queryKey: qk.meetings.transcript(meetingId) })
-    },
-  })
-}
