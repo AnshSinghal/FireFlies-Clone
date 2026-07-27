@@ -95,6 +95,7 @@ export function ConfirmDialog({
             variant="secondary"
             onClick={() => onOpenChange(false)}
             disabled={pending}
+            data-testid="confirm-dialog-cancel"
           >
             {cancelLabel}
           </Button>

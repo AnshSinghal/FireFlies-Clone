@@ -22,6 +22,7 @@ from app.core.exceptions import (
     InvalidSortError,
     MeetingDeletedError,
     MeetingNotFoundError,
+    ValidationError,
 )
 from app.models import (
     ActionItem,
@@ -331,6 +332,7 @@ class MeetingService:
             # linked user account, and an external attendee has none at all.
             # The client falls back to initials on a hashed colour.
             avatar_url=participant.user.avatar_url if participant.user else None,
+            user_id=participant.user_id,
             attended=participant.attended,
             talk_seconds=participant.talk_seconds,
             color_index=participant.speaker.color_index if participant.speaker else None,
@@ -712,12 +714,69 @@ class MeetingService:
         # never mentioned is left alone, while one explicitly sent as null is
         # cleared. Using the model's defaults instead would blank every field
         # the client did not resend.
-        for field, value in payload.model_dump(exclude_unset=True).items():
+        scalars = payload.model_dump(
+            exclude_unset=True, exclude={"participant_names", "host_participant_id"}
+        )
+        for field, value in scalars.items():
             setattr(meeting, field, value)
+
+        if payload.participant_names is not None:
+            self._sync_participants(meeting, payload.participant_names)
+
+        if "host_participant_id" in payload.model_fields_set:
+            self._set_host(meeting, payload.host_participant_id)
 
         self.db.commit()
         self.db.refresh(meeting)
         return meeting
+
+    def _sync_participants(self, meeting: Meeting, names: list[str]) -> None:
+        """Reconcile the participant list to `names`.
+
+        MATCHED BY NAME, so a participant who survives the edit keeps their id
+        — and with it their action items, their speaker link and their talk
+        time. Deleting the lot and re-adding would silently orphan all three.
+        """
+        existing = {
+            participant.display_name.lower(): participant for participant in meeting.participants
+        }
+        wanted = {name.lower(): name for name in names}
+
+        for key, participant in existing.items():
+            if key not in wanted:
+                self.db.delete(participant)
+
+        for key, name in wanted.items():
+            if key not in existing:
+                self.db.add(Participant(meeting_id=meeting.id, display_name=name))
+
+        self.db.flush()
+
+    def _set_host(self, meeting: Meeting, participant_id: int | None) -> None:
+        """Point the meeting at a participant's linked user.
+
+        The host is a USER — meetings are listed and filtered by host across the
+        app — while the editor picks from the people who were in the room. A
+        participant with no linked user cannot host, which is the honest answer
+        rather than inventing an account for them.
+        """
+        if participant_id is None:
+            return
+
+        participant = self.db.get(Participant, participant_id)
+        if participant is None or participant.meeting_id != meeting.id:
+            raise ValidationError(
+                "That person is not a participant in this meeting.",
+                details={"participant_id": participant_id},
+            )
+
+        if participant.user_id is None:
+            raise ValidationError(
+                f"{participant.display_name} has no account, so they cannot be the host.",
+                details={"participant_id": participant_id},
+            )
+
+        meeting.host_id = participant.user_id
 
     def soft_delete(self, meeting_id: int) -> None:
         meeting = self.get(meeting_id)

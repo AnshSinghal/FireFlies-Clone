@@ -50,6 +50,8 @@ interface MeetingRowProps {
   query?: string
   onDelete: (id: number) => void
   onShowDetails: (id: number) => void
+  /** Opens the edit modal, which loads the full meeting itself. */
+  onEditDetails?: (id: number) => void
   onPrefetch: () => void
   /** Roving tabindex: only the focused row is tabbable (T-12.12). */
   tabIndex: number
@@ -65,6 +67,7 @@ export function MeetingRow({
   query,
   onDelete,
   onShowDetails,
+  onEditDetails,
   onPrefetch,
   tabIndex,
   onFocus,
@@ -311,7 +314,20 @@ export function MeetingRow({
           <DropdownItem icon={<Pencil size={16} strokeWidth={1.75} />} soon>
             Rename
           </DropdownItem>
-          <DropdownItem icon={<SlidersHorizontal size={16} strokeWidth={1.75} />} soon>
+          {/*
+            Opens the FULL meeting, not this row.
+
+            A row is a list item — it carries a title and some counts, not the
+            participants or the description the editor needs. Fetching the
+            detail on demand is what the modal does when it opens; sending the
+            user to the Notepad's own editor would be a navigation they did not
+            ask for.
+          */}
+          <DropdownItem
+            icon={<SlidersHorizontal size={16} strokeWidth={1.75} />}
+            onSelect={() => onEditDetails?.(meeting.id)}
+            testId="meeting-row-edit-details"
+          >
             Edit details
           </DropdownItem>
           <DropdownSub label="Export" icon={<Download size={16} strokeWidth={1.75} />}>

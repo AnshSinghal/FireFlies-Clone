@@ -953,8 +953,12 @@ export interface components {
       channel_id?: number | null
       /** Description */
       description?: string | null
+      /** Host Participant Id */
+      host_participant_id?: number | null
       /** Language */
       language?: string | null
+      /** Participant Names */
+      participant_names?: string[] | null
       /** Started At */
       started_at?: string | null
       /** Title */
@@ -1031,6 +1035,8 @@ export interface components {
       id: number
       /** Talk Seconds */
       talk_seconds: number
+      /** User Id */
+      user_id?: number | null
     }
     /**
      * ParticipantRef
