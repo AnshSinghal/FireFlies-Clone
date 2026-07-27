@@ -310,7 +310,8 @@ cd frontend && npm install && npm run dev
 
 ## Assumptions & Scope
 
-_(Expanded in T-45.9.)_ Known scope boundaries, all deliberate:
+Known scope boundaries, all deliberate. Each one is a decision with a reason, not a thing that ran
+out of time:
 
 - **Authentication is out of scope** per the assignment. A single seeded default user is returned by
   a `get_current_user` dependency — the one place real auth would be wired in. The profile menu
@@ -318,7 +319,24 @@ _(Expanded in T-45.9.)_ Known scope boundaries, all deliberate:
 - **Speech-to-text is out of scope.** Transcripts are uploaded or pasted, not generated from audio.
 - **Summaries default to a deterministic offline provider**, not a live LLM, so the demo cannot fail
   on a missing API key or a rate limit. Switching to a real model is a one-variable change.
-- **Deletes are soft.** Meetings disappear from the UI but remain restorable.
+- **Deletes are soft.** Meetings disappear from the UI but remain restorable. That is what makes the
+  undo affordance honest — Undo restores *the row*, rather than re-creating a lesser copy of it. The
+  cost is that the FTS index still contains soft-deleted segments, so every search path joins back to
+  `meetings` and filters; asserted from both sides in `tests/test_schema.py`.
+- **Integrations and the live meeting bot are out of scope.** Calendar, Slack, CRM and the
+  notetaker-that-joins-your-call are the parts of Fireflies that are mostly other people's APIs and a
+  media server. They exist here as placeholder surfaces that say so (T-30), not as dead links.
+- **Two of the eight seeded meetings carry real audio**, not all eight. The file is 18 minutes of
+  band-limited brown noise generated with ffmpeg (`backend/media/README.md` has the command) — it is
+  not a recording of anything. Two is the number that matters: it makes the player exercise a genuine
+  `<audio>` element with real `buffered` ranges, `timeupdate` events and HTTP Range seeking, which is
+  what T-19 and T-21 are actually about. The other six drive the same UI from a virtual clock, which
+  is the fallback path and also needs to be exercised. Committing eight real files would have added
+  ~13MB to the repository to test nothing new.
+- **The seed is small on purpose** — eight meetings, 607 segments, 15 people. Enough that every filter
+  has data on both sides of it, few enough that the numbers are checkable by hand. Stress behaviour is
+  tested where it belongs instead: a synthetic 5,000-segment meeting in `34-stress.spec.ts` and
+  `backend/tests/test_performance.py`.
 
 ---
 
