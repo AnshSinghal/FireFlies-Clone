@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     # ── AI ──────────────────────────────────────────────────────────────────
     ai_provider: Literal["mock", "openai", "anthropic"] = "mock"
     ai_api_key: str = ""
+    #: Optional override; empty means the vendor's default in `app/ai/llm.py`.
+    ai_model: str = ""
 
     # ── Uploads & media ─────────────────────────────────────────────────────
     media_dir: Path = Path("./media")
