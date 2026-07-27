@@ -22,6 +22,7 @@ import { ApiError } from '@/lib/api/client'
 import { useDeleteMeeting, useMeeting } from '@/lib/api/meetings'
 import { useRegenerateSummary } from '@/lib/api/summaries'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
+import { NotepadCommandsProvider } from '@/lib/notepad/commands'
 import { mediaSrc } from '@/lib/player/media-src'
 import { PlayerProvider, usePlayer } from '@/lib/player/player-context'
 import { usePlayerShortcuts } from '@/lib/player/use-player-shortcuts'
@@ -119,27 +120,28 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
         </div>
       ) : (
         <PlayerProvider durationMs={meeting.duration_seconds * 1000} src={src}>
-          <NotepadHeader
-            meeting={meeting}
-            onRegenerate={() =>
-              regenerate.mutate(undefined, {
-                onSuccess: () => toast.success(TOAST_MESSAGES.summaryRegenerated),
-              })
-            }
-            onDelete={() => setConfirmingDelete(true)}
-          />
-
-          <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-            <IconRail
-              active={openPanel}
-              onToggle={(id) => setOpenPanel((current) => (current === id ? null : id))}
+          <NotepadCommandsProvider>
+            <NotepadHeader
+              meeting={meeting}
+              onRegenerate={() =>
+                regenerate.mutate(undefined, {
+                  onSuccess: () => toast.success(TOAST_MESSAGES.summaryRegenerated),
+                })
+              }
+              onDelete={() => setConfirmingDelete(true)}
             />
 
-            {openPanel && <RailFlyout item={openPanel} onClose={() => setOpenPanel(null)} />}
+            <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+              <IconRail
+                active={openPanel}
+                onToggle={(id) => setOpenPanel((current) => (current === id ? null : id))}
+              />
 
-            {isNarrow ? (
-              <div className="flex min-h-0 flex-1 flex-col" data-testid="notepad-tabs">
-                {/*
+              {openPanel && <RailFlyout item={openPanel} onClose={() => setOpenPanel(null)} />}
+
+              {isNarrow ? (
+                <div className="flex min-h-0 flex-1 flex-col" data-testid="notepad-tabs">
+                  {/*
                   The panels are CHILDREN of `Tabs`, not siblings.
 
                   Radix's `Tabs.Content` throws outside its `Tabs.Root`, and
@@ -147,53 +149,54 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
                   wrong" — visible only below 1024px, which is why the desktop
                   tests were all green.
                 */}
-                <Tabs
-                  value={tab}
-                  onValueChange={setTab}
-                  tabs={[
-                    { value: 'summary', label: 'Summary' },
-                    { value: 'transcript', label: 'Transcript' },
-                  ]}
-                >
-                  <TabPanel value="summary" className="min-h-0 flex-1 overflow-hidden">
-                    {panels.summary}
-                  </TabPanel>
-                  <TabPanel value="transcript" className="min-h-0 flex-1 overflow-hidden">
-                    {panels.transcript}
-                  </TabPanel>
-                </Tabs>
-              </div>
-            ) : (
-              <ResizablePanels
-                storageKey={SPLIT_STORAGE_KEY}
-                leftLabel="Summary"
-                rightLabel="Transcript"
-                className="min-h-0 flex-1"
-                left={panels.summary}
-                right={panels.transcript}
-              />
-            )}
-          </div>
+                  <Tabs
+                    value={tab}
+                    onValueChange={setTab}
+                    tabs={[
+                      { value: 'summary', label: 'Summary' },
+                      { value: 'transcript', label: 'Transcript' },
+                    ]}
+                  >
+                    <TabPanel value="summary" className="min-h-0 flex-1 overflow-hidden">
+                      {panels.summary}
+                    </TabPanel>
+                    <TabPanel value="transcript" className="min-h-0 flex-1 overflow-hidden">
+                      {panels.transcript}
+                    </TabPanel>
+                  </Tabs>
+                </div>
+              ) : (
+                <ResizablePanels
+                  storageKey={SPLIT_STORAGE_KEY}
+                  leftLabel="Summary"
+                  rightLabel="Transcript"
+                  className="min-h-0 flex-1"
+                  left={panels.summary}
+                  right={panels.transcript}
+                />
+              )}
+            </div>
 
-          {/*
+            {/*
             Inside the provider, because it binds the transport. A hook needs
             the player, and the player only exists once the meeting has loaded
             and its duration is known.
           */}
-          <PlayerKeyboard />
+            <PlayerKeyboard />
 
-          <ConfirmDialog
-            open={confirmingDelete}
-            onOpenChange={setConfirmingDelete}
-            title="Delete meeting?"
-            objectName={meeting.title}
-            body="and its transcript, summary, and action items will be deleted."
-            onConfirm={async () => {
-              await remove.mutateAsync(meeting.id)
-              toast.success(TOAST_MESSAGES.meetingDeleted)
-              window.location.href = notebookReturnUrl()
-            }}
-          />
+            <ConfirmDialog
+              open={confirmingDelete}
+              onOpenChange={setConfirmingDelete}
+              title="Delete meeting?"
+              objectName={meeting.title}
+              body="and its transcript, summary, and action items will be deleted."
+              onConfirm={async () => {
+                await remove.mutateAsync(meeting.id)
+                toast.success(TOAST_MESSAGES.meetingDeleted)
+                window.location.href = notebookReturnUrl()
+              }}
+            />
+          </NotepadCommandsProvider>
         </PlayerProvider>
       )}
     </div>

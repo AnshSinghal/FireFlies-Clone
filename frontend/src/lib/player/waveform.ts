@@ -15,6 +15,9 @@ export const PEAK_COUNT = 400
 
 const CACHE_PREFIX = 'ff.waveform.'
 
+/** How many samples to inspect per bar. See the note in `decodePeaks`. */
+const SAMPLES_PER_BUCKET = 256
+
 /**
  * mulberry32 — small, fast, and good enough to look organic.
  *
@@ -120,13 +123,25 @@ export async function decodePeaks(url: string, signal: AbortSignal): Promise<num
     const channel = audio.getChannelData(0)
     const bucket = Math.floor(channel.length / PEAK_COUNT) || 1
 
+    /*
+     * STRIDE through each bucket rather than reading every sample.
+     *
+     * Eighteen minutes of mono at 22kHz is 24 million samples; scanning all of
+     * them to draw 400 bars is a ~200ms block of the main thread for a
+     * decoration, and it showed up as exactly that in the long-task budget.
+     * Sampling 256 points per bucket is visually indistinguishable — a peak
+     * that only one sample in a hundred thousand reaches is a click, not a
+     * shape — and two orders of magnitude cheaper.
+     */
+    const stride = Math.max(1, Math.floor(bucket / SAMPLES_PER_BUCKET))
+
     const peaks: number[] = []
     let max = 0
 
     for (let i = 0; i < PEAK_COUNT; i += 1) {
       let peak = 0
       const start = i * bucket
-      for (let j = 0; j < bucket; j += 1) {
+      for (let j = 0; j < bucket; j += stride) {
         const sample = Math.abs(channel[start + j] ?? 0)
         if (sample > peak) peak = sample
       }

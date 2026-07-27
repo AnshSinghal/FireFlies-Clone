@@ -20,9 +20,10 @@ import { StateView } from '@/components/ui/state-view'
 import { useToast } from '@/components/ui/toast'
 import { useTranscript } from '@/lib/api/transcript'
 import type { SegmentOut } from '@/lib/api/types'
+import { useNotepadCommands } from '@/lib/notepad/commands'
 import { usePlayer } from '@/lib/player/player-context'
 import { TOAST_MESSAGES } from '@/lib/toast/messages'
-import { toPlainText } from '@/lib/transcript/grouping'
+import { activeSegmentIndex, toPlainText } from '@/lib/transcript/grouping'
 import { formatTimestamp, pluralize } from '@/lib/utils/format'
 
 import { PlayerCard } from './player/player-card'
@@ -64,15 +65,9 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
     [toast],
   )
 
-  const onSeek = useCallback(
-    (ms: number, options?: { play?: boolean }) => {
-      player.seek(ms)
-      // T-21 settles the full bidirectional behaviour. What is already true is
-      // that the timestamp starts playback and the row alone does not.
-      if (options?.play && !player.isPlaying) player.play()
-    },
-    [player],
-  )
+  // One seek path for the whole Notepad (T-21.8). The row seeks; the timestamp
+  // seeks and plays; neither reaches into the player directly.
+  const { seekTo } = useNotepadCommands()
 
   const onCopyText = useCallback(
     (segment: SegmentOut) => void copy(segment.text, TOAST_MESSAGES.segmentCopied),
@@ -87,6 +82,15 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
     },
     [copy],
   )
+
+  /*
+   * Resolved HERE so the list can take an index (T-21.4).
+   *
+   * This component re-renders with the clock either way — it reads
+   * `player.currentMs` — but it renders almost nothing. Passing the index down
+   * keeps the ten-times-a-second cadence out of the transcript.
+   */
+  const activeIndex = activeSegmentIndex(segments, player.currentMs)
 
   const onCopyAll = useCallback(() => {
     const labels = new Map(speakers.map((speaker) => [speaker.id, speaker.label]))
@@ -154,11 +158,12 @@ export function TranscriptPanel({ meetingId, mediaSrc }: TranscriptPanelProps) {
 
         {segments.length > 0 && (
           <TranscriptList
+            meetingId={meetingId}
             segments={segments}
             speakers={speakers}
-            currentMs={player.currentMs}
+            activeIndex={activeIndex}
             isPlaying={player.isPlaying}
-            onSeek={onSeek}
+            onSeek={seekTo}
             onCopyText={onCopyText}
             onCopyLink={onCopyLink}
           />

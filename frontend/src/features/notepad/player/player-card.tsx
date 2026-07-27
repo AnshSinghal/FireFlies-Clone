@@ -13,6 +13,7 @@ import { useMemo } from 'react'
 
 import { useSummary } from '@/lib/api/summaries'
 import { useTranscript } from '@/lib/api/transcript'
+import { useNotepadCommands } from '@/lib/notepad/commands'
 import { usePlayer } from '@/lib/player/player-context'
 import { cn } from '@/lib/utils/cn'
 
@@ -29,6 +30,9 @@ interface PlayerCardProps {
 
 export function PlayerCard({ meetingId, src, className }: PlayerCardProps) {
   const player = usePlayer()
+  // Chapter ticks are an explicit "take me there", so they reveal the target
+  // in the transcript even if the reader has scrolled away (T-21.6).
+  const { seekTo } = useNotepadCommands()
 
   // Both are already in the cache — the panels mounted with them. React Query
   // returns them without a second request.
@@ -85,6 +89,7 @@ export function PlayerCard({ meetingId, src, className }: PlayerCardProps) {
         chapters={chapters}
         cues={cues}
         onSeek={player.seek}
+        onSeekChapter={(ms) => seekTo(ms, { reveal: true })}
       />
 
       <Transport
