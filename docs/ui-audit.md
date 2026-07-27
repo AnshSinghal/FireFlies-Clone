@@ -169,13 +169,22 @@ groups.
 | | below card | heading | above next card |
 |---|---|---|---|
 | Fireflies | 0.520 | 0.180 | 0.310 |
-| Ours now | **0.500** | 0.212 | **0.303** |
+| Ours now | **0.520** | **0.187** | **0.307** |
 | Ours before | 0.640 | 0.210 | 0.160 |
 
-Both gaps land within 0.02 of the reference, and the gap-to-card ratio held at
-0.930 against their 0.94 — ADR-149's match survived, which was the constraint.
+All three components are now within 0.007 of the reference — closer than the
+first attempt, which landed 0.500 / 0.212 / 0.303.
 
-The heading's own share stays at 0.212 against their 0.18, deliberately.
+That improvement was not aimed for. Re-deriving the tokens after ADR-150 raised
+the card height (see the regression note at the top) recomputed the split from
+the reference's own 0.52 : 0.31 against the larger total, and the heading's
+share fell out at 0.187 rather than the 0.212 it had been. The earlier entry
+below argued that 0.18 was unreachable without breaking the gap ratio; that was
+true of a 71px card and stopped being true of an 81px one, because a bigger
+total gives the fixed 14px glyph band a smaller share.
+
+Kept as a record of the reasoning being right about its own moment and wrong
+about the next one:
 Reaching 0.18 needs a 78px total, which puts gap ÷ card at 1.10 — a worse miss
 on the more visible property. Our heading band is proportionally taller relative
 to the gap than theirs, and that cannot be closed from the gap side.
