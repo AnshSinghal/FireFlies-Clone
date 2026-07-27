@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+import { API_BASE } from '../api-base'
+
 /**
  * Post-deploy smoke suite (T-40.13) — exactly 12 tests, tagged `@smoke`.
  *
@@ -7,7 +9,7 @@ import { expect, test, type Page } from '@playwright/test'
  * shipped actually working? It runs in two modes:
  *
  *   Local (default) — against the stack `playwright.config.ts` boots on
- *   3100/8100, as part of the ordinary suite.
+ *   3140/8140, as part of the ordinary suite.
  *
  *   Deployed — against a live URL, catching "works locally, broken in prod":
  *
@@ -37,8 +39,7 @@ const SMOKE_URL = process.env.SMOKE_URL
  * (deploy/nginx-fireflies.conf routes /api/* to the backend); locally the
  * backend answers directly on its own port.
  */
-const API_URL =
-  SMOKE_URL ?? process.env.E2E_API_URL ?? `http://localhost:${process.env.E2E_BACKEND_PORT ?? '8100'}`
+const API_URL = SMOKE_URL ?? API_BASE
 
 if (SMOKE_URL) test.use({ baseURL: SMOKE_URL })
 

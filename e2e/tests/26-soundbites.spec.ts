@@ -1,5 +1,7 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
+import { API_BASE as API_URL } from '../api-base'
+
 /**
  * Soundbites (T-33, cases T33-A → T33-K).
  *
@@ -13,9 +15,6 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
  * them from segment indices, so a fixture edit would silently move every
  * millisecond a hardcoded test relied on.
  */
-
-const API_URL =
-  process.env.E2E_API_URL ?? `http://localhost:${process.env.E2E_BACKEND_PORT ?? '8100'}`
 
 /** Meeting 1 has two seeded soundbites; meeting 2 has none. */
 const HERO = 1

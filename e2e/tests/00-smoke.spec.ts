@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 
+import { API_BASE as API_URL } from '../api-base'
+
 /**
  * Scaffold smoke test (T-01.10).
  *
@@ -7,9 +9,6 @@ import { expect, test } from '@playwright/test'
  * other. The real suites arrive in T-40; this exists so the CI Playwright job
  * is a genuine check rather than a green tick over nothing.
  */
-
-const API_URL =
-  process.env.E2E_API_URL ?? `http://localhost:${process.env.E2E_BACKEND_PORT ?? '8100'}`
 
 test('backend reports healthy', async ({ request }) => {
   const response = await request.get(`${API_URL}/api/health`)

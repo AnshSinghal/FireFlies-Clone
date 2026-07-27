@@ -1,5 +1,7 @@
 import { test as base, type Page } from '@playwright/test'
 
+import { API_BASE } from './api-base'
+
 /**
  * Shared fixtures (T-39.6).
  *
@@ -22,9 +24,14 @@ import { test as base, type Page } from '@playwright/test'
  */
 export const SEED_ANCHOR = '2026-07-26T09:00:00Z'
 
-/** Where the backend listens — same resolution as `00-smoke` and the config. */
-export const API_URL =
-  process.env.E2E_API_URL ?? `http://localhost:${process.env.E2E_BACKEND_PORT ?? '8100'}`
+/**
+ * Where the backend listens.
+ *
+ * Re-exported rather than re-derived: a second copy of this expression is a
+ * second place the default port can drift, and a spec pointed at a port
+ * nothing of ours serves tests whatever else is listening there.
+ */
+export const API_URL = API_BASE
 
 /** What `page.route` accepts as a matcher. */
 type RouteMatcher = string | RegExp | ((url: URL) => boolean)
