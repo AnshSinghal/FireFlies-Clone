@@ -92,9 +92,7 @@ export function CommentsPanel({ meetingId }: { meetingId: number }) {
               <FlyoutEntry
                 key={thread.id}
                 thread={thread}
-                snippet={
-                  thread.segment_id != null ? snippets.get(thread.segment_id) : undefined
-                }
+                snippet={thread.segment_id != null ? snippets.get(thread.segment_id) : undefined}
                 onOpen={() => {
                   if (thread.start_ms != null) seekTo(thread.start_ms, { play: true, reveal: true })
                 }}
@@ -132,7 +130,7 @@ function FlyoutEntry({
           <span className="tnum text-muted">{formatTimestamp(thread.start_ms)}</span>
         )}
         {thread.is_resolved && <Badge variant="success">Resolved</Badge>}
-        <span className="ml-auto tnum text-xs text-muted">
+        <span className="tnum ml-auto text-xs text-muted">
           {formatRelativeDate(thread.created_at)}
         </span>
       </span>

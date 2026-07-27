@@ -145,7 +145,7 @@ export function SummaryPanel({ meetingId, title, participants }: SummaryPanelPro
           <Tooltip content="The transcript changed after this summary was generated">
             <span
               data-testid="summary-stale-badge"
-              className="rounded-full bg-warning-subtle px-2 py-0.5 text-xs text-warning"
+              className="rounded-full bg-warning-subtle px-2 py-0.5 text-xs text-warning-strong"
             >
               Outdated
             </span>
