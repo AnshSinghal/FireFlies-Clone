@@ -94,8 +94,15 @@
   --ff-speaker-3: #b23383;
   --ff-speaker-4: #c62a1e;
   --ff-speaker-5: #0e7490;
-  --ff-speaker-6: #6f4ff0;
-  --ff-speaker-7: #6d4be8;
+  /* Blue and stone, NOT two more violets. 6 and 7 were #6f4ff0 and #6d4be8 —
+     ΔE 2.5 from each other and barely distinguishable from speaker-0's
+     #6a39ef, so three of the eight "distinguishable" hues were the same
+     colour in ordinary vision (T-42.6). These two are far from every existing
+     hue under all three dichromacies, and the low-chroma stone stays separable
+     when hue information is gone entirely. Worst pair across the palette went
+     from ΔE 2.5 to 28.1. */
+  --ff-speaker-6: #1d4ed8;
+  --ff-speaker-7: #57534e;
 
   /* ═════════════════════════════════════════════════════════════════════════
      LAYER 2 — SEMANTICS   (the only names a component may use)
@@ -278,8 +285,11 @@
   --ff-speaker-3: #e879b8;
   --ff-speaker-4: #f87171;
   --ff-speaker-5: #38bdf8;
-  --ff-speaker-6: #a894ff;
-  --ff-speaker-7: #9d87ff;
+  /* Same defect, same fix: #a894ff and #9d87ff were speaker-0's violet again.
+     Periwinkle and a light stone, both clearing 4.5:1 on the dark active tint.
+     Worst pair ΔE 8.4 → 26.7. */
+  --ff-speaker-6: #8b9dff;
+  --ff-speaker-7: #b0aaa4;
 
   /* Elevation recedes; surfaces do the lifting. */
   --ff-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.24);
