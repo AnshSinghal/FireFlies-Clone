@@ -31,8 +31,14 @@ Then, in the browser you will present from:
   route in both themes.
 - Have a second tab on `http://localhost:8000/docs` and a terminal in `e2e/` ready for beat 10.
 
-**The hero meeting is `Q3 Product Roadmap Sync`** (id 1, Sarah Chen, 9:06, 5 open action items,
-tagged `engineering` `product` `roadmap`). Every beat from 2 to 6 happens inside it.
+**The hero meeting is `Q3 Product Roadmap Sync`** (id 1, Sarah Chen, `9 min` in the list and
+`09:06` on the player clock, 5 open action items, tagged `engineering` `product` `roadmap`). Every
+beat from 2 to 6 happens inside it.
+
+Both numbers are correct and they are supposed to differ — ADR-148. A meeting's *length* is
+labelled the way the reference labels it (`9 min`); a *position* in the recording keeps second
+precision (`09:06`). If an evaluator asks why the two disagree, that is the answer, and it is worth
+having ready because it looks like a bug for about two seconds.
 
 ---
 
