@@ -17,6 +17,8 @@
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useMemo } from 'react'
 
+import { useCurrentUser } from '@/lib/api/me'
+import { BUILT_IN_CHANNEL_IDS } from '@/lib/nav'
 import { useDefaultSortPref, usePageSizePref } from '@/lib/prefs/app-prefs'
 
 export type ParamValue = string | number | boolean | null | undefined | string[]
@@ -151,10 +153,17 @@ export function useNotebookParams() {
   const [defaultSort] = useDefaultSortPref()
   const [defaultPageSize] = usePageSizePref()
 
+  // Already in the cache — the app shell fetches it to render the avatar — so
+  // resolving "My Meetings" costs no extra request.
+  const { data: me } = useCurrentUser()
+  // Hoisted out of the memo's dependency list: the compiler cannot preserve a
+  // memo whose deps contain an optional chain.
+  const myName = me?.name
+  const channelParam = getParam('channel') ?? undefined
+
   const filters = useMemo(
     () => ({
       q: getParam('q') ?? undefined,
-      host: getParam('host') ?? undefined,
       participant: getParam('participant') ?? undefined,
       from: getParam('from') ?? undefined,
       to: getParam('to') ?? undefined,
@@ -163,7 +172,24 @@ export function useNotebookParams() {
       // Repeated `?tags=a&tags=b`, not a comma-joined string: a tag containing
       // a comma would otherwise split into two filters that match nothing.
       tags: getAll('tags'),
-      channel: getParam('channel') ?? undefined,
+      /*
+       * The two BUILT-IN views are filters over the same data, not stored
+       * channels (see `BUILT_IN_CHANNELS` and the `/channels` docstring) — so
+       * they must not reach the API's `channel` filter, which matches a stored
+       * slug and found nothing. Both sidebar items led to an empty Notebook.
+       *
+       * They stay in the URL as `?channel=` because that is what lights the
+       * rail item and what makes the view shareable; only the request they
+       * translate into changes here.
+       */
+      channel: BUILT_IN_CHANNEL_IDS.has(channelParam ?? '') ? undefined : channelParam,
+      /*
+       * "My Meetings" means hosted by me, matching `hosted_by` — the same
+       * definition the rail's own count uses, so the badge and the list cannot
+       * disagree. By NAME because that is what the API's `host` filter takes.
+       */
+      host:
+        channelParam === 'my-meetings' && myName ? myName : (getParam('host') ?? undefined),
       hasActionItems: parseBool(getParam('has_action_items')),
       source: getParam('source') ?? undefined,
       // The details drawer's open meeting (T-15.12). Not a filter: it narrows
@@ -173,7 +199,7 @@ export function useNotebookParams() {
       page: getNumber('page', 1),
       pageSize: getNumber('page_size', defaultPageSize),
     }),
-    [getParam, getNumber, getAll, defaultSort, defaultPageSize],
+    [getParam, getNumber, getAll, defaultSort, defaultPageSize, channelParam, myName],
   )
 
   const activeFilterCount = useMemo(

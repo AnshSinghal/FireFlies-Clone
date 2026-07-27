@@ -66,6 +66,15 @@ export const BUILT_IN_CHANNELS: NavItem[] = [
   },
 ]
 
+/**
+ * The ids of the two built-in views, as a set.
+ *
+ * Exported because the Notebook has to recognise them and NOT pass them to the
+ * API's `channel` filter, which matches a stored channel slug — neither of
+ * these is one, and sending them narrowed the list to nothing.
+ */
+export const BUILT_IN_CHANNEL_IDS = new Set(BUILT_IN_CHANNELS.map((item) => item.id))
+
 export const FOOTER_NAV: NavItem[] = [
   { id: 'settings', label: 'Settings', href: '/settings', icon: Settings },
   { id: 'help', label: 'Help & Support', href: '/help', icon: CircleHelp, soon: true },

@@ -322,3 +322,41 @@ test('the rail is white, not grey or dark', async ({ page }) => {
 
   expect(background).toBe(hexToRgb(await token(page, '--ff-surface-0')))
 })
+
+test('the two built-in views list meetings rather than emptying the Notebook', async ({ page }) => {
+  /*
+   * `all-meetings` and `my-meetings` are FILTERS over the same data, not
+   * stored channels — so passing either to the API's `channel` filter, which
+   * matches a stored slug, narrowed the list to nothing. Both rail items led
+   * to an empty Notebook, which is a lot of the app to lose to a naming
+   * collision nobody had asserted on.
+   */
+  await page.goto('/notebook')
+  await railReady(page)
+
+  /** The rail's own badge, once the count has actually arrived. */
+  async function badge(id: string): Promise<number> {
+    const item = page.getByTestId(`sidebar-channel-${id}`)
+    // The channels request lands after the rail paints, so reading the text
+    // before this resolves reads the label without its number.
+    await expect(item).toContainText(/\d/)
+    return Number((await item.innerText()).match(/\d+/)![0])
+  }
+
+  const total = await badge('all-meetings')
+  const mine = await badge('my-meetings')
+  expect(total).toBeGreaterThan(0)
+  expect(mine).toBeGreaterThan(0)
+
+  await page.getByTestId('sidebar-channel-all-meetings').click()
+  await expect(page).toHaveURL(/channel=all-meetings/)
+  await expect(page.getByTestId('meeting-list')).toBeVisible()
+  await expect(page.getByTestId('meeting-row')).toHaveCount(total)
+
+  // "My Meetings" is hosted-by-me, the same definition the rail's count uses —
+  // so the badge and the list have to agree.
+  await page.getByTestId('sidebar-channel-my-meetings').click()
+  await expect(page).toHaveURL(/channel=my-meetings/)
+  await expect(page.getByTestId('meeting-list')).toBeVisible()
+  await expect(page.getByTestId('meeting-row')).toHaveCount(mine)
+})
