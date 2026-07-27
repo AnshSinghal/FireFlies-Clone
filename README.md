@@ -8,7 +8,7 @@ bidirectionally to a media player, AI-generated summaries and extracted action i
 The badge is the measured `pytest --cov` number over `services/`, `ai/` and `parsers/`
 (target ≥80%, per T-43.12); regenerate with `make coverage`.
 
-**Live demo:** _(deployed in T-44)_ · **Repository:** https://github.com/AnshSinghal/FireFlies-Clone
+**Live demo:** <http://8.231.115.48:8600> — auto-deployed from `main` (see [deploy/README.md](deploy/README.md)) · **Repository:** https://github.com/AnshSinghal/FireFlies-Clone
 
 ---
 
