@@ -61,6 +61,8 @@ export const qk = {
     actionItems: (id: number) => [...qk.meetings.detail(id), 'action-items'] as const,
     comments: (id: number) => [...qk.meetings.detail(id), 'comments'] as const,
     soundbites: (id: number) => [...qk.meetings.detail(id), 'soundbites'] as const,
+    highlights: (id: number) => [...qk.meetings.detail(id), 'highlights'] as const,
+    bookmarks: (id: number) => [...qk.meetings.detail(id), 'bookmarks'] as const,
 
     facets: () => [...qk.meetings.all, 'facets'] as const,
   },
