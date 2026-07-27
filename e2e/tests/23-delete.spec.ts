@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+import { expect, test } from '../fixtures'
 
 /**
  * Deleting a meeting (T-28, cases T28-A → T28-K).

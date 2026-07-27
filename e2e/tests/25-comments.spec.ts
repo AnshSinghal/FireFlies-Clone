@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+import { expect, test } from '../fixtures'
 
 /**
  * Comments & threads (T-31, cases T31-A → T31-K).

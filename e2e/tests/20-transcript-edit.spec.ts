@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+import { expect, test } from '../fixtures'
 
 /**
  * Transcript editing & speaker management (T-25, cases T25-A → T25-M).

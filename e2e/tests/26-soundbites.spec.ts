@@ -1,6 +1,7 @@
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
+import type { APIRequestContext, Page } from '@playwright/test'
 
 import { API_BASE as API_URL } from '../api-base'
+import { expect, test } from '../fixtures'
 
 /**
  * Soundbites (T-33, cases T33-A → T33-K).
