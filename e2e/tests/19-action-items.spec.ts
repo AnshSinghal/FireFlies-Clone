@@ -1,4 +1,12 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+// `../fixtures`, NOT `@playwright/test` — the auto-fixture there pins the
+// browser clock to SEED_ANCHOR. T24-L asserts a "Due today" badge, which
+// `describeDueDate` computes client-side from `new Date()`; on the bare
+// Playwright `test` that is the real wall clock, so the badge only said
+// "today" on the one real-world day that happened to line up with the seeded
+// due date. It passed for two days and failed on the third.
+import { expect, test } from '../fixtures'
 
 /**
  * Action items (T-24, cases T24-A → T24-Q).
@@ -10,6 +18,8 @@ import { expect, test, type Page } from '@playwright/test'
 
 /** The QBR: seven items, a mix of overdue, due-today and no-date. */
 const QBR = 6
+/** Seeded with an action item at `due_in_days: 0` — see T24-L. */
+const STANDUP = 3
 
 async function openActions(page: Page, meetingId = QBR): Promise<void> {
   await page.goto(`/meeting/${meetingId}`)
@@ -87,7 +97,22 @@ test.describe('action items', () => {
   })
 
   test('T24-L · a due-today item is badged as such, in warning', async ({ page }) => {
-    await openActions(page)
+    /*
+     * STANDUP, not the QBR this file otherwise uses. The QBR's action items are
+     * seeded at `due_in_days` -12, -11, -8, -4, 1 and 3 — nothing due on the
+     * anchor day — so with the clock correctly pinned there is no "today" badge
+     * on that meeting at all.
+     *
+     * It passed anyway until the clock got pinned, which is the interesting
+     * part: this file was importing `test` from `@playwright/test` instead of
+     * `../fixtures`, so it ran on the real wall clock. The QBR item at
+     * `due_in_days: 1` is 2026-07-27, and the suite happened to be run on
+     * 2026-07-27. The assertion was reading the calendar, not the seed.
+     *
+     * The standup has an item at `due_in_days: 0`, which is due-today for ANY
+     * anchor. That is the property this test needs.
+     */
+    await openActions(page, STANDUP)
 
     const today = page.locator('[data-testid^="action-item-due-"][data-tone="today"]').first()
     await expect(today).toBeVisible()
