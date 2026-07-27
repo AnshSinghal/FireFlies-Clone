@@ -8,14 +8,65 @@ import { api } from './client'
 import { qk } from './query-keys'
 import type { SegmentOut, SpeakerRef, TranscriptPage } from './types'
 
+/**
+ * A bound on the cursor loop below.
+ *
+ * At the API's 500-row page size this is 25,000 segments — comfortably past
+ * the 10,000-segment import cap, so the ceiling can only be reached by a bug.
+ * A `while (cursor)` with no bound turns one such bug into a hung tab.
+ */
+const MAX_TRANSCRIPT_PAGES = 50
+
+/**
+ * The WHOLE transcript, paged to exhaustion (T-21).
+ *
+ * This used to fetch one page and stop, which meant any meeting over 200
+ * segments silently showed only its first 200 lines — and, worse, the find bar
+ * reported "0 of 0" for a word that was plainly in the recording, because it
+ * searches what the client holds. Nothing caught it: the seeded meetings top
+ * out at 159 segments, so the bug needed a transcript longer than any fixture
+ * to appear (`34-stress.spec.ts` now keeps one).
+ *
+ * Paged inside ONE query rather than with `useInfiniteQuery`: every consumer —
+ * the virtualiser, the find bar, the sync engine, `copyAll` — wants a single
+ * ordered list, and an infinite query would push page-flattening into all four.
+ * The virtualiser is what makes holding them all cheap; 5,000 rows in state is
+ * a few hundred KB and ~40 in the DOM.
+ */
 export function useTranscript(meetingId: number | null, { q }: { q?: string } = {}) {
   return useQuery({
     queryKey: [...qk.meetings.transcript(meetingId ?? 0), q ?? ''],
-    queryFn: ({ signal }) =>
-      api.get<TranscriptPage>(`/api/v1/meetings/${meetingId}/transcript`, {
-        signal,
-        params: { q },
-      }),
+    queryFn: async ({ signal }) => {
+      const segments: SegmentOut[] = []
+      const speakers: SpeakerRef[] = []
+      const bySpeakerId = new Set<number>()
+      let cursor: number | null = null
+      let total = 0
+
+      for (let page = 0; page < MAX_TRANSCRIPT_PAGES; page += 1) {
+        // Annotated: `next` feeds `cursor`, which feeds the next request, and
+        // TypeScript will not infer through that cycle.
+        const next: TranscriptPage = await api.get<TranscriptPage>(
+          `/api/v1/meetings/${meetingId}/transcript`,
+          { signal, params: { q, cursor: cursor ?? undefined } },
+        )
+
+        segments.push(...next.segments)
+        // Speakers are sent per page and repeat across them; the union keyed
+        // by id is what the legend and the colour map need.
+        for (const speaker of next.speakers) {
+          if (bySpeakerId.has(speaker.id)) continue
+          bySpeakerId.add(speaker.id)
+          speakers.push(speaker)
+        }
+        total = next.total
+
+        cursor = next.next_cursor ?? null
+        if (cursor === null) break
+      }
+
+      return { segments, speakers, next_cursor: null, total } satisfies TranscriptPage
+    },
     enabled: meetingId !== null,
   })
 }
