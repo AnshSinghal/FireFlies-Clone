@@ -201,7 +201,7 @@ export function SummaryPanel({ meetingId, title, participants }: SummaryPanelPro
 
       <div className="min-h-0 flex-1 overflow-y-auto p-5" data-testid="summary-scroll">
         {isPending && (
-          <div className="space-y-6" aria-busy="true" aria-label="Loading summary">
+          <div className="space-y-6" role="status" aria-busy="true" aria-label="Loading summary">
             <SkeletonText lines={2} />
             <SkeletonText lines={5} />
             <SkeletonText lines={6} />
