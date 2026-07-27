@@ -1,6 +1,4 @@
-import type { Page } from '@playwright/test'
-
-import { expect, test } from '../fixtures'
+import { expect, test, type Page } from '@playwright/test'
 
 /**
  * Find in transcript & Smart Search (T-22, cases T22-A → T22-N).
