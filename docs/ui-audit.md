@@ -64,6 +64,19 @@ reads correctly against every reference. Recorded here because earlier notes
 in this repo claimed a blue-vs-violet gap — `tokens.css` is the authority and
 it says violet.
 
+**7 · The profile menu carries a theme switcher, not a plan and a storage meter
+(reference 06).**
+Visual weight: low — one popover. Fireflies shows `Free · Unlimited meetings`,
+a `96 / 400 mins` storage bar and `Refer and Earn $5`, because it is a product
+with tiers and a transcription quota. This clone has neither, so those rows
+would be invented numbers on a surface whose whole job is to tell you who you
+are signed in as. Ours shows name, email, `Profile` (Soon), `Settings`, the
+light/dark/system control (T-38.3 puts it here) and `Sign out`.
+
+An earlier draft of this audit listed the profile menu under *Verified
+equivalent* with "name, plan, storage meter" — the screenshots do not support
+that, and the reason they do not is this decision rather than an omission.
+
 ## Verified equivalent
 
 - Date-grouped rows with a group header and per-group checkbox (reference 02).
@@ -74,7 +87,6 @@ it says violet.
   help, avatar menu.
 - Settings: left nav with segmented Personal/Team, card-per-setting body
   (references 07, 08).
-- Profile menu: name, plan, storage meter, menu items (reference 06).
 - Dark theme: near-black app background, lifted card surfaces, no light-mode
   shadows, legible chips and avatars — checked on every dark capture.
 
