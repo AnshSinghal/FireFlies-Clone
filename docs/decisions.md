@@ -3090,6 +3090,36 @@ calling code.
 
 ---
 
+## ADR-147 — `aria-hidden-focus` under a dropdown: fix ours, assert theirs
+
+**Context.** Pending decision 8, open since T-19: with any dropdown open, axe
+reports `aria-hidden-focus`. Nothing had ever opened a dropdown under axe, so
+it stayed a note. Writing that test showed the finding still stands and is
+broader than the note said — Radix's modal `DropdownMenu` marks the whole shell
+`aria-hidden` WITHOUT making it `inert`, so every control on the page is
+flagged, not just the skip link. Dialogs escape it; the create modal and delete
+confirmation have always been clean.
+
+**Decision.** Split it. The part that is ours is FIXED: the skip link is
+`sr-only` and therefore focusable, and Radix marks it `aria-hidden` directly,
+so `globals.css` hides it outright while any overlay owns the page. The part
+that is Radix's is DISABLED for those two cases, and the guarantee the rule
+proxies for is asserted directly instead — Tab twice, and focus is still inside
+the menu.
+
+**Consequence.** `aria-hidden-focus` exists because a user can tab into content
+announced as hidden. Radix traps focus, so they cannot; asserting that outcome
+is stronger evidence than the rule passing would be, and it keeps working if
+Radix later swaps `aria-hidden` for `inert` (which would make the rule pass for
+a reason unrelated to whether the app is usable).
+
+Two selectors were needed for the skip-link rule, and the first attempt failed
+without them: Radix's helper walks `<body>`'s CHILDREN and marks each one, so
+the attribute lands on the link itself rather than on an ancestor — a
+descendant-only selector matched nothing.
+
+---
+
 ## Pending decisions
 
 Tracked so they are not silently defaulted. Each becomes an ADR when settled.
@@ -3102,7 +3132,7 @@ Tracked so they are not silently defaulted. Each becomes an ADR when settled.
 | ~~4~~ | ~~`/` welcome screen vs Home dropped from the nav~~ | ✅ T-06 — `/` redirects, Home removed |
 | ~~5~~ | ~~Filters panel: draft-then-Apply vs live-apply~~ | ✅ ADR-039 — draft-then-Apply |
 | ~~6~~ | ~~Notebook layout: cards vs column table~~ | ✅ ADR-036 — cards, with the plan's testids and behaviour kept |
-| 8 | With any dropdown open, axe reports `aria-hidden-focus`: Radix marks the rest of the page `aria-hidden`, and the skip link stays focusable inside it. Identical for the T-18 kebab and the T-19 rate menu, so it belongs to the Dropdown primitive rather than to either caller. | T-42 |
+| ~~8~~ | ~~`aria-hidden-focus` with a dropdown open~~ | ✅ ADR-147 — the skip link fixed at source; the rest disabled with the trapped-focus guarantee asserted instead |
 | ~~7~~ | ~~`text-muted` fails AA contrast on `surface-0`~~ | ✅ ADR-102 — fixed at the token layer; both themes axe-clean on both key pages |
 
 ## ADR-136 — AskFred opens from the header, not the rail

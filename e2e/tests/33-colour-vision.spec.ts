@@ -59,7 +59,8 @@ const MIN_DELTA_E = 15;
  * a differently-inaccessible one.
  *
  * So the mitigation is not the hue: it is that a speaker's NAME is always
- * rendered beside their colour, which the third test below asserts. That is
+ * rendered beside their colour, which the `a speaker's name is always
+ * beside their colour` case below asserts. That is
  * what T-42.6 actually asks for — status is never conveyed by colour ALONE —
  * and it holds for total colour blindness and greyscale print as well.
  *

@@ -87,9 +87,15 @@ interface Downloaded {
 /**
  * Every script byte a cold load of `path` pulls down.
  *
- * The cache is disabled per-route so the second route measured is not credited
- * with chunks the first one already warmed — each number is a genuine
- * first-visit cost.
+ * Each budget test runs on its own page, and Playwright gives every test a
+ * fresh context — so these ARE cold loads, with nothing carried over from the
+ * route measured before.
+ *
+ * `clearCookies()` below does not contribute to that (it clears cookies, not
+ * the HTTP cache); it is there so a stored preference cannot change which
+ * chunks a route asks for. The comparison test further down deliberately
+ * reuses one page and compares URL SETS rather than bytes, which is immune to
+ * caching either way.
  */
 async function scriptBytes(page: Page, path: string): Promise<Downloaded> {
   const seen = new Map<string, number>();

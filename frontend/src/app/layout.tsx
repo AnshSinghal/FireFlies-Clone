@@ -56,6 +56,7 @@ export default function RootLayout({
           {/* First tab stop, visually hidden until focused (T-42.3). */}
           <a
             href="#main"
+            data-skip-link=""
             className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-toast focus:rounded-md focus:bg-accent focus:px-4 focus:py-2 focus:text-body-strong focus:text-inverse"
           >
             Skip to content

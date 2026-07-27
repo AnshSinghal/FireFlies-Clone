@@ -347,3 +347,30 @@
     width: 100%;
   }
 }
+
+/*
+ * The skip link disappears while an overlay owns the page.
+ *
+ * Radix marks everything outside its portal `aria-hidden` when a modal menu or
+ * dialog opens. The skip link is `sr-only` — invisible but still FOCUSABLE —
+ * so it became a focusable element inside an aria-hidden subtree, which axe
+ * reports as `aria-hidden-focus` (serious) and which is genuinely
+ * contradictory markup: announced as hidden, still reachable by Tab.
+ *
+ * `display: none` is the fix rather than a suppression: it removes the link
+ * from the accessibility tree AND the tab order for exactly as long as the
+ * attribute is there, and Radix removing it on close restores the link with no
+ * state for us to keep in sync. While a menu is open, "skip to content" is not
+ * an action that should be available anyway.
+ *
+ * Both forms of the selector are needed. Radix's `aria-hidden` helper walks
+ * `<body>`'s CHILDREN and marks each one, so the attribute lands on the skip
+ * link ITSELF rather than on an ancestor — a descendant-only selector matched
+ * nothing and the violation survived the first attempt at this fix.
+ *
+ * Settles pending decision 8, open since T-19.
+ */
+[data-skip-link][aria-hidden='true'],
+[aria-hidden='true'] [data-skip-link] {
+  display: none;
+}
