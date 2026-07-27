@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+
+import { expect, test } from '../fixtures'
 
 /**
  * AI summary panel (T-23, cases T23-A → T23-P).
@@ -147,14 +149,13 @@ test.describe('summary panel', () => {
     expect(bullets).toBeGreaterThan(headings.length)
   })
 
-  test('T23-H · Copy writes Markdown with every section heading', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+  test('T23-H · Copy writes Markdown with every section heading', async ({ page, clipboard }) => {
     await openSummary(page)
 
     await page.getByTestId('summary-copy').click()
     await expect(page.getByTestId('toast')).toContainText('Summary copied')
 
-    const copied = await page.evaluate(() => navigator.clipboard.readText())
+    const copied = await clipboard.readText()
 
     expect(copied).toContain('## Keywords')
     expect(copied).toContain('## Meeting Overview')
