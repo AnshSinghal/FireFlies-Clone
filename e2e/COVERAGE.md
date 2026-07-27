@@ -82,15 +82,34 @@ bare `test`** and therefore never got `fixtures.ts`'s auto-fixture that pins
 
 **Ten have since been converted, in two batches read one failure at a time.**
 Batch 1 took the four with the most timing surface — `12-states`, `14-player`,
-`16-sync`, `17-find` — and was clean, 55/55 first run. Batch 2 took the six
+`16-sync`, `17-find` — and read clean, 55/55 first run. Batch 2 took the six
 mutation specs — `20-transcript-edit`, `21-create`, `22-edit`, `23-delete`,
-`25-comments`, `26-soundbites` — and was also clean.
+`25-comments`, `26-soundbites` — and was clean and stayed clean.
 
-Fourteen still import the bare `test`: `00-smoke`, `02-tokens`, `04-sidebar`,
-`05-topbar`, `06-toasts`, `07-primitives`, `11-details`, `24-placeholders`,
-`24-search`, `25-dark-mode`, `27-tags`, `34-export`, `98-smoke`, `99-capture`.
-Two of those have a positive reason to stay: `99-capture` is a camera and pins
-the clock itself, and `27-tags` is the case below.
+**`17-find` was reverted afterwards. Batch 1's clean read was 50/50 luck.** The
+full suite on the merged tree failed T22-I, the debounce assertion. Measured on
+one machine minutes apart, the only variable being which module `test` comes
+from: **pinned 2/5 pass, unpinned 5/5 pass**, and 5/5 again after reverting.
+
+T22-I is the one test here whose *subject* is elapsed time — it types seven
+characters and counts how many searches were committed, so a frozen `Date.now()`
+is the input being measured, not a background condition. `fixtures.ts` says
+`setFixedTime` keeps timers running so debounces behave normally; true for a
+debounce built on `setTimeout` alone, evidently not for this one.
+
+The reason it survived its batch is the useful part: **it is intermittent where
+`27-tags` is deterministic.** A spec that fails every run gets caught by any
+check. One that fails half the time has even odds of passing the check that was
+supposed to catch it. Converting in batches was right; verifying each batch once
+is not enough for this class of change. Re-run a converted spec several times,
+or accept that half the flakes ship.
+
+Fifteen still import the bare `test`: `00-smoke`, `02-tokens`, `04-sidebar`,
+`05-topbar`, `06-toasts`, `07-primitives`, `11-details`, `17-find`,
+`24-placeholders`, `24-search`, `25-dark-mode`, `27-tags`, `34-export`,
+`98-smoke`, `99-capture`.
+Three of those have a positive reason to stay: `99-capture` is a camera and pins
+the clock itself, `27-tags` is the case below, and `17-find` is the case above.
 
 Count these by import SOURCE, not by prefix — `grep "^import { expect, test"`
 matches the converted form too, and reports 37 of 38 files as unconverted.
