@@ -97,9 +97,7 @@ _FIRST_PERSON_RE = re.compile(
 #: Speaker is delegating → assignee is a named participant if one appears.
 _SECOND_PERSON_RE = re.compile(r"\b(?:can you|could you|would you mind)\b", re.IGNORECASE)
 #: Group commitment → left unassigned; "Unassigned" is a real UI group.
-_COLLECTIVE_RE = re.compile(
-    r"\b(?:we need to|we should|we'll|let's|action item)\b", re.IGNORECASE
-)
+_COLLECTIVE_RE = re.compile(r"\b(?:we need to|we should|we'll|let's|action item)\b", re.IGNORECASE)
 
 _WEEKDAYS = {
     "monday": 0,
@@ -165,9 +163,7 @@ class MockProvider(AIProvider):
             df.update(set(doc))
 
         n_docs = len(docs)
-        scores = {
-            term: count * math.log(n_docs / (1 + df[term]) + 1) for term, count in tf.items()
-        }
+        scores = {term: count * math.log(n_docs / (1 + df[term]) + 1) for term, count in tf.items()}
         # Tie-break on the term itself so equal scores can't reorder between
         # runs — dict iteration order alone would be insertion-dependent.
         top = sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))[:6]
@@ -222,9 +218,7 @@ class MockProvider(AIProvider):
         if len(chunk) <= _MAX_CHUNK_SEGMENTS:
             return [chunk]
         middle = len(chunk) // 2
-        turn_points = [
-            i for i in range(1, len(chunk)) if chunk[i].speaker != chunk[i - 1].speaker
-        ]
+        turn_points = [i for i in range(1, len(chunk)) if chunk[i].speaker != chunk[i - 1].speaker]
         if not turn_points:
             return [chunk]
         cut = min(turn_points, key=lambda i: (abs(i - middle), i))
@@ -289,9 +283,7 @@ class MockProvider(AIProvider):
         outline = self.generate_outline(transcript)
         groups: list[NoteGroupResult] = []
         for position, entry in enumerate(outline):
-            next_start = (
-                outline[position + 1].start_ms if position + 1 < len(outline) else None
-            )
+            next_start = outline[position + 1].start_ms if position + 1 < len(outline) else None
             sentences = [
                 sentence
                 for segment in transcript.segments

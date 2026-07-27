@@ -148,9 +148,7 @@ def test_mock_output_is_byte_identical_across_runs(
 # ── T29-B: action items ─────────────────────────────────────────────────────
 
 
-def test_extracts_the_known_commitments(
-    provider: MockProvider, transcript: Transcript
-) -> None:
+def test_extracts_the_known_commitments(provider: MockProvider, transcript: Transcript) -> None:
     """T29-B: a transcript with 3 explicit commitments yields at least 2."""
     extracted = {item.text for item in provider.extract_action_items(transcript)}
     found = [commitment for commitment in _COMMITMENTS if commitment in extracted]
@@ -203,8 +201,7 @@ def test_outline_lands_on_real_segments_in_order(
 
     for entry in outline:
         assert any(
-            segment.start_ms <= entry.start_ms <= segment.end_ms
-            for segment in transcript.segments
+            segment.start_ms <= entry.start_ms <= segment.end_ms for segment in transcript.segments
         ), f"outline entry at {entry.start_ms}ms lands outside every segment"
 
 
@@ -235,14 +232,10 @@ def test_invalid_key_falls_back_to_mock_without_a_500(
         vendor="anthropic",
         api_key="not-a-real-key",
         transport=httpx2.MockTransport(
-            lambda _request: httpx2.Response(
-                401, json={"error": {"type": "authentication_error"}}
-            )
+            lambda _request: httpx2.Response(401, json={"error": {"type": "authentication_error"}})
         ),
     )
-    app.dependency_overrides[get_ai_provider] = lambda: FallbackProvider(
-        dead_llm, MockProvider()
-    )
+    app.dependency_overrides[get_ai_provider] = lambda: FallbackProvider(dead_llm, MockProvider())
 
     response = client.post(f"/api/v1/meetings/{meeting.id}/summary/regenerate")
 
