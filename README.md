@@ -340,9 +340,15 @@ rather than a runtime `undefined`. A test fails the build if the committed schem
 | Tool | Version | Needed for |
 |---|---|---|
 | Docker + Compose | 24+ / v2+ | The one-command path |
-| Node.js | 20+ | Manual path, and the E2E suite |
-| Python | 3.12+ | Manual path |
+| Node.js | **22** | Manual path, and the E2E suite |
+| Python | **3.13+** | Manual path |
 | [uv](https://docs.astral.sh/uv/) | latest | Manual path (Python deps) |
+
+Those are the versions this is actually built and tested on — CI pins Node 22 and Python 3.13
+(`.github/workflows/ci.yml`), and development runs Python 3.14. `backend/pyproject.toml` declares a
+floor of `>=3.12` and that is probably still true, but nothing verifies it, so the table states what
+is tested rather than what might work. An earlier version of this table said "Node 20+ / Python
+3.12+", which was a guess wearing the costume of a requirement.
 
 ### Quick start (Docker)
 
