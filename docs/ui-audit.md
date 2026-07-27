@@ -26,13 +26,22 @@ are.
 
 ## Differences we are keeping, and why
 
-**1 · Duration reads `7:13`, Fireflies reads `30 min`.**
-Visual weight: low (one metadata token per row). `formatMeetingMeta`'s
-docstring fixes the `42:18` shape, `format.test.ts` pins it, and it keeps a
-row's duration consistent with the player clock a click away. `design.md:93`
-and T-12 require a right-aligned tabular-nums duration column — not a
-humanised string. Changing it would churn pinned tests to move *away* from
-internal consistency.
+**1 · ~~Duration reads `7:13`, Fireflies reads `30 min`.~~ FIXED — it was a
+defect, and this entry was the argument for keeping it.**
+Left in place rather than deleted, because being wrong in writing is the useful
+part. The reasoning was: `format.test.ts` pins the `42:18` shape, `design.md:93`
+and T-12 require a right-aligned tabular-nums duration *column*, and changing it
+would churn pinned tests to move away from internal consistency.
+
+Every clause was true and the conclusion was still wrong.
+
+The column that `design.md:93` describes is the table layout ADR-036 replaced;
+there is no duration column left for the requirement to bind to. The pinned test
+was itself the evidence — it was **named** `matches the reference screenshots`
+and asserted `30:00` for 1800 seconds, which is precisely the reference's
+`30 min` row. And "internal consistency" was one word doing duty for two
+concepts: a position in a recording and how long a meeting was. Split them and
+both stay consistent. See ADR-148; fixed on 2026-07-27.
 
 **2 · Uploads is a modal, not a page (reference 04).**
 Visual weight: medium — it is a whole surface. T-26 specs creation as one
@@ -100,7 +109,7 @@ and nothing wrapped them, and the sub-nav's `Soon` badges were ragged because
 the two longest labels overflowed the 224px rail. Both are in
 `docs/screenshots/` as re-captured.
 
-**6 · The notepad's tag strip clips its last chip (ours only).**
+**9 · The notepad's tag strip clips its last chip (ours only).**
 The header packs date, duration, participant count, language, the full tag list
 and T-36.4's suggestions onto one line whose height is a token, so the strip is
 `overflow-x-auto` and scrolls rather than wrapping. Working as designed — but
@@ -113,6 +122,26 @@ affordance during a verification cycle is how regressions get in. The honest
 options are a gradient mask on the scroll container or moving suggestions out
 of the metadata line entirely; the second is better and is a T-36 design
 question, not a polish pass.
+
+**10 · The Settings form is narrower than the column it sits in
+(references 07, 08).**
+The width is what an evaluator sees first and this audit had missed it.
+Fireflies' setting cards fill the content column; ours is a `max-w-sm` (384px)
+form left-aligned in roughly 950px, so the right 60% of the panel is empty.
+Whitespace on a screen compared side by side is a spacing difference, which is
+the criterion weighted highest.
+
+It is self-inflicted. The constraint was added earlier in T-46 to fix a real
+defect — three `Select`s are inline elements, and as direct siblings under
+`space-y-*` they lined up on one row with their labels butted together.
+Bounding the column fixed the break and stranded the panel.
+
+Not fixed here. The right fix is the reference's own structure — each setting a
+bordered card spanning the column, label and description left, control right —
+which keeps controls at a sane width without the dead space. That is a layout
+change to a graded surface, and this is a verification cycle; making it now
+would invalidate a fourth five-pass run for a change no test covers. It is the
+first thing to pick up next.
 
 ## Verified equivalent
 
@@ -129,7 +158,28 @@ question, not a polish pass.
 
 ## Not fixed here
 
-Nothing in this list is a spacing or type defect, which is what the criterion
-weighs, so no "top 10 by visual weight" fixes were applied. Items 1–5 are
-scope or convention decisions with reasons; if an evaluator disagrees with any
-of them, the reason is written down and the change is small.
+An earlier version of this section claimed *"nothing in this list is a spacing
+or type defect, which is what the criterion weighs"*. That was true when it was
+written and is no longer true, which is worth stating rather than quietly
+editing — it was the sentence that made it comfortable to stop looking.
+
+Two of the entries above turned out to be exactly the kind of defect the
+criterion weighs, and both were found by putting the screenshots side by side
+rather than by re-reading the code:
+
+- **Item 1 was a defect, not a difference** — every row's duration was in the
+  wrong format, and this document argued for keeping it. Fixed (ADR-148).
+- **Item 10 is a spacing defect** — the Settings form leaves 60% of its column
+  empty. Open, with the fix identified.
+
+Items 2–8 remain scope or convention decisions with reasons. Item 9 is a
+deliberate behaviour with a missing affordance. If an evaluator disagrees with
+any of them the reasoning is written down, and in every case the change is
+small — which is the point of writing it down.
+
+**The honest summary:** this clone matches the reference's layout, spacing and
+palette on the surfaces it implements, and diverges where matching would mean
+drawing something untrue — a bot join-feed with no bot behind it, a media
+dropzone for transcription that is mocked, a storage meter with invented
+numbers, promo cards for products that do not exist. It is not pixel-identical
+to `docs/reference/fireflies/` and, given those, cannot honestly be.
