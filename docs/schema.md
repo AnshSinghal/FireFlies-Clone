@@ -13,6 +13,7 @@ erDiagram
     users ||--o{ participants : "may resolve to"
     users ||--o{ comments : authors
     users ||--o{ highlights : creates
+    users ||--o{ bookmarks : creates
     users ||--o{ soundbites : creates
 
     channels ||--o{ meetings : contains
@@ -25,6 +26,7 @@ erDiagram
     meetings ||--o{ action_items : has
     meetings ||--o{ comments : has
     meetings ||--o{ highlights : has
+    meetings ||--o{ bookmarks : has
     meetings ||--o{ soundbites : has
     meetings }o--o{ tags : "tagged with"
 
@@ -35,6 +37,9 @@ erDiagram
 
     transcript_segments ||--o{ comments : "anchored to"
     transcript_segments ||--o{ highlights : "anchored to"
+    transcript_segments ||--o{ bookmarks : "anchored to"
+    comments ||--o{ comment_mentions : names
+    participants ||--o{ comment_mentions : "is named in"
 
     summaries ||--o{ summary_sections : contains
 
@@ -144,6 +149,51 @@ front so the schema is stable, even though the features land in Phase 6. Adding 
 easy; migrating one whose shape was never considered is not.
 
 ---
+
+## Two tables this document had missed
+
+Found on 2026-07-28 by listing `__tablename__` across `app/models/` and
+grepping each one here: **16 tables in the ORM, 14 in this file.** The README
+calls this the full ERD, so the gap mattered.
+
+Both arrived with the Phase 6 features and neither was drawn — the same drift
+that left `design.md` specifying ten colours the app does not use. The schema
+grew; the document describing it did not.
+
+### `bookmarks`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `meeting_id` | FK → `meetings` CASCADE, indexed | the flyout queries by meeting, not by segment |
+| `segment_id` | FK → `transcript_segments` CASCADE, indexed | the moment being marked |
+| `created_by` | FK → `users` CASCADE | |
+| `is_active` | BOOLEAN NOT NULL | un-starring keeps the row |
+
+`UNIQUE (segment_id, created_by)` — one person cannot bookmark the same moment
+twice, so the star is idempotent rather than accumulating rows.
+
+**Why it is not a `highlights` row with a flag.** A highlight marks a character
+range and carries a colour; a bookmark marks a whole moment. Merging them means
+a nullable offset pair and a `kind` discriminator on every row of both features,
+which share nothing but a foreign key.
+
+### `comment_mentions`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | |
+| `comment_id` | FK → `comments` CASCADE, indexed | |
+| `participant_id` | FK → `participants` CASCADE, indexed | |
+
+`UNIQUE (comment_id, participant_id)` — mentioning someone twice in one comment
+is one mention.
+
+**Participants, not users**, for the same reason `participants.user_id` is
+nullable: most attendees of a real meeting have no account. A mention table
+keyed on `users` could not name two thirds of the people in these transcripts.
+It is a table rather than regex-mining comment bodies at read time, so a rename
+does not orphan a mention.
 
 ## Two problems found while drawing this
 
