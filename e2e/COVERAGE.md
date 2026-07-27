@@ -72,6 +72,34 @@ neither requires nor derives anything from the prefix, so the files were left
 as they merged rather than renamed — a rename would have rewritten history that
 is itself graded evidence, for a purely cosmetic gain.
 
+## The clock fixture is not yet universal — 24 specs still run on the wall clock
+
+Worth stating precisely, because a commit message in the history says `10-bulk`
+"was the last spec importing `test` from Playwright rather than `../fixtures`".
+It was not. Counted after that change landed, **24 spec files still import the
+bare `test`** and therefore never get `fixtures.ts`'s auto-fixture that pins
+`Date.now()` to `SEED_ANCHOR` — among them `04-sidebar`, `16-sync`, `12-states`,
+`24-search` and `25-dark-mode`. Only `99-capture` has a reason to (it is a
+camera, and pins the clock itself).
+
+**Why this is not currently a defect.** The specs that assert anything
+date-relative were audited: only `19-action-items` and `33-colour-vision`, and
+both use the fixture now. The other 24 assert structure and behaviour, not
+dates.
+
+**Why it is still worth doing.** Pinning is not only about dates. Converting
+`10-bulk` immediately failed *"selection survives paging"* — the test waited for
+the meeting list to be VISIBLE after clicking page 2, which is instantly true of
+page 1 because the list element never unmounts, so it selected a row that was
+already selected, toggled it off, and asserted against a bulk bar that had
+unmounted. The race predated the conversion; real-clock timing had been hiding
+it. That is one genuine bug per spec converted, from a sample of two.
+
+**Not done here** because it is 24 files of churn immediately before a final
+verification run, and because the payoff is unknown per file — the `10-bulk`
+result argues it is worth trying, not that every file hides something. Convert
+in small batches and read each failure, rather than converting all 24 and
+triaging a wall of red.
 ## On the plan's test-case IDs
 
 PLAN.md names 497 case IDs (`T12-A`, `T21-N`, …). Grepping the whole test tree
