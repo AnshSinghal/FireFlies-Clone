@@ -20,9 +20,19 @@ interface CheckA11yOptions {
   /** Regions to skip — third-party embeds, known-noisy widgets. */
   exclude?: string[]
   /**
-   * Rules to switch off, each one a documented decision. The recurring case is
-   * `color-contrast`: ADR-012 records `--ff-text-muted` (3.14:1) as a
-   * deliberate deviation to stay close to the reference.
+   * Rules to switch off, each one a documented decision — and each one owing a
+   * replacement assertion, because a disabled rule with nothing in its place is
+   * a hole rather than a decision.
+   *
+   * The only current use is `aria-hidden-focus` in `28-a11y`, where Radix marks
+   * the shell `aria-hidden` without `inert` so axe flags every control on the
+   * page. The half that was ours is fixed at source in `globals.css`; the half
+   * that is not is replaced by asserting the property directly — focus cannot
+   * leave the menu.
+   *
+   * `color-contrast` used to be the recurring case, on ADR-012's grounds that
+   * `--ff-text-muted` shipped at 3.14:1. It ships at 4.97:1. Removed from all
+   * three call sites in 2026-07-28 after verifying each passes with the rule on.
    */
   disableRules?: string[]
 }

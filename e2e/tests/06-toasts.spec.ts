@@ -192,15 +192,21 @@ test.describe('toasts · behaviour', () => {
     expect(scoped.violations).toEqual([])
 
     /*
-     * The page-wide scan drops `color-contrast` and nothing else. ADR-012
-     * records `--ff-text-muted` (#8992A2, 3.14:1) as a deliberate deviation to
-     * stay close to the reference, and predicted axe would flag it. Excluding
-     * the one known rule keeps every OTHER rule enforced across the whole page,
-     * which narrowing the scan to the toast would have quietly given up.
+     * A page-wide scan with NO rules disabled.
+     *
+     * This used to drop `color-contrast`, because ADR-012 recorded
+     * `--ff-text-muted` at #8992A2 (3.14:1) as a deliberate deviation and
+     * predicted axe would flag it. That prediction expired: the shipped value
+     * is #667085 — 4.97:1 light, 5.94:1 dark — so there is nothing to suppress,
+     * and the exclusion was hiding a rule that no longer fires. Verified by
+     * removing it and running: clean.
+     *
+     * Page-wide rather than scoped to the toast, which is the original point
+     * worth keeping: narrowing the scan would quietly give up every other rule
+     * across the page to silence one.
      */
     const page_wide = await new AxeBuilder({ page })
       .withTags(TAGS)
-      .disableRules(['color-contrast'])
       .analyze()
     expect(page_wide.violations).toEqual([])
   })

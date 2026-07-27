@@ -266,12 +266,23 @@ justification. If accessibility is later prioritised over fidelity, the single-t
 > being asked about. An interviewer reading this ADR would be told the product
 > knowingly ships inaccessible metadata text. It does not.
 >
-> **The improvement is also unprotected.** A test asserting a 3:1 floor cannot
-> notice a regression from 4.97 back to 3.14 — the value it was written to
-> defend. Tightening it to 4.5:1 is queued; that is what makes this a decision
-> rather than an accident, and it is why the ADR is annotated here rather than
-> quietly edited. What was decided is still what is recorded; what happened
-> instead is now recorded next to it.
+> **The improvement was also unprotected, and now is not.** A test asserting a
+> 3:1 floor cannot notice a regression from 4.97 back to 3.14 — the value it was
+> written to defend. Tightened to **4.5** on 2026-07-28, which both themes clear
+> (4.97 light, 5.94 dark). That is what turns this from an accident into a
+> decision.
+>
+> **Three axe exclusions rested on this entry and are now removed.**
+> `06-toasts`' page-wide scan, `07-primitives`' gallery scan and `a11y.ts`'s
+> docstring all disabled `color-contrast` citing the 3.14:1 value. Since it
+> ships at 4.97:1 the rule no longer fires, so those exclusions were suppressing
+> nothing — except every OTHER contrast pairing on those pages, because
+> `disableRules` switches a rule off wholesale. Verified by removing each and
+> running: both surfaces clean. Three checks got stronger by deleting three
+> lines.
+>
+> The ADR is annotated rather than edited. What was decided is still what is
+> recorded; what happened instead sits next to it.
 
 ---
 

@@ -177,12 +177,20 @@ describe.each([
     }
   })
 
-  it('muted text clears the 3:1 non-text floor', () => {
-    // Deliberately below AA. Fireflies' sampled muted grey scores 2.60:1;
-    // holding metadata to 4.5:1 would mean visibly departing from the reference
-    // this project is graded against. 3:1 is the documented compromise —
-    // see ADR-012, and expect this to be the one known axe exception in T-42.
-    expect(ratio('--ff-text-muted', '--ff-surface-0', theme)).toBeGreaterThanOrEqual(3)
+  it('muted text clears AA', () => {
+    /*
+     * 4.5, not the 3 this asserted until 2026-07-28.
+     *
+     * ADR-012 decided to ship #8992A2 at 3.14:1 — deliberately below AA, to stay
+     * close to Fireflies' own #97A1B3 (2.60:1) — and set this floor to match.
+     * That decision was later reversed in code and never written down: the
+     * shipped value is #667085, which is 4.97:1 light and 5.94:1 dark.
+     *
+     * A floor of 3 cannot notice a regression back to 3.14 — the exact value it
+     * was written to defend. The guard outlived the decision it was guarding,
+     * and passed more comfortably every year for it.
+     */
+    expect(ratio('--ff-text-muted', '--ff-surface-0', theme)).toBeGreaterThanOrEqual(4.5)
   })
 
   it('accent-on-surface is usable for links and icons (3:1)', () => {

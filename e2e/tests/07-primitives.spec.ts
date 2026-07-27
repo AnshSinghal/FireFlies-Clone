@@ -360,9 +360,9 @@ test.describe('primitives', () => {
   test('T10-L · the gallery is axe-clean', async ({ page }) => {
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      // ADR-012: `--ff-text-muted` is a recorded, tested deviation from AA to
-      // stay close to the reference. Every other rule is enforced.
-      .disableRules(['color-contrast'])
+      // No rules disabled. This used to exclude `color-contrast` on ADR-012's
+      // grounds that `--ff-text-muted` shipped at 3.14:1; it ships at 4.97:1,
+      // so the exclusion suppressed a rule that no longer fires.
       .analyze()
 
     const serious = results.violations.filter(

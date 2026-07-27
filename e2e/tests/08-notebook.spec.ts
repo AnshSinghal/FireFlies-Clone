@@ -7,7 +7,7 @@ import { expect, test } from '../fixtures'
  *
  * The layout is a DATE-GROUPED CARD LIST rather than the column table PLAN.md
  * A2.1 describes — see ADR-036. Cases that assert table geometry (T12-B's
- * 72px row, T12-I's sticky column header) are adapted here with their reasoning
+ * fixed-height row, T12-I's sticky column header) are adapted here with their reasoning
  * inline; every behavioural case is unchanged.
  */
 
@@ -52,8 +52,11 @@ test.describe('notebook', () => {
       .evaluateAll((nodes) => nodes.map((n) => n.getBoundingClientRect().height))
 
     expect(new Set(heights).size).toBe(1)
-    // The card is pinned to the `row` token, which is the plan's 72px — so the
-    // original assertion holds after all, just on a card rather than a table row.
+    // The card is pinned to the `row` token — 82px since ADR-150, which measured
+    // the reference's card against ours and found it short against both the
+    // topbar and the type. T12-B's assertion survives the layout change; only
+    // the number moved. (This comment said 72px above an `82` for a few hours
+    // after that change — the same drift the ADR log kept hitting.)
     expect(heights[0]).toBe(82)
   })
 
