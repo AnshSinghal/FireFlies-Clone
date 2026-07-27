@@ -47,5 +47,3 @@ export const TOAST_MESSAGES = {
   /** Every `Soon` affordance uses this exact sentence, so the build is honest about its edges. */
   comingSoon: "Coming soon — this feature isn't part of this build",
 } as const
-
-export type ToastMessageKey = keyof typeof TOAST_MESSAGES

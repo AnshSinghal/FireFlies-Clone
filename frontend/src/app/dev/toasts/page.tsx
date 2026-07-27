@@ -73,7 +73,7 @@ export default function ToastHarnessPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-h3 text-primary">Behaviour</h2>
+        <h2 className="text-h3 text-primary">Behavior</h2>
         <div className="flex flex-wrap gap-2">
           <Fire
             testId="fire-five"
