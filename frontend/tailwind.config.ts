@@ -234,6 +234,21 @@ const config: Config = {
         'rail-collapsed': '64px',
         'icon-rail': '56px',
         row: '72px',
+
+        /*
+         * Notebook list rhythm, derived from `docs/reference/fireflies/02.png`
+         * rather than chosen (T-46.1, ADR-149). Measured as ratios of card
+         * height, because the reference was captured at a different width:
+         *
+         *   between cards in one date group   0.274 x card  ->  0.274 x 72 = 20px
+         *   across a date-group heading       0.94  x card  ->  67px total,
+         *     of which the heading and its own 8px gap supply 31 -> 36px here
+         *
+         * Named, not inlined, because the skeleton has to mirror them exactly
+         * or the list jumps when real rows replace it.
+         */
+        'row-gap': '20px',
+        'group-gap': '36px',
         'btn-sm': '32px',
         'btn-md': '36px',
         'btn-lg': '40px',

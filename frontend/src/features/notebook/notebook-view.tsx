@@ -622,7 +622,12 @@ function GroupedList({
   }
 
   return (
-    <div ref={listRef} onKeyDown={onKeyDown} className="space-y-6" data-testid="meeting-list">
+    <div
+      ref={listRef}
+      onKeyDown={onKeyDown}
+      className="space-y-group-gap"
+      data-testid="meeting-list"
+    >
       {groups.map((group) => {
         const groupIds = group.items.map((m) => m.id)
         const allSelected = groupIds.every((id) => selection.isSelected(id))
@@ -644,7 +649,7 @@ function GroupedList({
               </div>
             )}
 
-            <ul className="space-y-2">
+            <ul className="space-y-row-gap">
               {group.items.map((meeting) => (
                 <MeetingRow
                   key={meeting.id}

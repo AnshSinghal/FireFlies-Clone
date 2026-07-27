@@ -3317,3 +3317,59 @@ functions are easy to confuse at a call site and confusing them is precisely
 the defect recorded here.
 
 ---
+
+## ADR-149 — The notebook's vertical rhythm comes from the reference, not the plan
+
+**Date:** 2026-07-28 · **Task:** T-46.1 · **Status:** Accepted
+
+**Context.** T-46.1's side-by-side audit had concluded the notebook matched. Its
+"Measured, not eyeballed" table compared topbar height, sidebar width, row
+height and title type against `design.md` and marked all four *exact* — which
+they are. But `design.md` is our spec, not Fireflies', so the table was
+reporting conformance to ourselves as fidelity to them. The plan's unsampled
+values had already lost to the reference four times (ADR-011 accent, ADR-021
+rail, ADR-036 layout, ADR-148 duration).
+
+Measuring the notebook against `docs/reference/fireflies/02.png` instead — by
+edge-detecting full-width rules in both images and comparing **ratios**, since
+the captures differ in width and the reference's device pixel ratio is unknown:
+
+| Ratio | Fireflies | Ours (before) |
+|---|---|---|
+| Title type ÷ topbar | 0.268 | 0.255 |
+| Card height ÷ topbar | 1.51 | 1.29 |
+| Gap between cards in a group ÷ card | 0.274 | **0.127** |
+| Gap across a group heading ÷ card | 0.94 | 0.78 |
+
+The type scale was right. The density was not, and the worst of it was the gap
+between cards inside one date group: less than half the reference's. Nobody had
+seen it by looking, including me, across several side-by-side passes in one day.
+
+**Decision.** Take the two gaps from the reference; leave the row height alone.
+
+- `row-gap: 20px` (0.274 × 72) between cards in a group — measured 0.296 after.
+- `group-gap: 36px`, which with the heading and its own 8px gap totals 67px
+  across a group boundary — measured 0.944 after, against the reference's 0.94.
+
+Both are named tokens in `tailwind.config.ts` beside `row: 72px`, with the
+derivation in a comment, because the config already establishes that layout
+sizes are named rather than inlined — and because the skeleton has to mirror
+them exactly.
+
+**Why the row height is NOT changed**, though it is 15% tighter than the
+reference at 1.29 against 1.51. Matching it means 72px → ~85px, and that token
+is load-bearing in a way the gaps are not: `design.md` §3.7 fixes it, T12-B
+asserts it, ADR-036 deliberately kept it, the skeleton is pinned to it, and the
+virtualiser sizes its items from it — a wrong value there breaks scrolling
+rather than looking slightly off. Closing a 54% deviation while leaving a 15%
+one is the right trade when the second costs an order of magnitude more risk.
+It is recorded as open in `docs/ui-audit.md` rather than quietly dropped.
+
+**Consequences.** Six visual baselines moved — `notebook-list` in both themes
+and the four responsive widths — and nothing else, which is itself the evidence
+that the change is contained to the surface it was meant for. The skeleton
+needed restructuring: it had flattened heading-to-first-card and card-to-card
+into one `space-y-2`, so once those diverged it would have stood in for a list
+taller than itself and the content would have jumped on load. That is the one
+thing a skeleton exists to prevent, and no test asserts inter-row gaps — only
+row height — so it would not have been caught.

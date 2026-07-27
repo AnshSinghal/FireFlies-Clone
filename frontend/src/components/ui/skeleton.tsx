@@ -137,7 +137,7 @@ export function MeetingListSkeleton({
       aria-label="Loading meetings"
       // Matches the real list's group spacing, so the whole block is the same
       // height as what replaces it.
-      className="space-y-6"
+      className="space-y-group-gap"
     >
       {groups.map((size, groupIndex) => (
         <div key={groupIndex} className="space-y-2">
@@ -146,9 +146,20 @@ export function MeetingListSkeleton({
             <Skeleton variant="rect" className="h-4 w-4 shrink-0" />
             <Skeleton variant="text" className="h-[22px] w-24" />
           </div>
-          {Array.from({ length: size }, (_, index) => (
-            <MeetingRowSkeleton key={index} idSuffix={idSuffix} />
-          ))}
+          {/*
+            The rows get their OWN wrapper, because the real list spaces
+            heading-to-first-card (8px, this div) differently from card-to-card
+            (`row-gap`, the <ul>). Flattening both into one `space-y-2` here —
+            which is what this used to do — would make the skeleton shorter
+            than the list it stands in for, and the content would jump the
+            moment real rows arrived. That is the one thing a skeleton exists
+            to prevent.
+          */}
+          <div className="space-y-row-gap">
+            {Array.from({ length: size }, (_, index) => (
+              <MeetingRowSkeleton key={index} idSuffix={idSuffix} />
+            ))}
+          </div>
         </div>
       ))}
     </div>

@@ -35,12 +35,12 @@ edge-detecting full-width rules in `docs/reference/fireflies/02.png` and
 widths, so everything below is a **ratio** — scale- and DPR-independent, which
 sidesteps having to know what device pixel ratio the reference was shot at:
 
-| Ratio | Fireflies | Ours | |
-|---|---|---|---|
-| Row title type ÷ topbar height | 0.268 | 0.255 | within 5% — type scale is right |
-| Card height ÷ topbar height | 1.51 | 1.29 | **ours 15% tighter** |
-| Gap between cards in one date group ÷ card height | 0.274 | 0.127 | **ours 54% tighter** |
-| Gap across a date-group heading ÷ card height | 0.94 | 0.78 | **ours 18% tighter** |
+| Ratio | Fireflies | Ours (before) | Ours (now) | |
+|---|---|---|---|---|
+| Row title type ÷ topbar height | 0.268 | 0.255 | 0.255 | type scale was already right |
+| Card height ÷ topbar height | 1.51 | 1.29 | 1.29 | **still 15% tighter — open, see below** |
+| Gap between cards in one date group ÷ card height | 0.274 | 0.127 | **0.296** | fixed (ADR-149) |
+| Gap across a date-group heading ÷ card height | 0.94 | 0.78 | **0.944** | fixed (ADR-149) |
 
 Raw measurements, for anyone re-deriving: Fireflies' cards are 107–108px with
 29–30px between cards in a group and ~101px across a group heading, on a 71px
@@ -62,18 +62,24 @@ pixels. Two different methods, stated rather than blended, because publishing a
 measured-looking number that was actually a bad threshold is the specific
 mistake this document has already made three times.
 
-**The type scale is right and the density is not.** Our list is meaningfully
-tighter than the reference — most of all in the gap between cards inside one
-date group, which is less than half the reference's in proportional terms. That
-is a spacing difference on the single most-compared screen, which is the
-criterion weighted highest, and no amount of looking at the two images side by
-side had made me see it. It took measuring.
+**The type scale was right and the density was not** — most of all the gap
+between cards inside one date group, which was less than half the reference's
+in proportional terms. No amount of looking at the two images side by side had
+made me see it, including several passes on the same day. It took measuring.
 
-Not changed in this pass — see *Not fixed here*. The 72px row height is pinned
-by `design.md`, by T12-B, and by the skeleton that mirrors it, so this is a
-token-layer decision rather than a CSS tweak, and it re-baselines 165 visual
-snapshots. It is specified and queued rather than rushed at the end of a
-verification cycle.
+**Both gaps are now taken from the reference** (ADR-149): `row-gap: 20px` and
+`group-gap: 36px`, named in `tailwind.config.ts` with the derivation, because
+the skeleton has to mirror them exactly. Six visual baselines moved —
+`notebook-list` in both themes and the four responsive widths — and nothing
+else, which is the evidence the change stayed on the surface it was meant for.
+
+**The row height is deliberately still 1.29 against their 1.51.** Matching it
+means 72px → ~85px, and that token is load-bearing in a way the gaps are not:
+`design.md` §3.7 fixes it, T12-B asserts it, ADR-036 kept it on purpose, the
+skeleton is pinned to it, and the virtualiser sizes its items from it — a wrong
+value there breaks scrolling rather than looking slightly off. Closing a 54%
+deviation and leaving a 15% one is the right trade when the second costs an
+order of magnitude more risk. Open, not dropped.
 
 ## Differences we are keeping, and why
 
@@ -260,10 +266,10 @@ rather than by re-reading the code:
 - **Item 10 is a spacing defect** — the Settings form leaves 60% of its column
   empty. Open, with the fix identified.
 
-- **The list is 15–54% denser than the reference** — measured, not eyeballed;
-  see the ratio table at the top. Queued with item 10: both are token-layer
-  spacing changes that re-baseline the same 165 visual snapshots, so they
-  should land together, in one review, with the baselines regenerated once.
+- **The list's gaps were 54% and 18% tighter than the reference** — measured,
+  not eyeballed. **Fixed** (ADR-149). The row height remains 15% tighter and is
+  deliberately open: matching it means changing a token the virtualiser sizes
+  from, which trades a visible-but-small difference for a scrolling bug.
 
 Items 2–8 remain scope or convention decisions with reasons. Item 9 is a
 deliberate behaviour with a missing affordance. If an evaluator disagrees with
