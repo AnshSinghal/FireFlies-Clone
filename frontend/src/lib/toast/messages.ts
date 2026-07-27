@@ -25,6 +25,7 @@ export const TOAST_MESSAGES = {
   selectionCopied: 'Selection copied to clipboard',
   transcriptCopied: 'Transcript copied to clipboard',
   summaryCopied: 'Summary copied to clipboard',
+  answerCopied: 'Answer copied to clipboard',
   markdownCopied: 'Markdown copied to clipboard',
   exportReady: 'Export downloaded',
 

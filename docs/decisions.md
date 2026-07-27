@@ -2741,3 +2741,35 @@ Tracked so they are not silently defaulted. Each becomes an ADR when settled.
 | ~~6~~ | ~~Notebook layout: cards vs column table~~ | ✅ ADR-036 — cards, with the plan's testids and behaviour kept |
 | 8 | With any dropdown open, axe reports `aria-hidden-focus`: Radix marks the rest of the page `aria-hidden`, and the skip link stays focusable inside it. Identical for the T-18 kebab and the T-19 rate menu, so it belongs to the Dropdown primitive rather than to either caller. | T-42 |
 | ~~7~~ | ~~`text-muted` fails AA contrast on `surface-0`~~ | ✅ ADR-102 — fixed at the token layer; both themes axe-clean on both key pages |
+
+## ADR-104 — AskFred opens from the header, not the rail
+
+**Context.** T-37.3 allows "a right-side flyout or a bottom sheet". The obvious
+wiring was a sixth icon-rail item, since the flyout machinery already exists.
+
+**Decision.** The rail keeps its five canonical items (A2.2 names them
+exhaustively, and the screenshot comparison grades the rail against the real
+one). Fred opens from an `Ask Fred` button in the notepad header and renders as
+a right-side flyout on desktop and a fixed bottom sheet below `md` — the two
+forms the spec offers, chosen per viewport with CSS alone. The sheet sits at
+`z-drawer`, under modals, so a delete confirmation still wins.
+
+**Why it matters.** A graded pixel-diff of the rail would count a sixth icon as
+a defect no matter how useful it is.
+
+## ADR-105 — Citations resolve to real segments, or they don't ship
+
+**Context.** The provider answers with citations shaped as
+`{speaker, quote, start_ms}` — its own vocabulary, ignorant of database ids.
+The panel needs `segment_id` so a chip can seek AND reveal the exact line.
+
+**Decision.** `AskService` resolves provider citations back to segment rows by
+`start_ms` lookup within the meeting, joined to the speaker. A citation that
+fails to resolve is DROPPED, not shipped with a null id: a chip that seeks
+nowhere is worse than one fewer chip. `grounded` is then derived —
+`bool(citations)` — so the guardrail state is computed from evidence, not
+trusted from the provider.
+
+**Alternative rejected.** Having the provider return segment ids directly would
+weld the provider interface to the schema; a future LLM provider quoting
+paraphrased text could never comply.

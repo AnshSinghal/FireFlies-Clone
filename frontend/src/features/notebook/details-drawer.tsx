@@ -376,7 +376,12 @@ function AttendeeRow({ person, longest }: { person: ParticipantDetail; longest: 
 
 function DrawerSkeleton() {
   return (
-    <div className="space-y-5 p-4" aria-busy="true" aria-label="Loading meeting details">
+    <div
+      className="space-y-5 p-4"
+      role="status"
+      aria-busy="true"
+      aria-label="Loading meeting details"
+    >
       <Skeleton variant="text" className="h-6 w-2/3" />
       <SkeletonText lines={5} />
       <SkeletonText lines={4} />

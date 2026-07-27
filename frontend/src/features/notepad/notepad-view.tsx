@@ -33,6 +33,7 @@ import { TOAST_MESSAGES } from '@/lib/toast/messages'
 import { EditMeetingModal } from '@/features/edit/edit-meeting-modal'
 import { ExportModal } from '@/features/export/export-modal'
 
+import { AskFredFlyout } from './askfred/askfred-flyout'
 import { IconRail, RailFlyout, type RailItemId } from './icon-rail'
 import { NotepadHeader } from './notepad-header'
 import { ShortcutsModal } from './player/shortcuts-modal'
@@ -72,6 +73,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
   const [openPanel, setOpenPanel] = useState<RailItemId | null>(() =>
     readClipParam() !== null ? 'soundbites' : null,
   )
+  const [askFredOpen, setAskFredOpen] = useState(false)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [editing, setEditing] = useState(false)
   const [exporting, setExporting] = useState(false)
@@ -163,7 +165,7 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
       className="flex h-full min-h-0 flex-col"
     >
       {isPending || !meeting ? (
-        <div className="space-y-4 p-6" aria-busy="true" aria-label="Loading meeting">
+        <div className="space-y-4 p-6" role="status" aria-busy="true" aria-label="Loading meeting">
           <SkeletonText lines={2} className="max-w-md" />
           <SkeletonText lines={12} />
         </div>
@@ -179,6 +181,8 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
               }
               onDelete={() => setConfirmingDelete(true)}
               onEditDetails={() => setEditing(true)}
+              onAskFred={() => setAskFredOpen((open) => !open)}
+              askFredOpen={askFredOpen}
               onExport={() => setExporting(true)}
             />
 
@@ -241,6 +245,13 @@ export function NotepadView({ meetingId }: { meetingId: number }) {
                   left={panels.summary}
                   right={panels.transcript}
                 />
+              )}
+
+              {/* AskFred (T-37.3): a right-side flyout on desktop, a bottom
+                sheet on phones. NOT a rail item — the rail's five icons are
+                canonical (A2.2), and Fireflies opens Fred from the header. */}
+              {askFredOpen && (
+                <AskFredFlyout meetingId={meetingId} onClose={() => setAskFredOpen(false)} />
               )}
             </div>
 

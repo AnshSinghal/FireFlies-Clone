@@ -130,6 +130,9 @@ export function MeetingListSkeleton({
   return (
     <div
       data-testid={`meeting-list-skeleton${idSuffix}`}
+      // `status` is the role that both permits the label and announces the
+      // loading state — a bare div with aria-label is an axe violation.
+      role="status"
       aria-busy="true"
       aria-label="Loading meetings"
       // Matches the real list's group spacing, so the whole block is the same

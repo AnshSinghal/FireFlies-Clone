@@ -53,11 +53,11 @@ Conventions in the table:
 | Placeholder: team/sharing | T-30.4 | PW-30-01 | `24-placeholders.spec.ts › placeholder surfaces` | Covered |
 | Placeholder: auth | T-30.8 | PW-30-06 | `24-placeholders.spec.ts › placeholder surfaces` | Covered |
 | Bonus: comments / highlights / soundbites | T-31/32/33 | PW-31-\*, PW-32-\*, PW-33-\* | Comments: `25-comments.spec.ts › comments · threads on transcript lines`. Highlights: **pending** — `feat/T-32-highlights` (in progress elsewhere). Soundbites: **pending** — `feat/T-33-soundbites` (in progress) | Partial |
-| Bonus: export | T-34 | PW-34-\* | **Pending** — `feat/T-34-export` (in progress) | Pending |
+| Bonus: export | T-34 | PW-34-\* | `34-export.spec.ts › export modal`, `› bulk export`; renderers (md/txt/pdf/docx) in `backend/tests/test_export.py` (pytest) | Covered |
 | Bonus: global search | T-35 | PW-35-\* | `24-search.spec.ts › global search` (page, deep links, filters); `05-topbar.spec.ts › topbar` (dropdown, grouping, history) | Covered |
 | Bonus: tags & filtering | T-36 | PW-36-\* | **Pending** — `feat/T-36-tags` (in progress) | Pending |
-| Bonus: LLM Q&A chat | T-37 | PW-37-\* | **Pending** — `feat/T-37-askfred` (in progress) | Pending |
-| Bonus: dark mode | T-38 | PW-38-\* | **Pending** — `feat/T-38-dark-mode` (in progress). `02-tokens.spec.ts › design tokens` already pins the token layer both themes read from | Pending |
+| Bonus: LLM Q&A chat | T-37 | PW-37-\* | `26-askfred.spec.ts › AskFred` (T37-E → T37-K: suggestions, thinking state, citation seek, history carry, retry, badge); endpoint claims (citations, guardrail, 429, truncation) in `backend/tests/test_ask.py` (pytest T37-A..D) | Covered |
+| Bonus: dark mode | T-38 | PW-38-\* | `25-dark-mode.spec.ts › dark mode` (T38-A → T38-I + shortcut cycle: first paint, system tracking, axe at zero in dark, canvas repaint). `02-tokens.spec.ts › design tokens` pins the token layer both themes read from | Covered |
 
 When a pending branch merges, its spec lands in `tests/` under the same
 numbering scheme and its row above flips to Covered — this file is updated in
@@ -99,6 +99,9 @@ The suite is still growing on this branch; the listing is authoritative.
 | `24-placeholders.spec.ts` | 8 | Placeholder surfaces (T-29/T-30) |
 | `24-search.spec.ts` | 7 | Global search page (T-35) |
 | `25-comments.spec.ts` | 10 | Comments & threads (T-31) |
+| `25-dark-mode.spec.ts` | 10 | Dark mode: state, first paint, contrast (T-38) |
+| `26-askfred.spec.ts` | 7 | AskFred grounded Q&A (T-37) |
+| `34-export.spec.ts` | 4 | Export modal & bulk zip (T-34) |
 | `90-mutations.spec.ts` | 33 | Every write path, serial (`@mutates`) |
 | `98-smoke.spec.ts` | 12 | Post-deploy smoke, `@smoke` (T-40.13) |
 | `99-capture.spec.ts` | 9 | Screenshot capture harness |

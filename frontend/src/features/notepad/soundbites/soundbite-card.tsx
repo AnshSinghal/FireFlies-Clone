@@ -139,21 +139,14 @@ export function SoundbiteCard({
           size="sm"
           label={playing ? 'Pause soundbite' : 'Play soundbite'}
           icon={
-            playing ? (
-              <Pause size={16} strokeWidth={1.75} />
-            ) : (
-              <Play size={16} strokeWidth={1.75} />
-            )
+            playing ? <Pause size={16} strokeWidth={1.75} /> : <Play size={16} strokeWidth={1.75} />
           }
           onClick={playing ? player.pause : play}
           data-testid={`soundbite-play-${clip.id}`}
           className={cn(isActive && 'text-accent')}
         />
         <div className="h-1 min-w-0 flex-1 rounded-full bg-surface-2" aria-hidden="true">
-          <div
-            className="h-full rounded-full bg-accent"
-            style={{ width: `${progress * 100}%` }}
-          />
+          <div className="h-full rounded-full bg-accent" style={{ width: `${progress * 100}%` }} />
         </div>
         <span className="tnum shrink-0 text-xs text-muted">
           {formatTimestamp(clip.start_ms)} – {formatTimestamp(clip.end_ms)}

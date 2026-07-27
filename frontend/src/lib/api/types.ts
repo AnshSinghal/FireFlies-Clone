@@ -46,6 +46,10 @@ export type SegmentOut = Schemas['SegmentOut']
 export type SpeakerRef = Schemas['SpeakerRef']
 
 export type SearchResults = Schemas['SearchResults']
+
+export type AskRequest = Schemas['AskRequest']
+export type AskResponse = Schemas['AskResponse']
+export type AskCitation = Schemas['AskCitation']
 export type MeetingHit = Schemas['MeetingHit']
 export type TranscriptHit = Schemas['TranscriptHit']
 export type MatchRange = Schemas['MatchRange']
