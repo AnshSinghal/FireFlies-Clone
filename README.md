@@ -549,7 +549,15 @@ Plan targets: Performance ≥ 85, Accessibility ≥ 95, Best Practices ≥ 95.
 HTTP on a bare IP — there is no domain to issue a certificate against — so this is an infrastructure
 limit, not a code one. Put it behind a hostname with TLS and the category is 100.
 
-**Performance** is LCP: 4.0s against FCP 0.8s, CLS 0, Speed Index 1.1s. The shell paints fast and
+**Performance** is LCP: 4.0s against FCP 0.8s, CLS 0, Speed Index 1.1s — **under Lighthouse's mobile
+profile**, which is 4× CPU throttling plus simulated slow 4G, and that qualifier matters enough to
+put in the same sentence. Driving the deployed site in a desktop browser with no throttling, the
+same route measures **LCP 304ms** (FCP 80ms), with the four API responses landing at 236–264ms and
+the list painting ~40ms after its data arrives. Neither figure is "what a user sees" on its own: the
+first is a deliberately hostile simulation, the second has no wide-area network in it at all. What
+the pair shows is that the cost is the *dependency chain* — HTML, then JS, then hydrate, then fetch,
+then paint — which is cheap when every step is fast and expensive the moment any of them is
+throttled. The shell paints fast and
 the largest element is the meeting list, which waits on a client-side fetch. The fix is to render
 the first page on the server — real work, and a change to the RSC-vs-client-data decision recorded
 in ADR-001 rather than a tuning pass, so it is written down rather than half-done.
