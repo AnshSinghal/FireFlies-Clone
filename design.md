@@ -341,7 +341,8 @@ participant avatars and the talk-time bars.
 | `--ff-text-body-strong` | 14px / 22px / 500 |
 | `--ff-text-title-row` | 15px / 22px / 600 — meeting title in a list row |
 | `--ff-text-transcript` | 15px / 26px / 400 — transcript body (looser leading, **this matters**) |
-| `--ff-text-sm` | 13px / 18px / 400 — metadata, previews |
+| `--ff-text-meta` | 15px / 22px / 400 — the notebook row's `date · time · duration · host` line. Same SIZE as the row title, differing only in weight and colour, which is how the reference sets it: their title and meta caps both measure 14px (ADR-154) |
+| `--ff-text-sm` | 13px / 18px / 400 — previews, and metadata OUTSIDE the notebook row |
 | `--ff-text-xs` | 12px / 16px / 500 — badges, chips, timestamps |
 | `--ff-text-label` | 12px / 16px / 600 / 0.04em / uppercase — table column headers, section labels |
 

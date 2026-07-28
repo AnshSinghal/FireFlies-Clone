@@ -20,11 +20,12 @@ matches, or was changed to match:
 | Card height ÷ title glyph | 5.658 | 5.786 |
 | Gap between cards in a group ÷ card | 0.274 | 0.259 |
 | Gap across a date heading ÷ card | 0.94 | 0.926 |
-| Tile→title gap ÷ tile width | 0.411 | 0.400 |
+| Tile→title gap ÷ tile width | 0.411 | 0.375 |
 | Leading tile ÷ card height | 0.509 | 0.494 |
 | Settings block ÷ content column | 57.6% | 57.4% |
 | Settings well ÷ content column | 60.4% | 60.9% |
 | Topbar search ÷ topbar height | 6.27 | 6.86 |
+| Row meta type ÷ row title type | 1.00 | 1.00 |
 | Left rail ÷ topbar height | 4.68 | 4.27 |
 | Notebook card width ÷ topbar height | 13.10 | 20.55 |
 | Settings gutters | 336 / 345 | 202 / 204 |
@@ -126,8 +127,26 @@ Raw measurements, for anyone re-deriving: Fireflies' cards are 107–108px with
 29–30px between cards in a group and ~101px across a group heading, on a 71px
 topbar. Ours are 71–72px with 9px and 55px, on a 55–56px topbar.
 
-**The card's horizontal rhythm matches.** The gap between the leading tile and
-the title is **0.411× the tile width** for Fireflies and **0.400×** for us.
+**The card's horizontal rhythm nearly matches.** The gap between the leading
+tile and the title is **0.411× the tile width** for Fireflies and **0.375×** for
+us — 15px against their 16.4px equivalent.
+
+That row read `0.400` until 2026-07-28, and the correction is a measurement
+story rather than a layout one. The title's leading glyph column was sampled in
+a 20px-tall band tuned to where the title sat before ADR-154. Raising the meta
+line to 15px re-centred the two-line stack and moved the title up about 2px, so
+the band caught the antialiased edge of the `A` one column late and reported
+331 where every wider band and every threshold reports 330.
+
+The gap itself never moved — it is a flex row, tile plus gap. **The published
+number had simply been flattering by one pixel**, which on a 40px denominator is
+2.5%: half the check's tolerance, spent on sampling noise. So the honest figure
+is 8.8% off rather than 2.7%, and the fix was to widen the window rather than to
+edit the number toward the measurement.
+
+Left at 15px. Closing 1.4px is below the granularity at which a gap token means
+anything, and the pixel it would buy is smaller than the one that produced the
+error.
 
 **That row used to read "title inset ÷ card height, 1.01 vs 0.94" and it was a
 bad measurement** — a horizontal distance normalised by a vertical one. It
@@ -504,6 +523,31 @@ of it cannot be taken.
 Note the notebook toolbar's field is a separate token and stays at 560px: the
 reference collapses that one to an icon button, so there is no width to match it
 against, and narrowing it would be unmotivated rather than faithful.
+
+**14 · The leading tile is a play thumbnail, not a host avatar (reference 02).**
+Same 40px box, opposite contents, and it is the loudest colour difference in the
+list. Theirs is a saturated `#EF6C02` square carrying the host's initial — an
+identity chip, and the only strong colour in their whole notebook. Ours is
+`--ff-accent-subtle` with a violet `Play` glyph when the meeting has media and
+`--ff-surface-2` with a muted `FileAudio` when it does not.
+
+So their tile answers *who*, and ours answers *can I play this*. Both are
+defensible; only ours is load-bearing. `design.md` §2.2 specifies the checkbox
+fading in to **replace the play thumbnail inside a reserved 40×40 box**, calls
+that hover behaviour "a graded detail", and T12-C and T12-D assert it. Swapping
+in a coloured letter avatar would match the reference's colour and delete a
+spec'd affordance the tests cover.
+
+It is also redundant information here in a way it is not for them: this build
+already shows the host by name in the meta line and the participants as an
+avatar group on the right, both of which their row omits entirely (see the
+row-anatomy bullet under "Verified equivalent"). Their tile is the only place
+identity appears; ours would be the third.
+
+**The honest cost:** their list carries an orange accent on every row and ours
+reads more neutral. That is a real fidelity difference in the side-by-side and
+it is not being fixed, because the alternative trades a tested, specified
+interaction for a colour.
 
 **13 · The notebook has no assistant panel, and that is the whole of the width
 difference (reference 02).**

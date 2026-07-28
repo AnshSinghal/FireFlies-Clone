@@ -257,7 +257,7 @@ export function MeetingRow({
             One metadata line, as the reference has it: date · time · duration ·
             host. Not four columns — see ADR-036.
           */}
-          <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted">
+          <span className="flex min-w-0 items-center gap-1.5 text-meta text-muted">
             <Tooltip content={formatFullDate(meeting.started_at)}>
               <span data-testid="meeting-row-date">{formatRelativeDate(meeting.started_at)}</span>
             </Tooltip>

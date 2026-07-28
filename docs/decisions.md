@@ -3643,3 +3643,41 @@ text, which changes a user-visible string PLAN.md specifies. That is a product-c
 measurement, so it is recorded in the audit as an open choice rather than folded into a fidelity
 commit. Shipping the clip was never an option; silently rewriting the spec's copy to hit a ratio
 would have been the same class of error in the other direction.
+
+## ADR-154 — The row's meta line is the same SIZE as its title
+
+**Date:** 2026-07-28 · **Task:** T-46.1 · **Status:** Accepted
+
+**Context.** The notebook row's `date · time · duration · host` line was `text-sm` — 13px against a
+15px title. Measured against `docs/reference/fireflies/02.png`, Fireflies sets both at the same
+size: **their title cap and their meta cap both measure 14px.** Ours were 11px and 9px, a ratio of
+0.818 against their 1.000.
+
+Their two lines are separated by *weight and colour only* — a 600-weight near-black title over a
+400-weight muted meta. Ours were separated by size as well, which is why our second line reads
+thinner and greyer than theirs in a side-by-side.
+
+**Cap height, not the line's ink extent.** The first measurement used the full glyph band and gave
+19px/19px for them and 14px/12px for us — suggestive but not sound, because a band depends on which
+characters are in the string: a line containing a `y` descends and one without it does not. Both
+rows begin with a capital, so cap height is the comparable quantity. It moved the ratio from a
+noisy 0.857 to a clean 0.818, and after the change to exactly 1.000.
+
+**Decision.** Add `text-meta` — 15px / 22px / 400 — and use it on the row's meta line. A new
+fontSize entry rather than reusing `transcript` (also 15px/400), whose 26px leading exists for
+long-form reading and would loosen a two-line card.
+
+**Consequences.** `meta ÷ title` is now **1.000**, matching the reference exactly, and is guarded as
+the thirteenth row of the audit's table. The card stays 82px — the taller line fits the existing
+box, verified by T12-B still asserting `toBe(82)`, and the mobile project passes with no wrapping at
+393px.
+
+`text-sm` keeps its 13px for previews and for metadata outside the notebook row; only the row's
+meta line moves, so nothing else in the app changes size.
+
+**It also exposed a stale measurement.** Re-centring the two-line stack moved the title up ~2px,
+which broke the `tile→title gap` ratio — not because the gap moved, but because that ratio sampled
+the title's leading glyph in a 20px band tuned to the old position. It had been reporting 0.400
+where every wider window reports 0.375. **A published number had been flattering by one pixel**,
+and on a 40px denominator one pixel is 2.5% — half the tolerance, spent on sampling noise. Widened
+the window and corrected the table to 0.375; the real gap to the reference is 8.8%, not 2.7%.

@@ -93,6 +93,22 @@ def _vedges(np, img, y0: int, y1: int, x0: int, x1: int, frac: float = 0.5, delt
     return out
 
 
+def _cap_height(np, img, x0: int, y0: int, y1: int, cut: int, width: int = 16) -> int:
+    """Height of the first inked glyph after `x0` — a leading capital.
+
+    Cap height rather than the whole line's ink extent, because a glyph band
+    depends on which characters happen to be in the string: a line with a `y`
+    descends and a line without one does not, so two lines at the SAME size can
+    measure differently. Both notebook rows start with a capital, which makes
+    this the comparable measurement (ADR-154).
+    """
+    sub = img[y0:y1, x0 : x0 + 120]
+    cols = np.where((sub < cut).sum(axis=0) > 0)[0]
+    glyph = sub[:, cols.min() : cols.min() + width]
+    ys = np.where((glyph < cut).any(axis=1))[0]
+    return int(ys.max() - ys.min() + 1)
+
+
 def _first_glyph_col(np, img, y0: int, y1: int, x0: int, x1: int, cut: int = 140) -> int | None:
     cols = np.where((img[y0:y1, x0:x1] < cut).sum(axis=0) > 0)[0]
     return int(cols.min()) + x0 if len(cols) else None
@@ -107,7 +123,17 @@ def measure(root: Path) -> dict[str, float]:
     intra = Counter(g for g in gaps if 15 <= g <= 30).most_common(1)[0][0]
     group = Counter(g for g in gaps if 55 <= g <= 95 and g != card).most_common(1)[0][0]
 
-    title_x = _first_glyph_col(np, notebook, 300, 320, 320, 900)
+    # A tall band, not the 20px one this used to sample. The narrow window was
+    # tuned to where the title sat before ADR-154 made the meta line 15px; that
+    # re-centred the two-line stack and moved the title up ~2px, and the band
+    # then caught the antialiased edge of the leading `A` one column late. It
+    # reported 0.400 where every wider band and every threshold reports 0.375.
+    #
+    # The gap itself never moved — it is flex, tile plus gap — so this was a
+    # measurement artifact that had been flattering the published number by a
+    # pixel. On a 40px denominator one pixel is 2.5%, which is half the
+    # tolerance, so this ratio needs a sampling window that cannot wobble.
+    title_x = _first_glyph_col(np, notebook, 295, 365, 320, 900)
     tile_end = 275 + TILE_PX  # card's left inset plus the reserved box
 
     # The topbar search field (ADR-153). Delta 3 rather than 4: the field's fill
@@ -146,6 +172,10 @@ def measure(root: Path) -> dict[str, float]:
         "Topbar search ÷ topbar height": search_w / TOPBAR_PX,
         "Left rail ÷ topbar height": rail_w / TOPBAR_PX,
         "Notebook card width ÷ topbar height": card_w / TOPBAR_PX,
+        "Row meta type ÷ row title type": (
+            _cap_height(np, notebook, 330, 332, 355, 175)
+            / _cap_height(np, notebook, 330, 305, 330, 150)
+        ),
         "Settings block ÷ content column": (edges[-2] - edges[1]) / 953,
         "Settings well ÷ content column": (edges[-1] - edges[0]) / 953,
     }

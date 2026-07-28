@@ -174,6 +174,7 @@ const config: Config = {
       'body-strong': ['14px', { lineHeight: '22px', fontWeight: '500' }],
       'title-row': ['15px', { lineHeight: '22px', fontWeight: '600' }],
       transcript: ['15px', { lineHeight: '26px', fontWeight: '400' }],
+      meta: ['15px', { lineHeight: '22px', fontWeight: '400' }],
       sm: ['13px', { lineHeight: '18px', fontWeight: '400' }],
       xs: ['12px', { lineHeight: '16px', fontWeight: '500' }],
       label: ['12px', { lineHeight: '16px', fontWeight: '600', letterSpacing: '0.04em' }],
