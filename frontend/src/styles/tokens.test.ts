@@ -193,8 +193,25 @@ describe.each([
     expect(ratio('--ff-text-muted', '--ff-surface-0', theme)).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('accent-on-surface is usable for links and icons (3:1)', () => {
-    expect(ratio('--ff-accent', '--ff-surface-0', theme)).toBeGreaterThanOrEqual(3)
+  it('accent-on-surface clears AA, because it is used as text and not only as an icon', () => {
+    /*
+     * 4.5, not the 3 this asserted until 2026-07-28 — and a different mistake
+     * from the muted-text floor above, which is why it is written out separately.
+     *
+     * There the floor went stale: the value moved and the guard did not. Here the
+     * floor was wrong the day it was written. It named two uses, "links and
+     * icons", and then applied the threshold for one of them to both. WCAG splits
+     * these: 1.4.11 sets 3:1 for non-text like an icon glyph, 1.4.3 sets 4.5:1
+     * for text. A link is text.
+     *
+     * And the accent is genuinely used as text, so this is not hypothetical —
+     * `search-dropdown` and `details-drawer` both render underlined `text-accent`
+     * links, the latter at `text-sm`, which is nowhere near the large-text
+     * exemption. Measured today: 6.10:1 light, 5.81:1 dark, so nothing changes on
+     * screen. What changes is that a drift to 3.5 would now be caught instead of
+     * passing a floor that never described the harder of the two uses.
+     */
+    expect(ratio('--ff-accent', '--ff-surface-0', theme)).toBeGreaterThanOrEqual(4.5)
   })
 
   it('the active-nav pairing is legible', () => {

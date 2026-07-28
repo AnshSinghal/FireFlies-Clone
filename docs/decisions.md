@@ -253,12 +253,18 @@ justification. If accessibility is later prioritised over fidelity, the single-t
 > `#8992A2` (3.14:1) as decided above, and not even the `#6C7481` this entry
 > named as the accessibility option. Dark mode likewise ships `#8B93A5` at
 > 5.66:1. So the conflict this ADR agonised over was resolved, in favour of
-> accessibility, and three artifacts still describe the losing side:
+> accessibility, and three artifacts were found still describing the losing side.
+> All three are corrected as of the same day; they are listed because the *set* is
+> the finding — one reversal, silently propagated into every document that cited it:
 >
-> - this entry, which reads as though the app knowingly fails AA on metadata
-> - `design.md` §3.2, whose table and footnote still specify `#8992A2`
-> - `tokens.test.ts`, which asserts `>= 3` with a comment calling this "the one
->   known axe exception in T-42"
+> - this entry, which read as though the app knowingly fails AA on metadata
+> - `design.md` §3.2, whose table and footnote specified `#8992A2` — now `#667085`,
+>   and `scripts/check_design_tokens.py` exists so prose cannot drift from the
+>   token layer again without CI noticing
+> - `tokens.test.ts`, which asserted `>= 3` with a comment calling this "the one
+>   known axe exception in T-42" — now `>= 4.5`, and the three e2e suites that
+>   disabled axe's `color-contrast` rule on this ADR's authority no longer do,
+>   because the premise for the exclusion expired with the value
 >
 > The interesting part is which way the drift went. The app is **better** than
 > its documentation, which is the harmless direction for users and the worst
@@ -3513,5 +3519,39 @@ token is used where it is documented to be used.
 Fewer meetings now fit above the fold. That is a real cost and it is the
 reference's own trade: Fireflies shows roughly four cards where we used to show
 six. Matching a design means matching its density, not just its parts.
+
+---
+
+## ADR-151 — The accent floor is 4.5:1, because the token is text as well as icon
+
+**Date:** 2026-07-28 · **Task:** T-42 · **Status:** Accepted · **Relates to ADR-012**
+
+**Context.** `tokens.test.ts` asserted `--ff-accent` on `--ff-surface-0` at `>= 3`, under the name
+"usable for links and icons (3:1)". That single threshold covers two things WCAG treats separately:
+**1.4.11** sets 3:1 for non-text content such as an icon glyph, **1.4.3** sets 4.5:1 for text. A link
+is text, so the assertion applied the easier of the two thresholds to both of the uses it named.
+
+This is worth separating from ADR-012 above, which looks similar and is not. There the floor went
+**stale** — the value moved from 3.14:1 to 4.97:1 and the guard stayed at 3. Here the floor was
+**wrong when written**: nothing drifted, the threshold simply never matched what the token is for.
+Only one of the two has a moment where it was correct.
+
+The premise was checked rather than assumed, because "the description says links" is not evidence the
+token is actually rendered as text. It is: `search-dropdown` and `details-drawer` both render
+underlined `text-accent` links, the latter at `text-sm` — small text, nowhere near the large-text
+exemption that would have made 3:1 defensible.
+
+**Decision.** Assert `>= 4.5`. Measured today: **6.10:1** light (`#6A39EF` on white) and **5.81:1**
+dark (`#9B7BFF` on `#14141D`).
+
+**Consequences.** No pixel changes — both themes already cleared 4.5 by a wide margin, which is
+precisely why this survived unnoticed. What changes is the failure the guard can catch: a future
+accent tuned toward the reference's lighter violet could reach 3.5:1, pass the old floor, and ship
+link text below AA. It now fails instead.
+
+The general lesson, and the reason this is written down rather than fixed silently: **a contrast
+floor should be derived from what the token is used for, not from the least demanding use in its
+name.** Both this and ADR-012 were assertions that could not fail — the recurring shape of every
+defect found on 2026-07-28 — and neither was caught by a test, because they *were* the tests.
 
 ---
