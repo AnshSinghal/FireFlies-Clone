@@ -79,6 +79,31 @@ test.describe('notebook', () => {
     await expect.poll(kebabOpacity).toBe('1')
   })
 
+  test('T12-C2 · the title chevron is visible at rest, not on hover', async ({ page }) => {
+    /*
+     * The opposite of T12-C above, and asserted separately because the visual
+     * suite cannot carry it. The chevron is ~120px of ink across the whole
+     * list against a 6000px page budget, so deleting it, or putting it back
+     * behind `opacity-0`, leaves every screenshot baseline passing.
+     *
+     * It is here because `docs/reference/fireflies/02.png` shows the mark on
+     * all five rows at once — a state no hover can produce — and ours was
+     * hover-only, so every static capture of our notebook had none. A
+     * side-by-side comparison is made of static captures, which makes a
+     * hover-only element an absent one.
+     */
+    const chevron = page.getByTestId('meeting-row-chevron').first()
+
+    // Opacity rather than toBeVisible: an `opacity-0` element is still
+    // "visible" to Playwright, which is exactly how this hid in plain sight.
+    await expect(chevron).toBeVisible()
+    expect(await chevron.evaluate((el) => getComputedStyle(el).opacity)).toBe('1')
+
+    // Every row carries one, not just the first.
+    const rows = await page.getByTestId('meeting-row').count()
+    await expect(page.getByTestId('meeting-row-chevron')).toHaveCount(rows)
+  })
+
   test('T12-D · the hover swap shifts nothing', async ({ page }) => {
     // The leading 40×40 box is reserved by the wrapper and the thumbnail and
     // checkbox swap INSIDE it. If either child sized the box, the title would

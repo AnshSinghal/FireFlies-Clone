@@ -228,11 +228,28 @@ export function MeetingRow({
               // `title` so a truncated name is readable on hover (T-12.5).
               className="truncate text-title-row text-primary"
             />
+            {/*
+              Visible at rest, not on hover, because the reference is
+              (`docs/reference/fireflies/02.png` shows it on all five rows at
+              once, which no hover state can produce).
+
+              Colour sampled rather than chosen: their chevron's stroke core
+              reads `#101929`, against `#00000a` for the title glyphs beside it.
+              That is the primary-text family, not the muted grey ours used —
+              `--ff-text-muted` is `#667085`. It was also `opacity-0` until
+              hover, so a static screenshot of our notebook had no chevron at
+              all, which is the artifact an evaluator compares.
+
+              Their Home list (`01.png`) has no chevron on its rows. The mark
+              means "this row navigates", and it is only the notebook's rows
+              that do.
+            */}
             <ChevronRight
               size={14}
               strokeWidth={2}
               aria-hidden="true"
-              className="shrink-0 text-muted opacity-0 transition-opacity duration-fast group-hover:opacity-100"
+              data-testid="meeting-row-chevron"
+              className="shrink-0 text-primary"
             />
           </span>
 

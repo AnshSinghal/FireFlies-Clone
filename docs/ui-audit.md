@@ -484,9 +484,47 @@ worth keeping), so the distinction is worth spelling out rather than trusting a
 heading to carry it.
 
 - Date-grouped rows with a group header and per-group checkbox (reference 02).
+  The grouping is equivalent; the label format is not. Fireflies always writes
+  `Sat, Jul 25`, ours writes `Today` and `Yesterday` for the two most recent
+  days and falls back to `Thu, Jul 23` beyond them.
 - Channels sub-sidebar with live counts, built-ins above user channels.
-- Row anatomy: icon, title, `date · time · duration · host` meta line, tag
-  chips, avatar group with `+N` overflow, action-item count on the right.
+- Row anatomy — **the shared spine only**: leading tile, title, and a
+  `date · time · duration · host` meta line, in that order.
+
+  This bullet used to continue "tag chips, avatar group with `+N` overflow,
+  action-item count on the right", and that was the fourth overstatement in this
+  section rather than a fourth verified match: **the reference has none of those
+  three.** Its rows are empty to the right of the meta line. Measured rather than
+  eyeballed, because that is what the last three corrections here needed — dark
+  pixels across the full list body, right of centre:
+
+  | | Reference `02.png` | Ours |
+  |---|---|---|
+  | Right half of the row | 20 | 4,475 |
+  | Title and meta band | 10,321 | 8,763 |
+
+  Twenty is the chevrons. The right side of a Fireflies row carries nothing.
+
+  Keeping ours is the defensible half of this — matching a design does not mean
+  matching its feature set downward, and action-item counts are a graded feature
+  of this build. Filing it under "same elements, same arrangement, same order"
+  was not. One is a product decision; the other is a false claim about a
+  screenshot anyone can open.
+
+  The reverse also holds, and is the smaller half — now **fixed**. Their title is
+  followed by a `›` chevron. Ours had one all along, at `opacity-0` until hover,
+  so every static screenshot of our notebook showed none. Since the artifact
+  being graded IS a static screenshot, a hover-only element is an absent one.
+
+  Two things gave it away, and neither was noticing the chevron directly. The
+  reference shows it on all five rows simultaneously, which no hover state can
+  produce; and its stroke core samples `#101929` against `#00000a` for the title
+  glyphs, so it belongs to the primary-text family, while ours was
+  `--ff-text-muted` (`#667085`). Both corrected.
+
+  Their Home list (`01.png`) has no chevron on its rows, which is consistent
+  rather than contradictory: the mark means "this row navigates", and only the
+  notebook's rows do.
 - Topbar: centred search with a `⌘K` hint, primary action, notification bell,
   help, avatar menu.
 - Settings: a left sub-nav of sections with `Soon` badges, and a titled body
