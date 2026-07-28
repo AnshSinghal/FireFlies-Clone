@@ -154,7 +154,7 @@ sidesteps having to know what device pixel ratio the reference was shot at:
 | Ratio | Fireflies | Ours (before) | Ours (now) | |
 |---|---|---|---|---|
 | Row title type ÷ topbar height | 0.268 | 0.255 | 0.255 | type scale was already right |
-| Card height ÷ topbar height | 1.51 | 1.29 | 1.29 | **still 15% tighter — open, see below** |
+| Card height ÷ topbar height | 1.51 | 1.29 | **1.446** | fixed later the same day (ADR-150) |
 | Gap between cards in one date group ÷ card height | 0.274 | 0.127 | **0.296** | fixed (ADR-149) |
 | Gap across a date-group heading ÷ card height | 0.94 | 0.78 | **0.944** | fixed (ADR-149) |
 
@@ -235,6 +235,14 @@ What does not fall out of scale is the card: 1.51 ÷ 1.29 against the topbar and
 is one finding seen twice, not two findings, and it means the row height is the
 single remaining geometric deviation on this screen. Do not touch the topbar
 token to chase it.
+
+> **Superseded — ADR-150 closed this the same day.** The card is 82px and the
+> two ratios are 1.446 and 5.786. The paragraph above is left as written because
+> its *reasoning* is what mattered and is still correct: one deviation seen
+> through two anchors is one finding, and the fix belongs on the card rather
+> than the topbar. Only the words "single remaining" and "open" have expired —
+> and they were still present tense in this file while a later section recorded
+> the fix, which is the contradiction that made this annotation necessary.
 
 **One refinement measured but not yet applied: how the group gap is split.**
 Matching the gap's total (done, ADR-149) is not the same as matching its

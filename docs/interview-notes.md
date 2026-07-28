@@ -117,16 +117,27 @@ row, and the budget is the thing that makes "it feels fast" falsifiable.
   copies resolved token values because a PDF cannot read CSS custom properties
   (ADR-105); generating it from `tokens.css` at build time would remove the one
   sanctioned place where a hex code lives outside the token layer.
-- **Close the last density gap.** Card height is 1.29× the topbar against the
-  reference's 1.51 (`docs/ui-audit.md`). The two gap tokens next to it were
-  measured and fixed (ADR-149); this one is deliberately still open because
-  `72px` is load-bearing — `design.md` §3.7 fixes it, T12-B asserts it, the
-  skeleton mirrors it. (This bullet used to end "and the virtualiser sizes items
-  from it, so a wrong value breaks scrolling" — my claim, propagated from
-  ADR-149, and false: the virtualiser is on the TRANSCRIPT list and estimates
-  from its own `ESTIMATED_ROW_PX = 92`; the notebook is not virtualised. The
-  real obstacle is that the reference scales to ~79-85px depending on whether
-  you transfer through the topbar or the type scale.)
+- **~~Close the last density gap.~~ DONE, and this bullet outliving it is the
+  point.** It read "card height is 1.29× the topbar against the reference's
+  1.51… deliberately still open because `72px` is load-bearing". ADR-150 closed
+  it hours later: the card is **82px, 1.446 against their 1.514**. So a
+  *forward-looking* list was still proposing work that was finished, with a
+  justification for deferring it that had already been overruled.
+
+  Worth keeping because it is the sharpest example of the failure this file
+  keeps documenting. Stale prose in an ADR misdescribes history; stale prose in
+  a "what I'd do next" list misdescribes the *present*, and it is the section an
+  interviewer is most likely to ask about. Nothing could have caught it —
+  `check_reference_ratios.py` guards the audit's table, not a bullet in another
+  file that quotes a number from it.
+
+  Two things it got wrong beyond being late. It claimed the virtualiser sizes
+  its items from the `row` token — false, and my error propagated from ADR-149;
+  the virtualiser is on the TRANSCRIPT list with its own `ESTIMATED_ROW_PX = 92`
+  and the notebook is not virtualised at all. And it treated "the reference
+  scales to ~79–85px depending on the anchor" as an obstacle, when that spread
+  is exactly what ADR-150 resolved by picking the value minimising the worst
+  case across both anchors.
 
 *(A fourth item lived here until 2026-07-27: "revisit `formatMeetingMeta`,
 rows show `7:13` where Fireflies shows `30 min` — kept for consistency with the
