@@ -61,7 +61,12 @@ export function Checkbox({
         aria-label={label ? undefined : ariaLabel}
         data-testid={testId}
         className={cn(
-          'flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors duration-fast',
+          // `rounded-xs` (3px), not `sm` (6px): on a 16px box, `sm` reads as a
+          // squircle and a squircle reads as a radio button — the wrong
+          // affordance for a multi-select. Measured off the reference rather
+          // than judged: their corner inset is 14% of the box width, ours was
+          // 25%. The box SIZE already matched exactly. See ADR-152.
+          'flex h-4 w-4 shrink-0 items-center justify-center rounded-xs border transition-colors duration-fast',
           'data-[state=unchecked]:border-strong data-[state=unchecked]:bg-surface-0',
           // `indeterminate` shares the checked styling — it means "some", which
           // is closer to on than to off.

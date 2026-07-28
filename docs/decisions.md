@@ -3568,3 +3568,38 @@ name.** Both this and ADR-012 were assertions that could not fail — the recurr
 defect found on 2026-07-28 — and neither was caught by a test, because they *were* the tests.
 
 ---
+
+## ADR-152 — A 3px radius token, because a squircle checkbox reads as a radio button
+
+**Date:** 2026-07-28 · **Task:** T-46.1 · **Status:** Accepted
+
+**Context.** Comparing our notebook against `docs/reference/fireflies/02.png` — the one slot in the
+reference set that is a genuine like-for-like comparison — the date-group checkbox was visibly
+rounder than theirs. The size was not the problem: their control measures 22px on a 2000px-wide
+capture, ours 16px on a 1440px one, and 16 × (2000/1440) = 22.2. **The box matched exactly.**
+
+Only the corner did not. Measured as corner inset over box width, which is scale-free and therefore
+comparable across the two capture widths: **theirs 14%, ours 25%.** The smallest radius in the scale
+was `--ff-radius-sm: 6px`, and 6px on a 16px control is 37.5% — most of the way to a circle.
+
+That is not only a fidelity gap. A circle is the affordance for a radio button, and radio means
+"pick one". This control selects a whole date group and composes with the per-row boxes, so the
+shape was signalling single-select on a multi-select. The reference is a rounded *square*.
+
+**Decision.** Add `--ff-radius-xs: 3px` and use it on the `Checkbox` primitive only.
+
+A new token rather than an arbitrary `rounded-[3px]`, because `design.md` is authoritative for radii
+per CLAUDE.md and components consume named tokens. Applied at the primitive, not by changing
+`--ff-radius-sm`, so the blast radius is checkboxes: the ten other files using `rounded-sm` — chips,
+badges, inputs — keep the 6px they were designed with and match the reference at their own sizes.
+
+**Consequences.** Re-measured after the change: **12% against their 14%.** At 16px one pixel is 6%,
+so that is inside the quantisation — the remaining gap is not addressable without a fractional
+radius, and chasing it would be false precision.
+
+Nothing else moved. The full visual suite passes against unchanged baselines, which is worth stating
+plainly rather than treating as reassurance: at ~30px of ink across the list this change is far
+below the 6000px page budget, so **the visual suite could not have caught it and cannot protect it.**
+Same lesson as the chevron in the commit before this one. Screenshot budgets catch layout breaks,
+not small-shape defects; those need a measurement or an assertion, and this one has the measurement
+recorded here.

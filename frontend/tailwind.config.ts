@@ -188,6 +188,7 @@ const config: Config = {
     // ── Shape & elevation ────────────────────────────────────────────────────
     borderRadius: {
       none: '0',
+      xs: 'var(--ff-radius-xs)', //  3px — checkboxes
       sm: 'var(--ff-radius-sm)', //  6px — chips, badges, inputs
       md: 'var(--ff-radius-md)', //  8px — buttons, dropdown items
       lg: 'var(--ff-radius-lg)', // 12px — cards, panels, modals

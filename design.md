@@ -103,6 +103,18 @@ tnum` · `participants 140` · `action items 100` · `kebab 48`.
 > grading is a side-by-side screenshot comparison, **the screenshot wins** — but the plan's row
 > anatomy, hover behaviour and `data-testid` names are still the contract T-12's tests are written
 > against. Decide deliberately at T-12 and record it.
+>
+> **RESOLVED at T-12 — see ADR-037.** The cards won; the table spec in the block above is
+> superseded and is kept only because the column widths and `data-testid` names below it are still
+> the test contract. Two of the plan's test cases were adapted rather than dropped: T12-B's height
+> assertion moved onto the card (72px, then 82px under ADR-150), and T12-I's sticky column header
+> was retired because this layout has no column header to stick.
+>
+> Two details in this note were specified correctly here and got lost on the way into the code,
+> which is worth flagging since the note is otherwise vindicated. The `›` affordance shipped at
+> `opacity-0` until hover, so it was absent from every static screenshot until 2026-07-28 — the
+> reference shows it at rest on every row. And the 40px squircle is right, but the group-header
+> checkbox beside it is rounder than the reference's: 25% of its width against their 14%.
 
 **Row hover behaviour — this is a graded detail:**
 - Row background → `--ff-surface-hover`
@@ -347,6 +359,7 @@ defaults. If your text looks bigger than the reference at the same zoom, your ba
 ```
 --ff-space: 4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 · 64      (4px base)
 
+--ff-radius-xs:   3px     (checkboxes — measured off the reference, ADR-152)
 --ff-radius-sm:   6px     (chips, badges, inputs)
 --ff-radius-md:   8px     (buttons, dropdown items)
 --ff-radius-lg:   12px    (cards, panels, modals)

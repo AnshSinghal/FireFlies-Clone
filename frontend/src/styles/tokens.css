@@ -187,6 +187,9 @@
      System stacks only — no webfont, so it costs nothing to load. */
   --ff-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
+  /* 3px, sampled from the reference's checkbox: its corner inset is 14% of the
+     box width where `sm` on a 16px control gives 25%. See ADR-152. */
+  --ff-radius-xs: 3px;
   --ff-radius-sm: 6px;
   --ff-radius-md: 8px;
   --ff-radius-lg: 12px;
