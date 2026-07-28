@@ -78,11 +78,17 @@ const COMPONENT_SHOT = {
  *
  * 6000 is chosen against both numbers: comfortably under the 10,592 a real
  * 8px shift produces, and far above the zero this machine actually varies by.
- * The margin is for CROSS-MACHINE rendering — CI runs the same
- * `-visual-linux` baselines on a different host, and that variance is the one
- * quantity still unmeasured here. If CI reddens on this, its failure message
- * prints the exact pixel count, which IS the measurement, and the budget should
- * then be set just above it rather than returned to a ratio.
+ * The margin is for CROSS-MACHINE rendering, and that has now been measured
+ * too: CI runs these same `-visual-linux` baselines on a GitHub runner and
+ * passes at this budget, so the host-to-host difference is under 6000 pixels.
+ * Both numbers the old comment guessed at are wrong — it claimed "sub-pixel
+ * text rendering alone moves a few thousand pixels between otherwise identical
+ * runs", and the real figures are zero locally and under 6000 across machines.
+ *
+ * If CI ever reddens here, its failure message prints the exact pixel count.
+ * That number IS the measurement: raise the budget just above it, and keep it
+ * absolute. Returning to a ratio reintroduces the bug this replaced — a budget
+ * that grows with the empty space around the thing you are testing.
  */
 const PAGE_SHOT = {
   animations: 'disabled',
