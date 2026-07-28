@@ -10,8 +10,22 @@ sales document.
 
 ## Where it landed
 
-Every geometric property that could be measured against the reference now
-matches, or was changed to match:
+Fourteen geometric properties measured against the reference. **Nine are within
+5%, thirteen within 10%, and one is 57% out for a structural reason given
+below.** Distances, worst first: card width 56.9%, topbar search 9.4%, left rail
+8.8%, tile→title gap 8.8%, gap-between-cards 5.5%, then nine rows under 5%.
+
+> This paragraph read "**every** geometric property that could be measured
+> against the reference now matches, or was changed to match" until 2026-07-28 —
+> above a table that already showed a 57% row. It was written when the table had
+> four rows and every one of them had just been closed; six more measurements
+> were added under it without the summary being re-read.
+>
+> That is the same failure this document keeps recording one level down, and it
+> is worse here: a lead sentence is the part an evaluator reads and the table is
+> the part they skim. A summary that has to be checked against the thing it
+> summarises is not a summary. So it now states the distribution and names the
+> outlier, both of which change when the numbers do.
 
 | | Fireflies | Ours |
 |---|---|---|
@@ -55,10 +69,27 @@ depended on it — and the `row` token has two dependants that live in a differe
 file.
 
 **Three of those rows started 12–54% off** and were closed by ADR-148, -149 and
--150. **Two differences remain and neither is geometric:** Settings cards carry
-no product icon (ours would be invented), and muted text is darker than theirs —
-4.97:1 against 2.60:1, the one place this clone knowingly trades likeness for
-legibility.
+-150; four more defects were found and closed later the same day by ADR-152
+(checkbox radius), -153 (topbar search), -154 (meta type) and -155 (settings
+heading hierarchy), plus the row chevron and the settings well.
+
+**What remains, stated as a list rather than a count**, because the previous
+version of this paragraph said "two differences remain and neither is
+geometric" and both halves had stopped being true:
+
+*Geometric, still open:*
+- Notebook card width, 57% — the assistant panel we do not have (item 13)
+- Topbar search, 9.4% — capped by the placeholder PLAN.md specifies (item 12)
+- Left rail, 8.8% — inside the 18% the three scale anchors disagree by (item 13)
+- Tile→title gap, 8.8% — 1.4px, below the granularity of a gap token
+
+*Not geometric:*
+- Settings cards carry no product icon; ours would be invented
+- Muted text is darker — 4.97:1 against 2.60:1, the one place this clone
+  knowingly trades likeness for legibility
+- The leading tile is a play thumbnail, not a host avatar (item 14)
+- The page name sits in their topbar and our content (item 15)
+- No Home hub, no assistant panel, no promo column (items 11, 13, 7)
 
 **These numbers are now checked, not asserted.**
 `scripts/check_reference_ratios.py` runs in `make lint` **and in CI** — both,
@@ -344,6 +375,22 @@ straightforwardly untrue.
 An earlier draft of this audit listed the profile menu under *Verified
 equivalent* with "name, plan, storage meter" — the screenshots do not support
 that, and the reason they do not is this decision rather than an omission.
+
+**Measured, and the comparable half is close.** Edge-detecting the popover in
+`06.png` gives three vertical pairs — outer frame at 1188/1990, and a divider at
+1604/1616 splitting it in two:
+
+| | Fireflies | Ours |
+|---|---|---|
+| Whole popover | 802px · 11.30 topbar-heights | 319px · 5.70 |
+| Promo column | 403px · 5.68 | — |
+| Account column | 362px · 5.10 | 319px · 5.70 |
+
+So ours is **12% wider than their account column**, and the entire remaining
+difference is the promo panel. That is the same shape as the notebook's card
+width (item 13): a large-looking gap that is one absent element rather than a
+spacing error, and narrowing ours to 5.10 would cramp a column that carries more
+rows than theirs does.
 
 **8 · Settings has no Personal/Team segmentation and no setting cards
 (references 07, 08).**
