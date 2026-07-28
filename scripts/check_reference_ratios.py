@@ -92,6 +92,19 @@ def measure(root: Path) -> dict[str, float]:
     title_x = _first_glyph_col(np, notebook, 300, 320, 320, 900)
     tile_end = 275 + TILE_PX  # card's left inset plus the reserved box
 
+    # The topbar search field (ADR-153). Its borders are the only vertical
+    # edges in that slice of the bar, so a lower delta than the card rules —
+    # the field's fill is nearly the topbar's own white.
+    tb = notebook[8:48, 400:1050]
+    tb_hit = (abs(np.diff(tb, axis=1)) > 3).mean(axis=0)
+    tb_edges: list[int] = []
+    prev = -10
+    for i in np.where(tb_hit > 0.5)[0]:
+        if i - prev > 3:
+            tb_edges.append(int(i) + 400)
+        prev = i
+    search_w = tb_edges[-1] - tb_edges[0]
+
     _, settings = _load(root / "docs/screenshots/07-settings-recording.png")
     band = settings[200:320, 500:1440]
     hit = (abs(np.diff(band, axis=1)) > 4).mean(axis=0)
@@ -119,6 +132,7 @@ def measure(root: Path) -> dict[str, float]:
         "Gap across a date heading ÷ card": group / card,
         "Tile→title gap ÷ tile width": (title_x - tile_end) / TILE_PX,
         "Leading tile ÷ card height": TILE_PX / card,
+        "Topbar search ÷ topbar height": search_w / TOPBAR_PX,
         "Settings block ÷ content column": (edges[-2] - edges[1]) / 953,
         "Settings well ÷ content column": (edges[-1] - edges[0]) / 953,
     }

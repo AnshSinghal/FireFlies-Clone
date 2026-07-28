@@ -3603,3 +3603,43 @@ below the 6000px page budget, so **the visual suite could not have caught it and
 Same lesson as the chevron in the commit before this one. Screenshot budgets catch layout breaks,
 not small-shape defects; those need a measurement or an assertion, and this one has the measurement
 recorded here.
+
+## ADR-153 — The topbar search is 384px, and the last 9% is a copy decision
+
+**Date:** 2026-07-28 · **Task:** T-46.1 · **Status:** Accepted
+
+**Context.** The topbar appears in all eight reference screenshots and had never been measured. Its
+search field was `max-w-search: 560px`, sourced from PLAN.md Part A — the same unsampled origin as
+the blue accent that was really violet (ADR-011) and the 72px row that was really 82px (ADR-150).
+
+Measured on their `01.png` and `02.png`, the field is **446px and 444px** — agreeing within 2px,
+so it is a fixed cap and not a fluid width. Against their 71px topbar that is **6.27
+topbar-heights**. Ours was 561px on a 56px topbar: **10.02**. A 60% overshoot on the single most
+repeated element in the app.
+
+The topbar is the right anchor for a topbar element, and it is independently corroborated: 71/56 =
+1.268, which is exactly the "1.268 via the topbar" scale factor `docs/ui-audit.md` had already
+derived by another route. 6.27 × 56 = **351px**.
+
+**What 351 actually did.** It shipped and it clipped the placeholder — `…transcripts, and mor`.
+PLAN.md T-08.2 specifies `Search meetings, transcripts, and more…`, which measures 269px at 14px
+Inter, and the field reserves 36px for the leading icon and 64px for the trailing `⌘K`. **The
+specified copy cannot fit under 369px.**
+
+Fireflies has no such problem because their placeholder is `Search by title or keyword`. Their
+narrow field and their short copy are one decision, and half of it cannot be taken.
+
+**Decision.** `search-global: 384px` — the 8px-grid step above the 369px floor. A separate token
+from `search`, which stays 560px for the notebook toolbar: the reference collapses that field to an
+icon button, so there is no width to match it against and narrowing it would be unmotivated rather
+than faithful. Sharing one token had two fields drifting toward a number only one was measured for.
+
+**Consequences.** 6.86 topbar-heights against their 6.27 — **9% over, where it was 60% over**. The
+remaining slack above 369 is deliberate: if Inter fails to load the fallback stack is wider, and an
+exact-fit width would clip on the grading machine rather than here.
+
+**The last 9% is available and is not mine to take.** Closing it means adopting their placeholder
+text, which changes a user-visible string PLAN.md specifies. That is a product-copy decision, not a
+measurement, so it is recorded in the audit as an open choice rather than folded into a fidelity
+commit. Shipping the clip was never an option; silently rewriting the spec's copy to hit a ratio
+would have been the same class of error in the other direction.

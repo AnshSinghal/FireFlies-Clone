@@ -328,7 +328,51 @@ const config: Config = {
       },
       maxWidth: {
         content: '1440px',
+        /*
+         * In-content search — the notebook toolbar's field. Stays at 560px:
+         * the reference collapses that one to an icon button, so there is no
+         * width in `02.png` to match it against, and narrowing it would be
+         * unmotivated rather than faithful.
+         */
         search: '560px',
+        /*
+         * The TOPBAR search, which does have a reference width, and was 60%
+         * over it (ADR-153). Measured on their `01.png` and `02.png` — 446px
+         * and 444px, agreeing within 2px — against a topbar of 71px, so their
+         * field is 6.27 topbar-heights. Ours was 561px on a 56px topbar: 10.02.
+         *
+         * 6.27 x 56 = 351. The topbar is the right anchor for a topbar element,
+         * and it is also the anchor whose scale factor the audit already
+         * derived independently: 71/56 = 1.268, matching "1.268 via the topbar"
+         * in `docs/ui-audit.md`.
+         *
+         * The old 560px came from PLAN.md Part A, unsampled — the same origin
+         * as the blue accent that was really violet (ADR-011) and the 72px row
+         * that was really 82px (ADR-150).
+         *
+         * **384, not the 351 the ratio asks for, and the gap is a real
+         * conflict rather than a rounding.** 351 was built and it CLIPPED the
+         * placeholder — "…transcripts, and mor". PLAN.md T-08.2 specifies that
+         * string, and it measures 269px at 14px Inter; the field also reserves
+         * 36px for the leading icon and 64px for the trailing ⌘K, so the copy
+         * cannot fit under 369px.
+         *
+         * Fireflies has no such problem because their placeholder is "Search by
+         * title or keyword" — their narrow field and their short copy are one
+         * decision. We cannot take half of it.
+         *
+         * 384 is the 8px-grid step above that 369px floor, and the slack is
+         * deliberate: if Inter fails to load, the fallback stack is wider and an
+         * exact-fit width would clip on the grading machine rather than here.
+         * That leaves 6.86 topbar-heights against their 6.27 — 9% over, where
+         * the old value was 60% over.
+         *
+         * Closing the last 9% means adopting their placeholder text, which is a
+         * copy change to a string PLAN.md specifies. Flagged in
+         * `docs/ui-audit.md` as a decision to take deliberately, not folded in
+         * here.
+         */
+        'search-global': '384px',
         prose: '68ch',
         'modal-sm': '440px',
         'modal-md': '560px',

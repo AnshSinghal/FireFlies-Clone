@@ -47,7 +47,7 @@ and the *Notepad* (meeting detail). Everything else is secondary.
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │ TOPBAR  h=56px  bg=surface-0  border-bottom 1px border-subtle                 │
-│ [☰] [LOGO 24px + wordmark]   [ 🔍 global search — max-w 560px, centred ]      │
+│ [☰] [LOGO 24px + wordmark]   [ 🔍 global search — max-w 384px, centred ]      │
 │                                   [+ Upload] [🔔] [? ] [avatar 32px ▾]       │
 ├────────────┬─────────────────────────────────────────────────────────────────┤
 │ LEFT RAIL  │                                                                  │

@@ -228,13 +228,23 @@ export function GlobalSearch() {
         }
       >
         {/*
-          The 560px cap is a DESKTOP constraint — it keeps the field from
+          The 352px cap is a DESKTOP constraint — it keeps the field from
           stretching across a wide window. In the mobile overlay it would leave
           the "full-width overlay" two thirds of the way across the screen, so
           the cap only applies from `lg` up while expanded.
+
+          `search-global`, not `search`: this field has a measured reference
+          width and the notebook toolbar's does not, because the reference
+          collapses that one to an icon button. Sharing one token had them
+          drifting together toward a number only one of them was ever measured
+          against. See ADR-153.
         */}
         <div
-          className={expanded ? 'relative w-full lg:max-w-search' : 'relative w-full max-w-search'}
+          className={
+            expanded
+              ? 'relative w-full lg:max-w-search-global'
+              : 'relative w-full max-w-search-global'
+          }
         >
           {/*
             The shared field (T-10.5), with combobox wiring. It was hand-rolled

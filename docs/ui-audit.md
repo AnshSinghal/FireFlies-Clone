@@ -24,6 +24,7 @@ matches, or was changed to match:
 | Leading tile ÷ card height | 0.509 | 0.494 |
 | Settings block ÷ content column | 57.6% | 57.4% |
 | Settings well ÷ content column | 60.4% | 60.9% |
+| Topbar search ÷ topbar height | 6.27 | 6.86 |
 | Settings gutters | 336 / 345 | 202 / 204 |
 
 Ratios, not pixels, because the reference was captured at a different width and
@@ -470,6 +471,37 @@ surfaces do the lifting" — and the alternative was a bespoke dark override,
 which CLAUDE.md calls a token-layer bug. It stays one token in both themes
 because there is no dark reference screenshot: a darker dark value would be
 invented rather than sampled.
+
+**12 · The topbar search is 9% wider than the reference, and closing that gap is
+a copy decision (references 01, 02).**
+The topbar is in all eight reference screenshots and had never been measured.
+Its field was 560px from PLAN.md Part A — unsampled, like the blue accent and
+the 72px row before it. Theirs measures **446px on `01.png` and 444px on
+`02.png`**, agreeing within 2px, so it is a fixed cap. Against their 71px topbar
+that is 6.27 topbar-heights; ours was **10.02**. A 60% overshoot on the most
+repeated element in the app. Now 6.86 — see ADR-153.
+
+**Why it stops at 9% and not 0%.** The ratio asks for 351px. That was built, and
+it clipped the placeholder: `…transcripts, and mor`. PLAN.md T-08.2 specifies
+`Search meetings, transcripts, and more…`, which is 269px at 14px Inter, and the
+field reserves 36px for the icon and 64px for the `⌘K`. The specified copy
+cannot fit under 369px.
+
+Fireflies has no such problem because their placeholder is `Search by title or
+keyword`. **Their narrow field and their short copy are one decision**, and half
+of it cannot be taken.
+
+> **Open decision, deliberately not taken here.** Adopting their placeholder
+> text would close the remaining 9% and make both the width and the copy match
+> the reference. It changes a user-visible string the plan specifies, which is a
+> product-copy call rather than a measurement — so it is written down instead of
+> folded into a fidelity commit. Shipping the clip was never an option; quietly
+> rewriting spec'd copy to hit a ratio would be the same error facing the other
+> way.
+
+Note the notebook toolbar's field is a separate token and stays at 560px: the
+reference collapses that one to an icon button, so there is no width to match it
+against, and narrowing it would be unmotivated rather than faithful.
 
 **11 · There is no Home hub, and slot `01` holds something else (reference 01).**
 The largest single difference in the set, and until 2026-07-28 the only
