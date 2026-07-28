@@ -24,6 +24,7 @@ matches, or was changed to match:
 | Leading tile ÷ card height | 0.509 | 0.494 |
 | Settings block ÷ content column | 57.6% | 57.4% |
 | Settings well ÷ content column | 60.4% | 60.9% |
+| Settings heading ÷ card title | 1.32 | 1.27 |
 | Topbar search ÷ topbar height | 6.27 | 6.86 |
 | Row meta type ÷ row title type | 1.00 | 1.00 |
 | Left rail ÷ topbar height | 4.68 | 4.27 |
@@ -62,8 +63,11 @@ legibility.
 **These numbers are now checked, not asserted.**
 `scripts/check_reference_ratios.py` runs in `make lint` **and in CI** — both,
 because CI does not invoke `make lint`, it lists the individual commands, so a
-check added only to the Makefile guards one machine. It re-derives all eight
-ratios from `docs/screenshots/` and fails when this table stops describing them. It is a
+check added only to the Makefile guards one machine. It re-derives every
+ratio in the table above from `docs/screenshots/` — fourteen of them as of
+2026-07-28, having started at eight — and fails when this table stops describing
+them. The count is deliberately not written as a number anywhere it could go
+stale; the script prints how many it checked. It is a
 documentation check, not a fidelity gate — a ratio drifting from the reference is
 a product decision; the table quietly ceasing to match the pixels beside it is a
 defect. Verified by reintroducing the 0.815 regression and watching it fire.

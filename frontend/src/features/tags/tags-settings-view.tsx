@@ -71,7 +71,7 @@ export function TagsSettingsView() {
         data-testid="tags-settings-page"
       >
         <header className="space-y-1">
-          <h2 className="text-h3 text-primary">Tags</h2>
+          <h2 className="text-display text-primary">Tags</h2>
           <p className="text-sm text-secondary">
             Rename, recolour, merge or delete the tags on your meetings. A rename follows the tag
             everywhere it appears.

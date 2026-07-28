@@ -36,7 +36,7 @@ export function SoonPanel({ tab }: SoonPanelProps) {
     <section className="space-y-4" data-testid={`settings-soon-${tab.id}`}>
       <header className="flex items-center gap-2">
         <Icon size={18} strokeWidth={1.75} className="text-muted" />
-        <h2 className="text-h3 text-primary">{tab.label}</h2>
+        <h2 className="text-display text-primary">{tab.label}</h2>
         <Badge variant="neutral">Soon</Badge>
       </header>
       <p className="text-sm text-secondary">

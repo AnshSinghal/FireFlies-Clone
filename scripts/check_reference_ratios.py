@@ -109,6 +109,18 @@ def _cap_height(np, img, x0: int, y0: int, y1: int, cut: int, width: int = 16) -
     return int(ys.max() - ys.min() + 1)
 
 
+def _cap_auto(np, img, x0: int, y0: int, y1: int, cut: int = 150, width: int = 22) -> int:
+    """`_cap_height`, but it finds the text's own rows inside a generous band.
+
+    The fixed-band version is what broke when ADR-154 shifted the notebook title
+    by two pixels. Anything measuring type that a later change might move
+    vertically should locate the ink first and measure second.
+    """
+    band = img[y0:y1, x0 : x0 + 180]
+    rows = np.where((band < cut).sum(axis=1) > 0)[0]
+    return _cap_height(np, img, x0, y0 + int(rows.min()) - 2, y0 + int(rows.max()) + 3, cut, width)
+
+
 def _first_glyph_col(np, img, y0: int, y1: int, x0: int, x1: int, cut: int = 140) -> int | None:
     cols = np.where((img[y0:y1, x0:x1] < cut).sum(axis=0) > 0)[0]
     return int(cols.min()) + x0 if len(cols) else None
@@ -178,6 +190,12 @@ def measure(root: Path) -> dict[str, float]:
         ),
         "Settings block ÷ content column": (edges[-2] - edges[1]) / 953,
         "Settings well ÷ content column": (edges[-1] - edges[0]) / 953,
+        # ADR-155. Guarded because the defect was an INVERSION — the heading was
+        # smaller than the cards it labelled — and a ratio is the only form in
+        # which "larger than" is checkable.
+        "Settings heading ÷ card title": (
+            _cap_auto(np, settings, 672, 180, 215) / _cap_auto(np, settings, 706, 250, 275)
+        ),
     }
 
 

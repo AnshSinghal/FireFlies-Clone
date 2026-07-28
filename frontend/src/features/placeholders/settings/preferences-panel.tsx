@@ -45,7 +45,7 @@ export function PreferencesPanel() {
   return (
     <section className="space-y-6" data-testid="settings-preferences">
       <header className="space-y-1">
-        <h2 className="text-h3 text-primary">Preferences</h2>
+        <h2 className="text-display text-primary">Preferences</h2>
         <p className="text-sm text-secondary">
           Defaults for the Notebook and the player. A link with its own sort or page still wins —
           shared links look the same for everyone.

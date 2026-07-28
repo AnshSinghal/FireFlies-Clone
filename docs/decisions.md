@@ -3681,3 +3681,43 @@ the title's leading glyph in a 20px band tuned to the old position. It had been 
 where every wider window reports 0.375. **A published number had been flattering by one pixel**,
 and on a 40px denominator one pixel is 2.5% — half the tolerance, spent on sampling noise. Widened
 the window and corrected the table to 0.375; the real gap to the reference is 8.8%, not 2.7%.
+
+## ADR-155 — Settings section headings lead their groups, in size and in colour
+
+**Date:** 2026-07-28 · **Task:** T-46.1 · **Status:** Accepted
+
+**Context.** The settings group heading (`Notebook`, `Player`) was `text-sm` muted — 13px grey above
+`text-body` near-black card titles. Measured against `07.png` and `08.png`, which agree with each
+other, Fireflies does the opposite on **both** axes:
+
+| | Fireflies | Ours (before) |
+|---|---|---|
+| Heading cap ÷ card-title cap | 18.5 / 14 = **1.32** | 9 / 11 = **0.82** |
+| Heading colour | `#18243b` | `#616b81` |
+| Card-title colour | `#1e2b42` | `#0b1424` |
+
+Their heading is the most prominent thing in the group — slightly larger than the card titles and
+just as dark. Ours was the least prominent: smaller *and* greyer than the cards it labelled. The
+hierarchy was inverted twice over, which is why the groups read as loose cards with a caption rather
+than as titled sections.
+
+Our card title was already right: 11px against their 10.9px equivalent. Only the heading was wrong.
+
+**Decision.** `text-h2 text-primary` on the group heading. The exact target is ~18px and the scale
+holds 16 and 20; 20 overshoots where 16 undershoots, and overshooting is the safer miss when the
+defect is a heading too small to lead. Measured after: **1.273 against their 1.32**, 3.6% apart —
+better than the 1.43 predicted, because measured cap height does not scale linearly with font size.
+
+**Consequences, including one this created.** Raising the section heading to 20px made it larger
+than the *panel* title above it (`Preferences`, `text-h3` at 16px), so fixing one inversion
+introduced another one level up. The reference cannot arbitrate: their settings content has no panel
+title at all — panel identity lives in the highlighted nav item, and their content's largest heading
+IS the section heading. Ours adds a level they do not have.
+
+Resolved by lifting the four settings panel titles to `text-display`, matching how the notebook's
+page title is already set. The content hierarchy is now **20 > 14 > 11** by cap height, three
+distinct steps.
+
+Guarded as a ratio rather than a size, because the defect was an *inversion* and "larger than" is
+only checkable as a ratio. A test asserting `text-h2` would have passed just as happily on the
+broken arrangement.

@@ -26,7 +26,7 @@ export function AppearancePanel() {
   return (
     <section className="space-y-4" data-testid="settings-appearance">
       <header className="space-y-1">
-        <h2 className="text-h3 text-primary">Appearance</h2>
+        <h2 className="text-display text-primary">Appearance</h2>
         <p className="text-sm text-secondary">How the app looks. Applies immediately.</p>
       </header>
 

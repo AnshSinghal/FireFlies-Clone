@@ -64,7 +64,24 @@ export function SettingCard({
 export function SettingGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h3 className="text-sm font-medium text-secondary">{title}</h3>
+      {/*
+        Larger and darker than the cards it labels, because the reference is
+        both and ours was neither (ADR-155). Measured on `07.png` and `08.png`,
+        which agree: their section heading's cap is 18–19px against a 14px card
+        title, and it is `#18243b` where the card title is `#1e2b42` — so the
+        heading is the most prominent thing in the group.
+
+        Ours was `text-sm` muted against a `text-body` primary card title: cap 9
+        against 11, and grey against near-black. The hierarchy was inverted on
+        both axes at once, which is why the groups read as loose cards with a
+        label rather than as titled sections.
+
+        `text-h2` overshoots slightly — 1.43 against their 1.32, where `text-h3`
+        would undershoot at 1.14. The exact target is ~18px and the scale has
+        16 and 20; overshooting is the safer miss here, because the defect being
+        fixed is a heading that was too small to lead its group.
+      */}
+      <h3 className="text-h2 text-primary">{title}</h3>
       {/*
         The cards sit in a tinted well, not directly on the page. Sampled from
         `07.png`: the page is `#FFFFFF`, the gap BETWEEN two cards is `#F9FAFB`,
