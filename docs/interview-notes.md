@@ -297,6 +297,47 @@ sounded like a reason. A wrong reason is more expensive than no reason: it
 stops anyone re-examining, including its author. That is why the correction is
 recorded in place in all four documents rather than quietly deleted.
 
+## 11 · Which bugs did only *looking* find?
+
+The counterpart to §8. Those were bugs a test caught that reading could not;
+these are bugs neither a test nor reading caught, and a rendered screenshot did.
+
+- **Every row's duration read `7:13` where the reference reads `30 min`.** Three
+  places already *claimed* to match the reference, including a test literally
+  named `matches the reference screenshots` asserting `30:00` for 1800 seconds —
+  the reference's own 30-minute row. The suite was green (ADR-148).
+- **The Analytics bar chart drew no bars.** Every bar 4px regardless of value,
+  because `items-end` sizes columns to content so `height: N%` had no definite
+  parent. On the one card captioned "this one is real".
+- **Three screenshot races.** Containers are visible while their skeletons
+  shimmer, so the dark notepad and the analytics page were photographed
+  mid-load, and a sidebar fetch made one capture show two channels where
+  another showed five.
+- **Two Settings tabs looked like different products** after I converted one to
+  cards and not the other.
+- **A 13% spacing regression** — raising the card height moved a ratio tuned as
+  a *fraction* of it. Tests asserted `toBe(82)` and were right; the visual
+  baselines were regenerated, so the wrong spacing became the expected spacing.
+- **The sidebar was unusable between 768 and 1279px** — labels clipped out of
+  sight and tooltips suppressed, because the component read the user's collapse
+  toggle while CSS pinned the width. Six unlabelled icons at a width the suite
+  already covered.
+
+**Why the suite could not see any of it.** Every one is a relationship between
+two artifacts rather than a property of one: the app versus a reference
+screenshot, a token versus the ratio derived from it, a component's belief about
+its width versus its actual width. Tests assert what the code does. Visual
+baselines assert what it looked like when you last regenerated them — which is
+worse than nothing after an unverified change, because it promotes the defect to
+the expectation. That is exactly how the spacing regression survived.
+
+**What I did about it** rather than resolving to look harder: three scripts that
+compare artifacts to each other — `check_layering.py`, `check_design_tokens.py`,
+`check_reference_ratios.py` — in `make lint` and CI, each proven by breaking it
+first. And where a check was not possible, a regression test that asserts the
+*property a user depends on* rather than pixels: the tablet-rail test asserts the
+tooltip, because the visual baseline was byte-identical before and after that fix.
+
 ## Things I would rather be asked
 
 - Why the mutations project runs one worker (three "feature bugs" that were
