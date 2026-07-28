@@ -65,7 +65,28 @@ export function SettingGroup({ title, children }: { title: string; children: Rea
   return (
     <section className="space-y-2">
       <h3 className="text-sm font-medium text-secondary">{title}</h3>
-      <div className="space-y-3">{children}</div>
+      {/*
+        The cards sit in a tinted well, not directly on the page. Sampled from
+        `07.png`: the page is `#FFFFFF`, the gap BETWEEN two cards is `#F9FAFB`,
+        and the card interior is `#FFFFFF` again — so there is a container
+        behind them. `--ff-surface-2` already resolves to `#F9FAFB`, so this is
+        the reference's own value rather than a near miss.
+
+        Fill only: scanning across its left edge gives 255 → 253 → 249 with no
+        border colour, just corner antialiasing. Radius 17px on their 2000px
+        capture is 12px at our 1440 (`rounded-lg`), and their 24px padding is
+        ~17px, so `p-4`.
+
+        **Dark inverts the depth on purpose.** In light the well is darker than
+        the cards and recedes. Dark re-points the grey primitives so the same
+        token is LIGHTER than `surface-0`, making the well a raised panel with
+        inset cards. That is this scale's stated convention — "elevation
+        recedes; surfaces do the lifting" — and the alternative was a bespoke
+        dark override, which CLAUDE.md calls a token-layer bug. Left as one
+        token in both themes because there is no dark reference screenshot: a
+        darker dark value would be invented, not sampled.
+      */}
+      <div className="space-y-3 rounded-lg bg-surface-2 p-4">{children}</div>
     </section>
   )
 }

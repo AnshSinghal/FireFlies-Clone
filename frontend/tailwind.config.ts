@@ -264,8 +264,23 @@ const config: Config = {
          * 548px is 57.5% of our 953px column, matching their ratio rather
          * than their pixels — the columns are different widths, so the ratio
          * is the transferable part.
+         *
+         * **580px, not 548px, since the group well landed.** The number the
+         * audit matched — their 927px — is the width of their CARDS, not of
+         * the tinted container behind them, which is 972px. Those were the
+         * same measurement here only while the cards sat directly on the page.
+         *
+         * `SettingGroup` now wraps them in a `p-4` well, and padding works
+         * inward, so a 548px body was producing 516px cards: the container had
+         * silently inherited the ratio the cards were supposed to have, and the
+         * cards had dropped to 54.1% against the reference's 57.5%. Adding a
+         * container without moving this token quietly undid the match it was
+         * created for.
+         *
+         * 580 = 548 + 2×16. Cards land back on 548 (57.5%, exactly their card
+         * ratio) and the well lands on 60.9% against their 60.4%.
          */
-        settings: '548px',
+        settings: '580px',
 
         'row-gap': '20px',
         /*

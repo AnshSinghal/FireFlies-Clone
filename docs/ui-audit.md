@@ -23,6 +23,7 @@ matches, or was changed to match:
 | Tile→title gap ÷ tile width | 0.411 | 0.400 |
 | Leading tile ÷ card height | 0.509 | 0.494 |
 | Settings block ÷ content column | 57.6% | 57.4% |
+| Settings well ÷ content column | 60.4% | 60.9% |
 | Settings gutters | 336 / 345 | 202 / 204 |
 
 Ratios, not pixels, because the reference was captured at a different width and
@@ -432,6 +433,43 @@ the collision cannot recur rather than being suppressed by a wrapper.
 left of each title. Ours do not, because ours would be invented — there is no
 calendar integration behind a calendar glyph here. Structure, measure and
 control placement match; the iconography is the honest gap.
+
+**A second measure was hiding inside the first (2026-07-28).** The cards do not
+sit on the page in the reference — they sit in a tinted well. Sampled from
+`07.png`: page `#FFFFFF`, the gap *between* two cards `#F9FAFB`, card interior
+`#FFFFFF` again. `--ff-surface-2` already resolved to `#F9FAFB`, so this is the
+reference's own value and not a near miss. Fill only, no border — scanning
+across its left edge gives 255 → 253 → 249, which is corner antialiasing.
+
+That means **"the settings block" was two different widths all along**, and the
+57.6% this audit matched is the narrower one:
+
+| | Reference | Ours |
+|---|---|---|
+| Well (tinted container) | 972px · 60.4% | 580px · 60.9% |
+| Cards inside it | 925px · 57.5% | 548px · 57.5% |
+
+While our cards sat directly on the page those were one number, so measuring the
+outermost edges was right by coincidence. Adding the well made them diverge, and
+because padding works inward, a 548px body produced **516px cards** — the
+container had silently inherited the ratio the cards were supposed to have and
+the cards had fallen to 54.1%. Adding a container undid the match it was added
+to improve.
+
+`scripts/check_reference_ratios.py` caught it, which is the first time that
+script has fired on a change made after it was written rather than on one
+excavated from history. Fixed by setting the measure to 580 = 548 + 2×16 and by
+teaching the check to read the inner edge pair as the card and the outer pair as
+the well, so the two can never be conflated again. Both are now published above.
+
+**Dark inverts the well's depth deliberately.** In light it is darker than the
+cards and recedes. Dark re-points the grey primitives, so the same token sits
+*lighter* than `surface-0` and the well becomes a raised panel holding inset
+cards. That follows this scale's stated convention — "elevation recedes;
+surfaces do the lifting" — and the alternative was a bespoke dark override,
+which CLAUDE.md calls a token-layer bug. It stays one token in both themes
+because there is no dark reference screenshot: a darker dark value would be
+invented rather than sampled.
 
 **11 · There is no Home hub, and slot `01` holds something else (reference 01).**
 The largest single difference in the set, and until 2026-07-28 the only

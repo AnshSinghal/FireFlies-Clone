@@ -102,6 +102,15 @@ def measure(root: Path) -> dict[str, float]:
             edges.append(int(i) + 500)
         prev = i
 
+    # Settings has TWO measures since the group well landed, and conflating them
+    # is what made this check fire. `edges` reads [well-left, card-left,
+    # card-right, well-right] — the outer pair is the tinted container, the
+    # inner pair the cards inside its 16px padding.
+    #
+    # The audit's long-standing 57.6% describes the reference's CARDS (their
+    # 927px), not the well behind them (972px). While our cards sat directly on
+    # the page those were one number here, so `edges[-1] - edges[0]` was right
+    # by coincidence and became wrong the moment a container appeared.
     return {
         "Row title type ÷ topbar": GLYPH_PX / TOPBAR_PX,
         "Card height ÷ topbar": card / TOPBAR_PX,
@@ -110,7 +119,8 @@ def measure(root: Path) -> dict[str, float]:
         "Gap across a date heading ÷ card": group / card,
         "Tile→title gap ÷ tile width": (title_x - tile_end) / TILE_PX,
         "Leading tile ÷ card height": TILE_PX / card,
-        "Settings block ÷ content column": (edges[-1] - edges[0]) / 953,
+        "Settings block ÷ content column": (edges[-2] - edges[1]) / 953,
+        "Settings well ÷ content column": (edges[-1] - edges[0]) / 953,
     }
 
 
