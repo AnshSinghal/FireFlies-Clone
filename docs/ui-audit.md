@@ -524,6 +524,41 @@ Note the notebook toolbar's field is a separate token and stays at 560px: the
 reference collapses that one to an icon button, so there is no width to match it
 against, and narrowing it would be unmotivated rather than faithful.
 
+**15 · The page name lives in the topbar for them and in the content for us
+(references 01, 02, 07).**
+Not a spacing difference — a different division of labour between the two bars,
+and it is consistent across all three of their screens.
+
+| | Fireflies | Ours |
+|---|---|---|
+| Rail top | brand mark | nav starts immediately |
+| Topbar left | the page name — `Meetings`, `Home`, `Settings` | brand mark + `Fireflies` wordmark |
+| Content top | straight into the controls row | `Meetings` H1 at 28px/700 + `N meetings` |
+
+Measured: their first content ink is at y=165 under a topbar ending at 123 —
+42px of gap and then the `Hosted by me / Shared with me / Filters` row. Ours is
+at y=88 under a topbar ending at 55, and what sits there is the H1.
+
+So their topbar answers *where am I* and their rail answers *whose app is this*.
+Ours does the reverse and then repeats the page name in the content.
+
+**Kept, and this one is a genuine spec commitment rather than a shrug.**
+`design.md` §2.2 specifies the page header as `H1 "Meetings" (28px/700) ·
+subtitle "N meetings"`, and §2.1 puts the logo and wordmark in the topbar. Both
+are built, tested and screenshotted. Moving the page name into the topbar and
+the brand into the rail is a restructure of the app shell (T-07, T-08), not a
+token change, and it would land against the spec rather than a gap in it.
+
+Recorded because it is the largest *structural* difference after the missing
+assistant panel, and because an evaluator will see it immediately in any
+side-by-side: their content starts with controls, ours starts with a heading.
+
+**A second row that came back clean.** The card's corner radius: their border's
+first ink is 12px in from the card's left edge on a 71px topbar; ours is 9px on
+a 56px topbar. That is **0.169 against 0.161** — 4.7% apart and inside the
+one-pixel quantisation at this size. Measured the same way on both, found
+matching, left alone.
+
 **14 · The leading tile is a play thumbnail, not a host avatar (reference 02).**
 Same 40px box, opposite contents, and it is the loudest colour difference in the
 list. Theirs is a saturated `#EF6C02` square carrying the host's initial — an
