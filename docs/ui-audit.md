@@ -433,6 +433,46 @@ left of each title. Ours do not, because ours would be invented — there is no
 calendar integration behind a calendar glyph here. Structure, measure and
 control placement match; the iconography is the honest gap.
 
+**11 · There is no Home hub, and slot `01` holds something else (reference 01).**
+The largest single difference in the set, and until 2026-07-28 the only
+reference screen with no entry in this list — which is how it stayed invisible.
+Every other non-match above was written down; the biggest one was not.
+
+Fireflies opens on a Home hub: a greeting (`Good Evening, Krishna`), a Personal
+Assistant strip of three cards (Daily Brief · *from 2 recent meetings*, Meeting
+Prep · *4 upcoming meetings*, Tasks · *16 New tasks*), a Connect-Slack-and-Email
+banner, Recent/Upcoming/AI Feed tabs, and the AskFred panel down the right. This
+clone has no such route. `/` lands on the notebook.
+
+**Why it is not built, stated as a trade rather than an omission.** Roughly one
+element on that screen could be rendered truthfully here — a greeting, and a
+recent-meetings list we already have. The rest is chrome for things that do not
+exist: a Daily Brief summarising nothing, an upcoming count from a calendar
+nobody connected, a task inbox with no task source, and an assistant panel with
+no assistant behind it. Building the frame and filling it with plausible numbers
+is the one failure mode this project refuses everywhere else, so it is refused
+here too.
+
+That is a defensible call and it is still a real cost. **A partial Home —
+greeting plus recent meetings — would match perhaps 40% of that screen where we
+currently match 0%,** and it would be honest, because both halves are things
+this app actually has. It is not built because scope posture on this repo is
+"do not scale up or down without asking", not because it was judged worthless.
+Recorded here so the option is visible rather than quietly foreclosed.
+
+**The slot swap, which is easy to mistake for a defect.** `docs/screenshots/01-home.png`
+is not a home screen — it is the notebook scoped to `#customer-calls`. That is
+deliberate: since slot 01 cannot be a like-for-like comparison whatever goes in
+it, the *channel-scoped* view goes there and the full list goes in 02, so the
+one slot that IS comparable holds our densest screen against their densest. It
+used to be the other way round, which put our thinnest screen against their
+fullest in the only genuinely comparable slot.
+
+The cost is that anyone opening 01 side by side sees two unrelated screens with
+no on-screen explanation, and the reasoning lived only in a comment in
+`99-capture.spec.ts` — a file an evaluator has no reason to open. Hence this
+entry.
+
 ## Verified equivalent
 
 **Structurally** equivalent — same elements, same arrangement, same order. Not a

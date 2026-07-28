@@ -128,6 +128,29 @@ def published(root: Path) -> dict[str, float]:
     return out
 
 
+def unaccounted(root: Path) -> list[str]:
+    """Reference screens the audit never mentions.
+
+    Reference 01 — Fireflies' Home hub — was the only screen in the set with no
+    entry in "Differences we are keeping, and why", and it went unnoticed until
+    2026-07-28 precisely because absence is what nothing looks for. Every other
+    non-match had been written up; the largest one had not, and slot `01` had
+    quietly been repurposed to hold the channel-scoped notebook on top of that.
+
+    So this asserts coverage rather than correctness. It cannot tell whether an
+    entry is any good — only that no reference screen is silently missing from
+    the document whose entire job is to account for all of them.
+    """
+    audit = (root / "docs/ui-audit.md").read_text(encoding="utf-8")
+    missing = []
+    for png in sorted((root / "docs/reference/fireflies").glob("*.png")):
+        n = png.stem
+        # "reference 03", "references 07, 08", or a direct `03.png` citation.
+        if not re.search(rf"references?\s+(?:\d\d,\s*)*{n}\b|`?{n}\.png`?", audit):
+            missing.append(f"  reference {n} is in docs/reference/fireflies/ but never cited")
+    return missing
+
+
 def main(root: Path) -> int:
     claimed, actual = published(root), measure(root)
     checked, failures = 0, []
@@ -144,18 +167,33 @@ def main(root: Path) -> int:
                 f"({abs(measured - want) / want * 100:.0f}% apart)"
             )
 
+    uncited = unaccounted(root)
+    failures += uncited
+
     if failures:
         print("docs/ui-audit.md disagrees with docs/screenshots/:\n", file=sys.stderr)
         print("\n".join(failures), file=sys.stderr)
-        print(
-            "\nEither the screenshots are stale (re-run the capture) or a token moved and "
-            "the audit was not re-derived. Check which before editing either — the last "
-            "three times this fired, a token had moved and the number was right when written.",
-            file=sys.stderr,
-        )
+        if uncited:
+            print(
+                "\nA reference screen with no entry is not evidence it matches — it is "
+                "evidence nobody looked. Add it to 'Differences we are keeping, and why', "
+                "or to 'Verified equivalent' if it genuinely matches.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "\nEither the screenshots are stale (re-run the capture) or a token moved and "
+                "the audit was not re-derived. Check which before editing either — the last "
+                "three times this fired, a token had moved and the number was right when written.",
+                file=sys.stderr,
+            )
         return 1
 
-    print(f"reference ratios: docs/ui-audit.md agrees with the screenshots ({checked} ratios)")
+    n_ref = len(list((root / "docs/reference/fireflies").glob("*.png")))
+    print(
+        f"reference ratios: docs/ui-audit.md agrees with the screenshots "
+        f"({checked} ratios, {n_ref} reference screens all cited)"
+    )
     return 0
 
 
