@@ -983,6 +983,19 @@ silently rewritten:
   nothing to stick. The property it protected — the topbar surviving a long scroll — is already
   covered by T08-K.
 
+> **The T12-B bullet above expired under ADR-150 — noticed 2026-07-28.** That
+> assertion is `toBe(82)` now, not 72, so "survives unchanged" is no longer
+> true; it survived the change *this* ADR made and not the later one. Left in
+> place rather than edited, because what it recorded was accurate when written
+> and the point of the entry is the reasoning, not the constant.
+>
+> Worth noting where it sat in the blast radius. ADR-150 moved the token and the
+> assertions together and re-captured the screenshots, so nothing failed — the
+> drift landed entirely in prose that merely *cited* 72: this bullet, `design.md`
+> §3.7, the gap-token derivation comment, and `docs/ui-audit.md`'s deployed-vs-spec
+> table, which went on reporting `72px | 72px | exact` against a deployment
+> rendering 82px. Four citations, one number, no test able to see any of them.
+
 Grouping is suppressed when the sort is not chronological: a title-sorted list would put every
 meeting under its own date heading, which is noise rather than structure.
 

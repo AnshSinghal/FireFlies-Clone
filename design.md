@@ -377,7 +377,7 @@ panels do not show chunky default scrollbars.
 ### 3.7 Fixed sizes — memorise these, they drive every layout test
 
 ```
-topbar             56        detail icon rail   56        meeting row      72
+topbar             56        detail icon rail   56        meeting row      82
 left rail         240        collapsed rail     64
 button md          36        button sm          32        input            40
 avatar sm          24        avatar md          32        avatar lg        40

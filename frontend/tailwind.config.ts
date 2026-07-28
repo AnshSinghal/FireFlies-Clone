@@ -250,18 +250,6 @@ const config: Config = {
         row: '82px',
 
         /*
-         * Notebook list rhythm, derived from `docs/reference/fireflies/02.png`
-         * rather than chosen (T-46.1, ADR-149). Measured as ratios of card
-         * height, because the reference was captured at a different width:
-         *
-         *   between cards in one date group   0.274 x card  ->  0.274 x 72 = 20px
-         *   across a date-group heading       0.94  x card  ->  67px total,
-         *     of which the heading and its own 8px gap supply 31 -> 36px here
-         *
-         * Named, not inlined, because the skeleton has to mirror them exactly
-         * or the list jumps when real rows replace it.
-         */
-        /*
          * The settings measure, taken from the reference (docs/ui-audit.md
          * item 10). Value and reasoning are the parallel session's, from
          * commit 241177d, kept when the two implementations were reconciled.
@@ -297,11 +285,16 @@ const config: Config = {
          * expressing a ratio TO THE CARD, so changing the card silently moved
          * the ratio. Group fell from 0.930 to 0.815 against a reference of 0.94
          * — a 13% shortfall introduced by a change that measured only the card
-         * and re-verified only the card. Re-derived at 32/20 for an 81px card.
+         * and re-verified only the card. Re-derived at 32/20 for the 82px card.
+         *
+         * Named rather than inlined because `skeleton.tsx` has to mirror them
+         * exactly, or the list jumps when real rows replace the placeholder.
          *
          * **Any future change to `row` must re-derive these.** The ratio table
-         * in `docs/ui-audit.md` is what catches it; re-measure against the
-         * committed screenshot, not against intent.
+         * in `docs/ui-audit.md` is what catches it, and
+         * `scripts/check_reference_ratios.py` fails CI when the table stops
+         * describing the committed screenshot; re-measure against that
+         * screenshot, not against intent.
          */
         'group-gap': '32px',
         'heading-gap': '20px',

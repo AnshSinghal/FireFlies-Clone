@@ -78,10 +78,25 @@ Taken from the deployed origin at 1440px with `getComputedStyle` /
 |---|---|---|---|
 | Topbar height | 56px | 56px | exact |
 | Sidebar width | 240px | 239px + 1px border | exact |
-| Meeting row height | 72px | 72px | exact |
+| Meeting row height | 82px | 82px | exact |
 | Row title type | 15px / 600 | 15px / 600 | exact |
 
 The layout primitives match the spec they were built from.
+
+That row read `72px | 72px | exact` until 2026-07-28, and the way it survived is
+the point of this section. ADR-150 raised the card to 82px after measuring it
+against the reference; the token moved, the height assertions moved, the
+screenshots were recaptured — and three places that merely *cited* 72 did not.
+`design.md` §3.7, the block headed "memorise these, they drive every layout
+test", still said 72. So did the derivation comment above the gap tokens. So did
+this table, which claimed the deployment renders 72px while the deployment
+renders 82px, and presented the disagreement as `exact`.
+
+A table comparing a spec to a deployment can only catch drift if someone
+re-measures both. Nobody did; both columns were copied forward. Re-measured on
+the deployment for this revision: topbar 56, card 82, intra-group gap 20,
+cross-heading gap 74 — matching `row-gap: 20px` and `group-gap: 32px` plus the
+heading's own band.
 
 **But that table measures the wrong thing, and it took until now to notice.**
 Every row above compares the build against `design.md` — our own spec. It
