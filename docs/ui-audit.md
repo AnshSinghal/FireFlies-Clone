@@ -25,6 +25,8 @@ matches, or was changed to match:
 | Settings block ÷ content column | 57.6% | 57.4% |
 | Settings well ÷ content column | 60.4% | 60.9% |
 | Topbar search ÷ topbar height | 6.27 | 6.86 |
+| Left rail ÷ topbar height | 4.68 | 4.27 |
+| Notebook card width ÷ topbar height | 13.10 | 20.55 |
 | Settings gutters | 336 / 345 | 202 / 204 |
 
 Ratios, not pixels, because the reference was captured at a different width and
@@ -502,6 +504,37 @@ of it cannot be taken.
 Note the notebook toolbar's field is a separate token and stays at 560px: the
 reference collapses that one to an icon button, so there is no width to match it
 against, and narrowing it would be unmotivated rather than faithful.
+
+**13 · The notebook has no assistant panel, and that is the whole of the width
+difference (reference 02).**
+The largest proportional gap in the table, and the one most likely to be
+misread. Our meeting card is **20.55 topbar-heights wide against their 13.10 —
+57% wider**. That is not spacing. Their `02.png` reserves x 1436–1982 for the
+AskFred panel, 7.69 topbar-heights of it, and the meetings list gets what is
+left.
+
+The arithmetic closes exactly. Give ours a panel at their ratio and the card
+lands on **12.86 against their 13.10 — 1.8% apart.** So the entire 57% is one
+missing element, and nothing about the list's own proportions is wrong.
+
+Which is also why the fix is not to narrow the cards. Doing that would buy the
+ratio and leave 430px of dead space, matching a number while contradicting the
+layout that produced it. The panel is absent for the same reason the Home hub is
+(item 11): an assistant panel with no assistant behind it is frame with nothing
+in it, and every card in that panel — "My action items", "Key decisions",
+"Connect Slack and Gmail" — would have to be invented or wired to something this
+build does not have.
+
+Recorded because the table now publishes the ratio, and a 57% row with no
+explanation reads as an unexamined defect rather than a consequence.
+
+**A row that came back clean, stated because negative results are evidence
+too.** The left rail is 332px in `01.png` against a 71px topbar — 4.68
+topbar-heights, where ours is 4.27. Resolved through the three scale anchors
+this audit already derived, the target is 262px (topbar), 245px (type) or 222px
+(card). **Ours is 240px: 1.9% off the type anchor and inside 8.3% of all
+three**, which is well within the 18% the anchors disagree with each other by.
+Measured, found correct, left alone.
 
 **11 · There is no Home hub, and slot `01` holds something else (reference 01).**
 The largest single difference in the set, and until 2026-07-28 the only

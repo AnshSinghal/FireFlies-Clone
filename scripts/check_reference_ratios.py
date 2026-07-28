@@ -75,6 +75,24 @@ def _hrules(np, img, x0: int, x1: int, frac: float = 0.75, delta: int = 4) -> li
     return out
 
 
+def _vedges(np, img, y0: int, y1: int, x0: int, x1: int, frac: float = 0.5, delta: int = 3):
+    """Columns where most of the band changes — a vertical rule or a box border.
+
+    The mirror of `_hrules`. Factored out once three call sites existed (the
+    settings block, the topbar search, the rail) and started drifting apart in
+    their thresholds for no reason anyone had recorded.
+    """
+    band = img[y0:y1, x0:x1]
+    hit = (abs(np.diff(band, axis=1)) > delta).mean(axis=0)
+    out: list[int] = []
+    prev = -10
+    for i in np.where(hit > frac)[0]:
+        if i - prev > 3:
+            out.append(int(i) + x0)
+        prev = i
+    return out
+
+
 def _first_glyph_col(np, img, y0: int, y1: int, x0: int, x1: int, cut: int = 140) -> int | None:
     cols = np.where((img[y0:y1, x0:x1] < cut).sum(axis=0) > 0)[0]
     return int(cols.min()) + x0 if len(cols) else None
@@ -92,28 +110,21 @@ def measure(root: Path) -> dict[str, float]:
     title_x = _first_glyph_col(np, notebook, 300, 320, 320, 900)
     tile_end = 275 + TILE_PX  # card's left inset plus the reserved box
 
-    # The topbar search field (ADR-153). Its borders are the only vertical
-    # edges in that slice of the bar, so a lower delta than the card rules —
-    # the field's fill is nearly the topbar's own white.
-    tb = notebook[8:48, 400:1050]
-    tb_hit = (abs(np.diff(tb, axis=1)) > 3).mean(axis=0)
-    tb_edges: list[int] = []
-    prev = -10
-    for i in np.where(tb_hit > 0.5)[0]:
-        if i - prev > 3:
-            tb_edges.append(int(i) + 400)
-        prev = i
+    # The topbar search field (ADR-153). Delta 3 rather than 4: the field's fill
+    # is nearly the topbar's own white, so its border is a fainter edge than a
+    # card rule.
+    tb_edges = _vedges(np, notebook, 8, 48, 400, 1050)
     search_w = tb_edges[-1] - tb_edges[0]
 
+    # The rail's trailing border, and the meeting card's own left/right edges.
+    # Both are published as ratios of the topbar so they stay comparable to a
+    # reference captured at an unknown scale.
+    rail_w = _vedges(np, notebook, 150, 700, 0, 400)[0] + 1  # +1: the border itself
+    card_edges = _vedges(np, notebook, 290, 370, 240, 1440)
+    card_w = card_edges[-1] - card_edges[0]
+
     _, settings = _load(root / "docs/screenshots/07-settings-recording.png")
-    band = settings[200:320, 500:1440]
-    hit = (abs(np.diff(band, axis=1)) > 4).mean(axis=0)
-    edges: list[int] = []
-    prev = -10
-    for i in np.where(hit > 0.5)[0]:
-        if i - prev > 3:
-            edges.append(int(i) + 500)
-        prev = i
+    edges = _vedges(np, settings, 200, 320, 500, 1440, delta=4)
 
     # Settings has TWO measures since the group well landed, and conflating them
     # is what made this check fire. `edges` reads [well-left, card-left,
@@ -133,23 +144,29 @@ def measure(root: Path) -> dict[str, float]:
         "Tile→title gap ÷ tile width": (title_x - tile_end) / TILE_PX,
         "Leading tile ÷ card height": TILE_PX / card,
         "Topbar search ÷ topbar height": search_w / TOPBAR_PX,
+        "Left rail ÷ topbar height": rail_w / TOPBAR_PX,
+        "Notebook card width ÷ topbar height": card_w / TOPBAR_PX,
         "Settings block ÷ content column": (edges[-2] - edges[1]) / 953,
         "Settings well ÷ content column": (edges[-1] - edges[0]) / 953,
     }
 
 
 def published(root: Path) -> dict[str, float]:
-    """The `Ours` column of the audit's headline table."""
+    """The `Ours` column of the audit's headline table.
+
+    The `%` is captured rather than inferred. This used to read
+    `v / 100 if v > 20`, on the reasoning that only the settings rows are
+    percentages — true when every other row was a ratio below 1. The first ratio
+    above 20 (the card width, at 20.55) was silently divided by 100 and reported
+    as 9902% adrift from itself. A magnitude heuristic standing in for a unit is
+    a bug waiting for its first large value.
+    """
     rows = re.findall(
-        r"^\|\s*([^|]+?)\s*\|\s*[\d.]+%?\s*\|\s*\*{0,2}([\d.]+)%?\*{0,2}\s*\|$",
+        r"^\|\s*([^|]+?)\s*\|\s*[\d.]+%?\s*\|\s*\*{0,2}([\d.]+)(%?)\*{0,2}\s*\|$",
         (root / "docs/ui-audit.md").read_text(encoding="utf-8"),
         re.M,
     )
-    out = {}
-    for label, value in rows:
-        v = float(value)
-        out[label] = v / 100 if v > 20 else v  # the settings row is a percentage
-    return out
+    return {label: float(value) / 100 if pct else float(value) for label, value, pct in rows}
 
 
 def unaccounted(root: Path) -> list[str]:
