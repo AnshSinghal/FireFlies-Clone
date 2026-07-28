@@ -65,18 +65,41 @@ const THEMES: readonly Theme[] = ['light', 'dark']
  * moves 10,592 — but a defect between 4,033 and 10,592 pixels would pass on that
  * one element while failing on every other.
  *
- * Left as a ratio deliberately rather than half-fixed. A single absolute number
- * cannot serve an 18k-pixel toast and a 403k-pixel panel, and combining
- * `maxDiffPixels` with `maxDiffPixelRatio` depends on Playwright's precedence
- * between the two, which is not documented clearly enough to rely on without
- * testing it. The honest fix is per-shot budgets sized from each frame, which is
- * a bigger change than the evidence currently justifies. Recorded so the next
- * person sees the number rather than the reassuring sentence.
+ * So both are set. The ratio keeps small frames tight — a toast still only gets
+ * 186 pixels — and `maxDiffPixels: 2000` caps the large ones, so the settings
+ * panel can no longer collect a four-thousand-pixel allowance from a rule
+ * written for a toast.
+ *
+ * **Playwright applies both as independent limits — the stricter one wins.**
+ * That was the open question and it is now tested rather than assumed: with
+ * `maxDiffPixelRatio: 0.05` (≈20,000 px, would pass) against
+ * `maxDiffPixels: 500` (would fail), a real 10,592-pixel diff FAILED. Had the
+ * looser won, combining them would have been pointless.
+ *
+ * 2000 sits above the measured cross-machine variance (under 6000 for a whole
+ * 1440×900 page, so far less for any element here) and well below the 10,592 a
+ * real 8px padding change produces.
+ *
+ * **The cap is principle, not a fix for a demonstrated miss — say so plainly.**
+ * The obvious worry was a defect between 4,033 (the old budget) and 10,592
+ * hiding on this one element. Trying to build one: dropping the padding by a
+ * SINGLE pixel, 16px → 17px, already moves **9,461** pixels, because every card
+ * below the first shifts. On a frame this dense the smallest realistic layout
+ * change is an order of magnitude past either budget, so the old ratio was very
+ * likely not hiding anything here in practice.
+ *
+ * Kept anyway because it costs nothing and removes a footgun: the ratio hands
+ * out a budget proportional to frame size, so the NEXT large element added here
+ * inherits a large allowance silently. But it is a guard against a future
+ * mistake, not evidence of a past one, and the difference is worth writing down
+ * — the whole reason the page budget needed replacing is that its comment
+ * asserted a measurement nobody had taken.
  */
 const COMPONENT_SHOT = {
   animations: 'disabled',
   caret: 'hide',
   maxDiffPixelRatio: 0.01,
+  maxDiffPixels: 2000,
 } as const
 
 /**
