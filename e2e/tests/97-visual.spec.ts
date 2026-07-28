@@ -59,14 +59,35 @@ const COMPONENT_SHOT = {
 } as const
 
 /**
- * Full pages get 1.5%: a 1440×900 shot is 1.3M pixels, and sub-pixel text
- * rendering alone moves a few thousand of them between otherwise identical
- * runs. Tighter than this is flaky; looser stops catching real regressions.
+ * An ABSOLUTE budget, not a ratio — measured, after the ratio was caught hiding
+ * a real defect.
+ *
+ * A ratio scales with the area you photograph, so the same defect passes or
+ * fails depending on how much empty page surrounds it. Measured on the settings
+ * panel: changing card padding `p-4` → `p-6` moves **10,592 pixels**. As a
+ * fraction of the 548×736 element that is 0.026 and fails the 0.01 component
+ * budget; as a fraction of a 1440×900 page it is 0.008 and passed the 0.015
+ * page budget. One defect, one pixel count, two verdicts.
+ *
+ * The old comment here claimed "sub-pixel text rendering alone moves a few
+ * thousand pixels between otherwise identical runs". That was never measured
+ * and is not true on this harness: regenerating all 165 baselines three times
+ * produced **zero** differing files. The clock is frozen, animations are off,
+ * fonts are awaited and `deviceScaleFactor` is 1, which is what determinism
+ * looks like when it works.
+ *
+ * 6000 is chosen against both numbers: comfortably under the 10,592 a real
+ * 8px shift produces, and far above the zero this machine actually varies by.
+ * The margin is for CROSS-MACHINE rendering — CI runs the same
+ * `-visual-linux` baselines on a different host, and that variance is the one
+ * quantity still unmeasured here. If CI reddens on this, its failure message
+ * prints the exact pixel count, which IS the measurement, and the budget should
+ * then be set just above it rather than returned to a ratio.
  */
 const PAGE_SHOT = {
   animations: 'disabled',
   caret: 'hide',
-  maxDiffPixelRatio: 0.015,
+  maxDiffPixels: 6000,
 } as const
 
 /**

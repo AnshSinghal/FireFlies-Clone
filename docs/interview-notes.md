@@ -243,6 +243,28 @@ Fix number 1 above, applied: shoot the panel instead of the page. Same ratio,
 much smaller absolute budget, and the same `p-4` -> `p-6` edit now fails all
 four. Verified by breaking it deliberately, watching them fail, and restoring.
 
+**Fix number 2 applied too, and it found three stale baselines.** `PAGE_SHOT`
+now carries `maxDiffPixels: 6000` instead of `maxDiffPixelRatio: 0.015`,
+calibrated from two measurements rather than intuition: the `p-4` -> `p-6`
+defect moves **10,592 pixels**, and repeated runs vary by **0**. The ratio was
+the wrong unit — that one defect is 0.026 of a 548×736 element and fails, but
+0.008 of a 1440×900 page and passes. One defect, one pixel count, two verdicts.
+
+Switching immediately failed three notepad snapshots at 17,525 pixels — 1.35% of
+the frame, sitting just under the old 1.5% budget. They were **stale**, not
+noisy: committed before some earlier change and passing ever since because the
+tolerance was fractionally wider than the error.
+
+**And a measurement mistake worth owning**, because it is the same class as
+everything else in §10. I first "measured" the noise floor by regenerating all
+165 baselines three times and reporting that zero files changed. That is not
+what it showed. `--update-snapshots` only rewrites baselines that FAIL, so zero
+files changed meant *everything passed under the old budget* — not *the render
+is byte-identical*. The two readings are indistinguishable unless you know the
+flag's semantics, and I reported the stronger one. The real noise floor, checked
+properly by comparing fresh baselines twice, is zero — the conclusion survived,
+the evidence I gave for it did not.
+
 Two things I would want an interviewer to take from that. **A baseline that has
 never failed is not evidence** — adding a screenshot test and seeing green is
 the most natural way in the world to conclude a surface is covered, and it is
