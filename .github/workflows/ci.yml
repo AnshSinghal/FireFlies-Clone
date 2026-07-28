@@ -102,6 +102,13 @@ jobs:
         working-directory: backend
       - run: uv run mypy app
         working-directory: backend
+      # `ruff` above runs with `working-directory: backend`, so it never saw
+      # `scripts/` — three Python files CI EXECUTES but did not lint. All three
+      # failed the project's own config when first checked on 2026-07-28, one
+      # with a real B904. Same config, via --config, so the two directories
+      # cannot drift into different rules.
+      - run: uv run --directory backend ruff check --config pyproject.toml ../scripts
+      - run: uv run --directory backend ruff format --config pyproject.toml --check ../scripts
       # Routers must not touch the ORM — see ADR-004.
       - run: python scripts/check_layering.py backend
 

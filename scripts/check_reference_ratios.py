@@ -47,15 +47,18 @@ TILE_PX = 40  # the reserved leading box (T-12.6, ADR-036)
 
 def _load(path: Path):
     try:
-        from PIL import Image  # noqa: PLC0415
-        import numpy as np  # noqa: PLC0415
+        import numpy as np
+        from PIL import Image
     except ImportError:
         print(
             "check-reference-ratios: needs pillow and numpy.\n"
             "  uv run --with pillow --with numpy python3 scripts/check_reference_ratios.py",
             file=sys.stderr,
         )
-        raise SystemExit(0)  # skip rather than fail a lint run that cannot satisfy it
+        # Skip rather than fail a lint run that cannot satisfy the dependency.
+        # `from None` because the ImportError is the expected path here, not an
+        # error worth chaining into the traceback.
+        raise SystemExit(0) from None
     return np, np.asarray(Image.open(path).convert("L"), dtype=float)
 
 

@@ -79,9 +79,14 @@ e2e-crossbrowser: ## Run the @crossbrowser cases in Firefox and WebKit (T-42.12)
 # ── Quality gates ────────────────────────────────────────────────────────────
 lint: lint-backend lint-frontend lint-e2e ## Lint everything and check backend layering
 
+# The two `../scripts` runs are separate because ruff above is scoped to
+# backend/ and never saw scripts/ — three files CI executes but did not lint.
+# `--config pyproject.toml` points both directories at the same rules.
 lint-backend:
 	cd backend && uv run ruff check .
 	cd backend && uv run ruff format --check .
+	cd backend && uv run ruff check --config pyproject.toml ../scripts
+	cd backend && uv run ruff format --config pyproject.toml --check ../scripts
 	python3 scripts/check_layering.py backend
 	python3 scripts/check_design_tokens.py .
 	@uv run --quiet --with pillow --with numpy python3 scripts/check_reference_ratios.py . \
