@@ -48,9 +48,30 @@ type Theme = 'light' | 'dark'
 const THEMES: readonly Theme[] = ['light', 'dark']
 
 /**
- * Component shots get the tighter ratio: a primitive occupies few enough
- * pixels that 1% is still only a handful, so a real padding change cannot hide
- * under it (T-41.5).
+ * Component shots keep a ratio, at 1%, and that is a weaker claim than the
+ * comment here used to make.
+ *
+ * It said "a primitive occupies few enough pixels that 1% is still only a
+ * handful". True at the small end and not at the large: these frames span 21x.
+ *
+ *   toast            380×49   =  18,620 px  ->   186 px budget
+ *   player           535×142  =  75,970 px  ->   759 px
+ *   topbar          1440×56   =  80,640 px  ->   806 px
+ *   sidebar          239×842  = 201,238 px  -> 2,012 px
+ *   settings panel   548×736  = 403,328 px  -> 4,033 px
+ *
+ * So the settings panel gets a four-thousand-pixel budget from a rule written
+ * for a toast. It still catches what it was added for — the `p-4` → `p-6` change
+ * moves 10,592 — but a defect between 4,033 and 10,592 pixels would pass on that
+ * one element while failing on every other.
+ *
+ * Left as a ratio deliberately rather than half-fixed. A single absolute number
+ * cannot serve an 18k-pixel toast and a 403k-pixel panel, and combining
+ * `maxDiffPixels` with `maxDiffPixelRatio` depends on Playwright's precedence
+ * between the two, which is not documented clearly enough to rely on without
+ * testing it. The honest fix is per-shot budgets sized from each frame, which is
+ * a bigger change than the evidence currently justifies. Recorded so the next
+ * person sees the number rather than the reassuring sentence.
  */
 const COMPONENT_SHOT = {
   animations: 'disabled',
