@@ -289,6 +289,50 @@ test.describe('highlights · writes', { tag: '@mutates' }, () => {
     await expect(page.getByTestId(/^bookmark-tick-\d+$/)).toHaveCount(2)
   })
 
+  test('T32-G2 · `B` toggles the focused segment, and is ignored inside an editor', async ({
+    page,
+  }) => {
+    /*
+     * T-32.6's keyboard path, which had no test at all.
+     *
+     * The shortcut is bound to the ARTICLE, not the document, so "the focused
+     * segment" means the one whose controls hold focus — that is the whole
+     * design, and a global binding would star whatever the playhead happened
+     * to be near instead. Focusing the segment's own action button is
+     * therefore the honest way in.
+     *
+     * The second half is the part worth having. `segment-row` explicitly
+     * refuses the key when the event came from an `input`, `textarea` or
+     * `[contenteditable]`, because in edit mode a `b` is a letter someone is
+     * typing. That guard is a deliberate line of code with a comment on it and
+     * nothing exercised it.
+     */
+    await openMeeting(page)
+
+    const row = page.locator('[data-segment-id]').nth(6)
+    const segmentId = Number(await row.getAttribute('data-segment-id'))
+    const star = page.getByTestId(`bookmark-star-${segmentId}`)
+
+    await expect(star).toBeHidden()
+
+    await row.hover()
+    await row.getByRole('button', { name: 'Segment actions' }).focus()
+    await page.keyboard.press('b')
+    await expect(star).toBeVisible({ timeout: 10_000 })
+
+    // Toggles, rather than only ever setting.
+    await page.keyboard.press('b')
+    await expect(star).toBeHidden({ timeout: 10_000 })
+
+    // Now the guard: in edit mode the same key is just a letter.
+    await page.getByTestId('transcript-edit-toggle').click()
+    const editor = page.locator(`[data-testid="segment-editor-${segmentId}"]`)
+    await editor.click()
+    await page.keyboard.press('b')
+
+    await expect(star).toBeHidden()
+  })
+
   test('T32-J · editing a highlighted segment leaves no garbled range', async ({ page }) => {
     await openMeeting(page)
 
